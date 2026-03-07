@@ -23,10 +23,9 @@ Setup is a bit involved. Geeks will feel at home - determined non-geeks can get 
 
 ## Features
 
-- **Signal**: Webhook server for document attachments sent via [Signal](https://signal.org/)
+- **Signal**: Webhook server for document attachments sent via Signal.
 - **Gmail**: IMAP-based crawl for email attachments. One-shot (runs once, exits). Schedule with cron or systemd timer.
-- **Generic IMAP**: Non-Gmail IMAP providers, manual config
-- **Ollama**: Optional AI eligibility filter for email attachments (images, plain text)
+- **Ollama**: Optional AI eligibility filter for email attachments (images, plain text).
 
 Supported file types: PDF, Word (.doc, .docx), RTF, Office formats, images (JPEG, PNG, etc.), plain text, HTML, CSV.
 
