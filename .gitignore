@@ -8,5 +8,5 @@ coverage/
 test-report.junit.xml
 sbom.json
 result
-.cursor/
-pr-body.md
+.cursor/worktrees.json
+.cursor/debug-*.log
