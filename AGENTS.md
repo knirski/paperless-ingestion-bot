@@ -82,7 +82,7 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 | Domain errors    | `Schema.TaggedErrorClass` in `domain/`                                     |
 | Optional returns | Use `Option<T>`; avoid `T \| null` or `T \| undefined`                     |
 | Optional params  | `param?: T` or `param: T \| undefined`; accept `null` only at API boundary |
-| Credentials      | OS keyring only; no file fallback. See [SECURITY.md](SECURITY.md#security-considerations). |
+| Credentials      | OS keyring only; no file fallback. Use `Redacted` for all PII/secrets. See [SECURITY.md](SECURITY.md#security-considerations). |
 | File names       | kebab-case for multi-word                                                  |
 
 ## Avoid
@@ -91,6 +91,8 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 - `any`, `as` type assertions — use `unknown`, Schema, or narrowing
 - Forgetting `Effect.fromResult` when calling core from shell
 - `console.log` — use `Effect.log`
+- Logging secrets — never call `Redacted.value()` for logging; keep passwords wrapped until use site
+- PII in errors — use `redactedForLog(value, redactFn)`; in formatters use `r.label ?? "<redacted>"`
 
 ## Commits
 

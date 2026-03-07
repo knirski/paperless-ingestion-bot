@@ -16,7 +16,7 @@ import {
 	type User,
 	UserSlugSchema,
 } from "../domain/types.js";
-import { unknownToMessage } from "../domain/utils.js";
+import { redactedForLog, redactPath, unknownToMessage } from "../domain/utils.js";
 import { mapFsError } from "./fs-utils.js";
 
 /** Log level for config. */
@@ -146,7 +146,7 @@ const readConfigFile = Effect.fn("paperless-ingestion-bot/shell/config.readConfi
 		yield* Effect.logWarning({ event: "config_file_missing", path });
 		yield* Effect.fail(
 			new ConfigParseError({
-				path,
+				path: redactedForLog(path, redactPath),
 				message: "Config file not found",
 				fix: "Pass --config /path or set PAPERLESS_INGESTION_CONFIG. Default: /etc/paperless-ingestion-bot/config.json",
 			}),
@@ -170,7 +170,7 @@ const loadIngestUsers = Effect.fn("paperless-ingestion-bot/shell/config.loadInge
 		if (!exists) {
 			yield* Effect.fail(
 				new ConfigParseError({
-					path,
+					path: redactedForLog(path, redactPath),
 					message: "Ingest users file does not exist",
 					fix: ingestUsersHint(path),
 				}),
@@ -180,7 +180,7 @@ const loadIngestUsers = Effect.fn("paperless-ingestion-bot/shell/config.loadInge
 		if (content.trim() === "") {
 			yield* Effect.fail(
 				new ConfigParseError({
-					path,
+					path: redactedForLog(path, redactPath),
 					message: "Ingest users file is empty",
 					fix: ingestUsersHint(path),
 				}),
@@ -203,7 +203,7 @@ function decodeRawConfig<A>(
 		Effect.mapError(
 			(e) =>
 				new ConfigParseError({
-					path,
+					path: redactedForLog(path, redactPath),
 					message: `Invalid JSON or config schema: ${unknownToMessage(e)}`,
 					fix: CONFIG_SCHEMA_FIX,
 				}),
@@ -219,7 +219,7 @@ const buildRegistryFromPath = Effect.fn(
 		try: () => createUserRegistry(parseUserRegistry(users)),
 		catch: (e) =>
 			new ConfigParseError({
-				path: configPath,
+				path: redactedForLog(configPath, redactPath),
 				message: `Invalid users in config: ${unknownToMessage(e)}`,
 				fix: ingestUsersHint(ingestUsersPath),
 			}),
@@ -235,7 +235,7 @@ function handleConfigParseError(
 	}
 	return Effect.fail(
 		new ConfigParseError({
-			path,
+			path: redactedForLog(path, redactPath),
 			message: `Invalid config: ${unknownToMessage(e)}`,
 			fix: CONFIG_PARSE_FIX,
 		}),

@@ -1,5 +1,5 @@
 import { assert, layer } from "@effect/vitest";
-import { Effect, Exit, Layer, Option } from "effect";
+import { Effect, Exit, Layer, Option, Redacted } from "effect";
 import * as fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import { collisionCandidateFilename, splitFilenameForCollision } from "../src/core/index.js";
@@ -23,9 +23,9 @@ describe("mapFsError", () => {
 		if (Option.isSome(errOpt)) {
 			expect(errOpt.value).toMatchObject({
 				_tag: "FileSystemError",
-				path: "/tmp/x",
 				operation: "exists",
 			});
+			expect(Redacted.value(errOpt.value.path)).toBe("/tmp/x");
 		}
 	});
 });

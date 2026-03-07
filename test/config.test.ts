@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Effect, Exit, Option, Redacted } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import type { SignalNumber } from "../src/domain/signal-types.js";
 import type { EmailLabel } from "../src/domain/types.js";
@@ -79,11 +79,12 @@ async function expectMissingFileFails(
 ): Promise<void> {
 	const tmp = await createTestTempDir();
 	const badPath = tmp.join("nonexistent.json");
-	await expect(run(badPath)).rejects.toMatchObject({
+	const err = await run(badPath).catch((e) => e);
+	expect(err).toMatchObject({
 		_tag: "ConfigParseError",
-		path: badPath,
 		message: "Config file not found",
 	});
+	expect(Redacted.value((err as { path: Redacted.Redacted<string> }).path)).toBe(badPath);
 	await tmp.remove();
 }
 
@@ -97,9 +98,22 @@ describe("buildSignalConfigLayer", () => {
 		const path = tmp.join("config.json");
 		await tmp.writeFile(path, "not valid json {");
 
-		const err = await runSignalConfigLayer(path).catch((e: unknown) => e);
-		expect(err).toMatchObject({ _tag: "ConfigParseError", path });
-		expect((err as { message?: string }).message).toContain("Invalid JSON or config schema");
+		const program = Effect.gen(function* () {
+			return yield* SignalConfig;
+		}).pipe(
+			Effect.provide(SignalConfig.layer(path)),
+			Effect.provide(PlatformServicesLayer),
+			Effect.provide(SilentLoggerLayer),
+		);
+		const exit = await Effect.runPromise(Effect.exit(program));
+		const errOpt = Exit.findErrorOption(exit);
+		expect(Option.isSome(errOpt)).toBe(true);
+		const err = (
+			errOpt as Option.Some<{ _tag: string; path: Redacted.Redacted<string>; message?: string }>
+		).value;
+		expect(err).toMatchObject({ _tag: "ConfigParseError" });
+		expect(Redacted.value(err.path)).toBe(path);
+		expect(err.message).toContain("Invalid JSON or config schema");
 		await tmp.remove();
 	});
 
@@ -114,10 +128,9 @@ describe("buildSignalConfigLayer", () => {
 			}),
 		);
 
-		await expect(runSignalConfigLayer(path)).rejects.toMatchObject({
-			_tag: "ConfigParseError",
-			path,
-		});
+		const err = await runSignalConfigLayer(path).catch((e) => e);
+		expect(err).toMatchObject({ _tag: "ConfigParseError" });
+		expect(Redacted.value((err as { path: Redacted.Redacted<string> }).path)).toBe(path);
 		await tmp.remove();
 	});
 
@@ -132,10 +145,9 @@ describe("buildSignalConfigLayer", () => {
 			}),
 		);
 
-		await expect(runSignalConfigLayer(path)).rejects.toMatchObject({
-			_tag: "ConfigParseError",
-			path,
-		});
+		const err = await runSignalConfigLayer(path).catch((e) => e);
+		expect(err).toMatchObject({ _tag: "ConfigParseError" });
+		expect(Redacted.value((err as { path: Redacted.Redacted<string> }).path)).toBe(path);
 		await tmp.remove();
 	});
 
@@ -196,11 +208,12 @@ describe("buildSignalConfigLayer", () => {
 			}),
 		);
 
-		await expect(runSignalConfigLayer(path)).rejects.toMatchObject({
+		const err = await runSignalConfigLayer(path).catch((e) => e);
+		expect(err).toMatchObject({
 			_tag: "ConfigParseError",
-			path: usersPath,
 			message: "Ingest users file does not exist",
 		});
+		expect(Redacted.value((err as { path: Redacted.Redacted<string> }).path)).toBe(usersPath);
 		await tmp.remove();
 	});
 
@@ -215,10 +228,9 @@ describe("buildSignalConfigLayer", () => {
 			}),
 		);
 
-		await expect(runSignalConfigLayer(path)).rejects.toMatchObject({
-			_tag: "ConfigParseError",
-			path,
-		});
+		const err = await runSignalConfigLayer(path).catch((e) => e);
+		expect(err).toMatchObject({ _tag: "ConfigParseError" });
+		expect(Redacted.value((err as { path: Redacted.Redacted<string> }).path)).toBe(path);
 		await tmp.remove();
 	});
 
