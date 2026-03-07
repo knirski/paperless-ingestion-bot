@@ -38,7 +38,8 @@
 		"prepare": "husky",
 		"prepublishOnly": "npm run build",
 		"publint": "publint",
-		"pack:dry": "npm run build && npm pack --dry-run"
+		"pack:dry": "npm run build && npm pack --dry-run",
+		"update-nix-hash": "node scripts/update-nix-hash.mjs"
 	},
 	"dependencies": {
 		"@effect/platform-node": "4.0.0-beta.28",

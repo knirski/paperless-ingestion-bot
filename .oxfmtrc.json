@@ -6,5 +6,11 @@
 	"semi": true,
 	"singleQuote": false,
 	"trailingComma": "all",
-	"ignorePatterns": ["dist/**", "node_modules/**", "coverage/**"]
+	"ignorePatterns": [
+		"dist/**",
+		"node_modules/**",
+		"coverage/**",
+		"CHANGELOG.md",
+		".github/PULL_REQUEST_TEMPLATE.md"
+	]
 }

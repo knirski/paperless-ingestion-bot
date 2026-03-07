@@ -12,6 +12,15 @@
       packages.${system} = {
         default = pkgs.callPackage ./default.nix { };
         paperlessIngest = pkgs.callPackage ./default.nix { };
+        update-npm-deps-hash = pkgs.writeShellApplication {
+          name = "update-npm-deps-hash";
+          runtimeInputs = with pkgs; [ prefetch-npm-deps gnused ];
+          text = ''
+            hash=$(prefetch-npm-deps package-lock.json)
+            echo "Updated npm dependency hash: $hash" >&2
+            sed -i "s|npmDepsHash = \"sha256-[^\"]*\"|npmDepsHash = \"$hash\"|" default.nix
+          '';
+        };
       };
 
       devShells.${system}.default = pkgs.mkShell {

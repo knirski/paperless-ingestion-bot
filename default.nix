@@ -4,6 +4,7 @@
 { pkgs }:
 
 let
+  packageJson = builtins.fromJSON (builtins.readFile ./package.json);
   src = builtins.path {
     path = ./.;
     name = "paperless-ingestion-bot-src";
@@ -13,11 +14,11 @@ let
       && builtins.baseNameOf path != ".git"
       && builtins.baseNameOf path != "result";
   };
-  npmDepsHash = "sha256-ItC1+UC8HFrXBF/bMicuBYu7ac9LF3cgBpGFP2AL+3E=";
+  npmDepsHash = "sha256-6MTADQNM77Je73keLkSZF6h+VmjgnfrX4lNDB5Kz1uY=";
 in
 pkgs.buildNpmPackage rec {
   pname = "paperless-ingestion-bot";
-  version = "0.1.0";
+  version = packageJson.version;
   inherit src npmDepsHash;
   nodejs = pkgs.nodejs_24;
   npmBuildScript = "build";
