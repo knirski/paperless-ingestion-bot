@@ -1,6 +1,9 @@
 /**
  * Email account state machine and persistence types.
  * Supports Gmail and generic IMAP via ImapProviderConfig.
+ *
+ * **User-generated data:** Account entries are stored in email-accounts.json, created/updated
+ * via `gmail add` (Signal) or manual edit. Passwords in OS keyring. Not configuration.
  */
 
 import { Match, type Redacted, Schema } from "effect";
@@ -173,5 +176,5 @@ const EmailAccountEntrySchema = Schema.Struct({
 	details: ConnectionDetailsSchema,
 });
 
-/** Schema for validating account metadata from JSON. */
+/** Schema for validating account metadata from JSON (email-accounts.json — user-generated). */
 export const AccountMetadataSchema = EmailAccountEntrySchema;

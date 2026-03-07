@@ -12,7 +12,7 @@ function minimalSignalConfig(overrides?: Partial<SignalConfigService>): SignalCo
 	return {
 		consumeDir: "/tmp/consume",
 		emailAccountsPath: "/tmp/email-accounts.json",
-		ingestUsersPath: "/tmp/ingest-users.json",
+		usersPath: "/tmp/users.json",
 		signalApiUrl: "http://localhost:8080",
 		registry: createUserRegistry([]),
 		logLevel: "INFO",
@@ -35,7 +35,7 @@ function minimalEmailConfig(overrides?: Partial<EmailConfigService>): EmailConfi
 	return {
 		consumeDir: "/tmp/consume",
 		emailAccountsPath: "/tmp/email-accounts.json",
-		ingestUsersPath: "/tmp/ingest-users.json",
+		usersPath: "/tmp/users.json",
 		signalApiUrl: "http://localhost:8080",
 		registry: createUserRegistry([]),
 		logLevel: "INFO",

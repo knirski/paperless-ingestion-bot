@@ -19,8 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * **PII redaction:** Effect `Redacted` for paths, emails, phones, URLs in domain errors. `redactedForLog`, `redactPath`, `redactEmail`, `redactPhone`, `redactUrl` in domain/utils. Raw values never appear in structured logs.
 
-### Changed
+### Breaking Changes
 
+* **config:** Split config files (Option 3). Config path from `--config` or `PAPERLESS_INGESTION_CONFIG`; users path from `--users` or `PAPERLESS_INGESTION_USERS_PATH`; email accounts path from `--email-accounts` or `PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH` (no longer in config.json). Config loading uses Effect ConfigProvider with orElse(env, file).
 * **credentials:** Replace keytar with @napi-rs/keyring; remove file-based credential fallback. Credentials are stored only in the OS keychain. Users who relied on `PAPERLESS_INGESTION_CREDENTIALS=file` must migrate credentials to the system keychain before upgrading. On headless Linux, ensure libsecret/Secret Service is available (e.g. gnome-keyring, kwallet). See ADR-0001.
 
 ## [0.1.0] - 2025-03-07

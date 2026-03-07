@@ -8,7 +8,7 @@
  * - **SignalApiHttpError**: `message` — HTTP 4xx/5xx or underlying error text.
  * - **FileSystemError**: `fix` — only when we have a concrete suggestion.
  * - **KeyringError**: `fix` — always present (libsecret hint).
- * - **ConfigParseError**: `fix` — only when we have a hint (e.g. ingest-users template).
+ * - **ConfigParseError**: `fix` — only when we have a hint (e.g. users.json template).
  */
 
 import { Match, Schema } from "effect";
@@ -31,7 +31,7 @@ export class IneligibleAttachmentError extends Schema.TaggedErrorClass<Ineligibl
 	{ message: Schema.String },
 ) {}
 
-/** Config validation errors (no users, invalid config, etc.). */
+/** Config validation errors (no users, invalid config, keyring unavailable, etc.). */
 export class ConfigValidationError extends Schema.TaggedErrorClass<ConfigValidationError>()(
 	"ConfigValidationError",
 	{
@@ -104,7 +104,7 @@ export class ImapConnectionError extends Schema.TaggedErrorClass<ImapConnectionE
 	{ email: Schema.Redacted(AccountEmailSchema), message: Schema.String },
 ) {}
 
-/** File parse errors (config, credentials, ingest-users). path + message required. */
+/** File parse errors (config, credentials, users.json). path + message required. */
 export class ConfigParseError extends Schema.TaggedErrorClass<ConfigParseError>()(
 	"ConfigParseError",
 	{

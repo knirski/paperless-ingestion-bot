@@ -17,3 +17,4 @@ When creating or editing ADRs, follow the workflow in [AGENTS.md](../../AGENTS.m
 | 0002 | [Signal webhook security](0002-signal-webhook-security.md)   |
 | 0003 | [Webhook rate limiting](0003-rate-limiting.md)               |
 | 0004 | [Biome migration](0004-biome-migration.md)                   |
+| 0005 | [Config: env overrides, JSON Schema, loadConfiguration](0005-config-app-config-and-validation.md) |

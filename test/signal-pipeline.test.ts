@@ -1,5 +1,7 @@
+import { Effect } from "effect";
 import { describe, expect, test } from "vitest";
 import type { AccountEmail } from "../src/domain/types.js";
+import { PlatformServicesLayer } from "../src/shell/layers.js";
 import {
 	collectValidAttachmentRefs,
 	formatGmailAddReply,
@@ -8,7 +10,9 @@ import {
 	formatResumeIngestionReply,
 	MAX_ATTACHMENTS_PER_MESSAGE,
 	trimAttachmentsToMax,
+	validateConsumeDir,
 } from "../src/shell/signal-pipeline.js";
+import { createTestTempDir, SilentLoggerLayer } from "./test-utils.js";
 
 describe("signal-pipeline", () => {
 	describe("collectValidAttachmentRefs", () => {
@@ -47,6 +51,32 @@ describe("signal-pipeline", () => {
 			{ input: [{ id: "att1" }], expected: [{ id: "att1" }] },
 		])("filters invalid refs", ({ input, expected }) => {
 			expect(collectValidAttachmentRefs(input)).toEqual(expected);
+		});
+	});
+
+	describe("validateConsumeDir", () => {
+		test("fails when directory does not exist", async () => {
+			const program = validateConsumeDir("/nonexistent/path/12345").pipe(
+				Effect.provide(PlatformServicesLayer),
+				Effect.provide(SilentLoggerLayer),
+			);
+			await expect(Effect.runPromise(program)).rejects.toMatchObject({
+				_tag: "ConfigValidationError",
+				message: "consume_dir does not exist",
+			});
+		});
+
+		test("succeeds when directory exists and is writable", async () => {
+			const { path: tmpDir, remove } = await createTestTempDir("validate-consume-");
+			try {
+				const program = validateConsumeDir(tmpDir).pipe(
+					Effect.provide(PlatformServicesLayer),
+					Effect.provide(SilentLoggerLayer),
+				);
+				await Effect.runPromise(program);
+			} finally {
+				await remove();
+			}
 		});
 	});
 

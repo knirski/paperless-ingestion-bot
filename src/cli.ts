@@ -4,8 +4,8 @@
  * paperless-ingestion-bot: Signal and Gmail document ingestion for Paperless-ngx.
  *
  * Commands:
- *   signal [--config path]  — Run Signal webhook server
- *   email [--config path] [--json]  — Run email crawl pipeline
+ *   signal [--config path] [--users path] [--email-accounts path]  — Run Signal webhook server
+ *   email [--config path] [--users path] [--email-accounts path] [--json]  — Run email crawl pipeline
  */
 
 import { createRequire } from "node:module";
@@ -14,7 +14,12 @@ import { Cause, Effect, ErrorReporter, Layer, Option } from "effect";
 import * as Arr from "effect/Array";
 import { Command, Flag } from "effect/unstable/cli";
 import { formatErrorForStructuredLog } from "./domain/errors.js";
-import { EmailConfig, resolveConfigPath } from "./shell/config.js";
+import {
+	EmailConfig,
+	resolveConfigPath,
+	resolveEmailAccountsPath,
+	resolveUsersPath,
+} from "./shell/config.js";
 import { runEmailPipeline } from "./shell/email-pipeline.js";
 import { buildEmailLayer, buildSignalLayer, MainLayer } from "./shell/layers.js";
 import { buildSignalServerLayer } from "./shell/signal-pipeline.js";
@@ -31,7 +36,26 @@ const pkg = require("../package.json") as { version: string };
 
 const configFlag = Flag.string("config").pipe(
 	Flag.optional,
-	Flag.withDescription("Path to config.json (default: /etc/paperless-ingestion-bot/config.json)"),
+	Flag.withDescription(
+		"Path to config.json (default: /etc/paperless-ingestion-bot/config.json, or PAPERLESS_INGESTION_CONFIG)",
+	),
+);
+
+const usersFlag = Flag.string("users").pipe(
+	Flag.optional,
+	Flag.withDescription("Path to users.json (default: /var/lib/paperless-ingestion-bot/users.json)"),
+);
+
+const emailAccountsFlag = Flag.string("email-accounts").pipe(
+	Flag.optional,
+	Flag.withDescription(
+		"Path to email-accounts.json (default: /var/lib/paperless-ingestion-bot/email-accounts.json)",
+	),
+);
+
+const skipReachabilityCheckFlag = Flag.boolean("skip-reachability-check").pipe(
+	Flag.withDefault(false),
+	Flag.withDescription("Skip startup validation of signal_api_url reachability"),
 );
 
 const jsonFlag = Flag.boolean("json").pipe(
@@ -39,12 +63,23 @@ const jsonFlag = Flag.boolean("json").pipe(
 	Flag.withDescription("Output result as JSON to stdout (for scripting)"),
 );
 
-const signalCommand = Command.make("signal", { config: configFlag }, ({ config }) => {
-	const configPath = resolveConfigPath(Option.getOrUndefined(config));
-	const appLayer = buildSignalLayer(configPath);
-	const serverLayer = buildSignalServerLayer(appLayer);
-	return Layer.launch(serverLayer);
-});
+const signalCommand = Command.make(
+	"signal",
+	{
+		config: configFlag,
+		users: usersFlag,
+		emailAccounts: emailAccountsFlag,
+		skipReachabilityCheck: skipReachabilityCheckFlag,
+	},
+	({ config, users, emailAccounts, skipReachabilityCheck }) => {
+		const configPath = resolveConfigPath(Option.getOrUndefined(config));
+		const usersPath = resolveUsersPath(Option.getOrUndefined(users));
+		const emailAccountsPath = resolveEmailAccountsPath(Option.getOrUndefined(emailAccounts));
+		const appLayer = buildSignalLayer(configPath, usersPath, emailAccountsPath);
+		const serverLayer = buildSignalServerLayer(appLayer, { skipReachabilityCheck });
+		return Layer.launch(serverLayer);
+	},
+);
 
 const runEmailCommand = Effect.fn("runEmailCommand")(function* (json: boolean) {
 	yield* EmailConfig; // Validate config loads before running pipeline
@@ -65,10 +100,12 @@ const runEmailCommand = Effect.fn("runEmailCommand")(function* (json: boolean) {
 
 const emailCommand = Command.make(
 	"email",
-	{ config: configFlag, json: jsonFlag },
-	({ config, json }) => {
+	{ config: configFlag, users: usersFlag, emailAccounts: emailAccountsFlag, json: jsonFlag },
+	({ config, users, emailAccounts, json }) => {
 		const configPath = resolveConfigPath(Option.getOrUndefined(config));
-		const layer = buildEmailLayer(configPath);
+		const usersPath = resolveUsersPath(Option.getOrUndefined(users));
+		const emailAccountsPath = resolveEmailAccountsPath(Option.getOrUndefined(emailAccounts));
+		const layer = buildEmailLayer(configPath, usersPath, emailAccountsPath);
 		return runEmailCommand(json).pipe(Effect.provide(layer));
 	},
 );

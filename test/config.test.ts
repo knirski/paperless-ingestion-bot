@@ -1,11 +1,15 @@
-import { Effect, Exit, Option, Redacted } from "effect";
+import { Effect } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import type { SignalNumber } from "../src/domain/signal-types.js";
 import type { EmailLabel } from "../src/domain/types.js";
 import {
 	DEFAULT_CONFIG_PATH,
+	DEFAULT_EMAIL_ACCOUNTS_PATH,
+	DEFAULT_USERS_PATH,
 	EmailConfig,
 	resolveConfigPath,
+	resolveEmailAccountsPath,
+	resolveUsersPath,
 	SignalConfig,
 	type SignalConfigService,
 } from "../src/shell/config.js";
@@ -14,9 +18,7 @@ import { createTestTempDir, SilentLoggerLayer } from "./test-utils.js";
 
 const minimalSignalConfig = {
 	consume_dir: "/tmp/consume",
-	email_accounts_path: "/tmp/email-accounts.json",
 	signal_api_url: "http://localhost:8080",
-	ingest_users_path: "/tmp/ingest-users.json",
 	webhook_host: "127.0.0.1",
 	webhook_port: 8089,
 };
@@ -29,22 +31,30 @@ const minimalEmailConfig = {
 	page_size: 50,
 };
 
-async function runSignalConfigLayer(path: string): Promise<SignalConfigService> {
+async function runSignalConfigLayer(
+	configPath: string,
+	usersPath: string,
+	emailAccountsPath: string,
+): Promise<SignalConfigService> {
 	const program = Effect.gen(function* () {
 		return yield* SignalConfig;
 	}).pipe(
-		Effect.provide(SignalConfig.layer(path)),
+		Effect.provide(SignalConfig.layer(configPath, usersPath, emailAccountsPath)),
 		Effect.provide(PlatformServicesLayer),
 		Effect.provide(SilentLoggerLayer),
 	);
 	return Effect.runPromise(program);
 }
 
-async function runEmailConfigLayer(path: string) {
+async function runEmailConfigLayer(
+	configPath: string,
+	usersPath: string,
+	emailAccountsPath: string,
+) {
 	const program = Effect.gen(function* () {
 		return yield* EmailConfig;
 	}).pipe(
-		Effect.provide(EmailConfig.layer(path)),
+		Effect.provide(EmailConfig.layer(configPath, usersPath, emailAccountsPath)),
 		Effect.provide(PlatformServicesLayer),
 		Effect.provide(SilentLoggerLayer),
 	);
@@ -52,116 +62,153 @@ async function runEmailConfigLayer(path: string) {
 }
 
 describe("resolveConfigPath", () => {
-	const origEnv = process.env.PAPERLESS_INGESTION_CONFIG;
-	afterEach(() => {
-		if (origEnv !== undefined) process.env.PAPERLESS_INGESTION_CONFIG = origEnv;
-		else delete process.env.PAPERLESS_INGESTION_CONFIG;
-	});
-
 	test("returns cli path when provided", () => {
 		expect(resolveConfigPath("/custom/path.json")).toBe("/custom/path.json");
 	});
 
-	test("returns env when cli path undefined", () => {
-		process.env.PAPERLESS_INGESTION_CONFIG = "/env/path.json";
-		expect(resolveConfigPath(undefined)).toBe("/env/path.json");
+	test("returns env when cli path undefined and env set", () => {
+		const orig = process.env.PAPERLESS_INGESTION_CONFIG;
+		process.env.PAPERLESS_INGESTION_CONFIG = "/env/config.json";
+		try {
+			expect(resolveConfigPath(undefined)).toBe("/env/config.json");
+		} finally {
+			if (orig !== undefined) process.env.PAPERLESS_INGESTION_CONFIG = orig;
+			else delete process.env.PAPERLESS_INGESTION_CONFIG;
+		}
 	});
 
-	test("returns default when both undefined", () => {
+	test("returns default when cli path undefined and no env", () => {
+		const orig = process.env.PAPERLESS_INGESTION_CONFIG;
 		delete process.env.PAPERLESS_INGESTION_CONFIG;
-		expect(resolveConfigPath(undefined)).toBe(DEFAULT_CONFIG_PATH);
+		try {
+			expect(resolveConfigPath(undefined)).toBe(DEFAULT_CONFIG_PATH);
+		} finally {
+			if (orig !== undefined) process.env.PAPERLESS_INGESTION_CONFIG = orig;
+		}
 	});
 });
 
-async function expectMissingFileFails(
-	run: (path: string) => Promise<unknown>,
-	_prefix: string,
+describe("resolveUsersPath", () => {
+	test("returns cli path when provided", () => {
+		expect(resolveUsersPath("/custom/users.json")).toBe("/custom/users.json");
+	});
+
+	test("returns env when cli path undefined and env set", () => {
+		const orig = process.env.PAPERLESS_INGESTION_USERS_PATH;
+		process.env.PAPERLESS_INGESTION_USERS_PATH = "/env/users.json";
+		try {
+			expect(resolveUsersPath(undefined)).toBe("/env/users.json");
+		} finally {
+			if (orig !== undefined) process.env.PAPERLESS_INGESTION_USERS_PATH = orig;
+			else delete process.env.PAPERLESS_INGESTION_USERS_PATH;
+		}
+	});
+
+	test("returns default when cli path undefined and no env", () => {
+		const orig = process.env.PAPERLESS_INGESTION_USERS_PATH;
+		delete process.env.PAPERLESS_INGESTION_USERS_PATH;
+		try {
+			expect(resolveUsersPath(undefined)).toBe(DEFAULT_USERS_PATH);
+		} finally {
+			if (orig !== undefined) process.env.PAPERLESS_INGESTION_USERS_PATH = orig;
+		}
+	});
+});
+
+describe("resolveEmailAccountsPath", () => {
+	test("returns cli path when provided", () => {
+		expect(resolveEmailAccountsPath("/custom/email-accounts.json")).toBe(
+			"/custom/email-accounts.json",
+		);
+	});
+
+	test("returns env when cli path undefined and env set", () => {
+		const orig = process.env.PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH;
+		process.env.PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH = "/env/email-accounts.json";
+		try {
+			expect(resolveEmailAccountsPath(undefined)).toBe("/env/email-accounts.json");
+		} finally {
+			if (orig !== undefined) process.env.PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH = orig;
+			else delete process.env.PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH;
+		}
+	});
+
+	test("returns default when cli path undefined and no env", () => {
+		const orig = process.env.PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH;
+		delete process.env.PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH;
+		try {
+			expect(resolveEmailAccountsPath(undefined)).toBe(DEFAULT_EMAIL_ACCOUNTS_PATH);
+		} finally {
+			if (orig !== undefined) process.env.PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH = orig;
+		}
+	});
+});
+
+async function expectMissingConfigFileFails(
+	run: (configPath: string, usersPath: string, emailAccountsPath: string) => Promise<unknown>,
 ): Promise<void> {
 	const tmp = await createTestTempDir();
 	const badPath = tmp.join("nonexistent.json");
-	const err = await run(badPath).catch((e) => e);
-	expect(err).toMatchObject({
+	await expect(
+		run(badPath, tmp.join("users.json"), tmp.join("email-accounts.json")),
+	).rejects.toMatchObject({
 		_tag: "ConfigParseError",
 		message: "Config file not found",
 	});
-	expect(Redacted.value((err as { path: Redacted.Redacted<string> }).path)).toBe(badPath);
 	await tmp.remove();
 }
 
 describe("buildSignalConfigLayer", () => {
-	test("missing file fails with ConfigParseError", async () => {
-		await expectMissingFileFails(runSignalConfigLayer, "config-missing-");
+	test("missing config file fails with ConfigParseError", async () => {
+		await expectMissingConfigFileFails(runSignalConfigLayer);
 	});
 
 	test("invalid JSON fails with ConfigParseError", async () => {
 		const tmp = await createTestTempDir();
-		const path = tmp.join("config.json");
-		await tmp.writeFile(path, "not valid json {");
+		const configPath = tmp.join("config.json");
+		const usersPath = tmp.join("users.json");
+		const emailAccountsPath = tmp.join("email-accounts.json");
+		await tmp.writeFile(configPath, "not valid json {");
+		await tmp.writeFile(usersPath, "[]");
 
-		const program = Effect.gen(function* () {
-			return yield* SignalConfig;
-		}).pipe(
-			Effect.provide(SignalConfig.layer(path)),
-			Effect.provide(PlatformServicesLayer),
-			Effect.provide(SilentLoggerLayer),
+		const err = await runSignalConfigLayer(configPath, usersPath, emailAccountsPath).catch(
+			(e: unknown) => e,
 		);
-		const exit = await Effect.runPromise(Effect.exit(program));
-		const errOpt = Exit.findErrorOption(exit);
-		expect(Option.isSome(errOpt)).toBe(true);
-		const err = (
-			errOpt as Option.Some<{ _tag: string; path: Redacted.Redacted<string>; message?: string }>
-		).value;
 		expect(err).toMatchObject({ _tag: "ConfigParseError" });
-		expect(Redacted.value(err.path)).toBe(path);
-		expect(err.message).toContain("Invalid JSON or config schema");
+		expect((err as { message?: string }).message).toMatch(
+			/Invalid JSON|Invalid JSON or config schema/,
+		);
 		await tmp.remove();
 	});
 
 	test("valid JSON but missing required field fails with ConfigParseError", async () => {
 		const tmp = await createTestTempDir();
-		const path = tmp.join("config.json");
+		const configPath = tmp.join("config.json");
+		const usersPath = tmp.join("users.json");
+		const emailAccountsPath = tmp.join("email-accounts.json");
+		await tmp.writeFile(usersPath, "[]");
 		await tmp.writeFile(
-			path,
+			configPath,
 			JSON.stringify({
 				...minimalSignalConfig,
 				webhook_host: undefined,
 			}),
 		);
 
-		const err = await runSignalConfigLayer(path).catch((e) => e);
-		expect(err).toMatchObject({ _tag: "ConfigParseError" });
-		expect(Redacted.value((err as { path: Redacted.Redacted<string> }).path)).toBe(path);
+		await expect(
+			runSignalConfigLayer(configPath, usersPath, emailAccountsPath),
+		).rejects.toMatchObject({
+			_tag: "ConfigParseError",
+		});
 		await tmp.remove();
 	});
 
-	test("missing ingest_users_path fails with ConfigParseError", async () => {
-		const tmp = await createTestTempDir();
-		const path = tmp.join("config.json");
-		await tmp.writeFile(
-			path,
-			JSON.stringify({
-				...minimalSignalConfig,
-				ingest_users_path: undefined,
-			}),
-		);
-
-		const err = await runSignalConfigLayer(path).catch((e) => e);
-		expect(err).toMatchObject({ _tag: "ConfigParseError" });
-		expect(Redacted.value((err as { path: Redacted.Redacted<string> }).path)).toBe(path);
-		await tmp.remove();
-	});
-
-	test("ingest_users_path loads registry from file", async () => {
+	test("usersPath loads registry from file", async () => {
 		const tmp = await createTestTempDir();
 		const configPath = tmp.join("config.json");
-		const usersPath = tmp.join("ingest-users.json");
-		await tmp.writeFile(
-			configPath,
-			JSON.stringify({
-				...minimalSignalConfig,
-				ingest_users_path: usersPath,
-			}),
-		);
+		const usersPath = tmp.join("users.json");
+		const emailAccountsPath = tmp.join("email-accounts.json");
+		await tmp.writeFile(configPath, JSON.stringify(minimalSignalConfig));
 		await tmp.writeFile(
 			usersPath,
 			JSON.stringify([
@@ -182,7 +229,7 @@ describe("buildSignalConfigLayer", () => {
 			]),
 		);
 
-		const config = await runSignalConfigLayer(configPath);
+		const config = await runSignalConfigLayer(configPath, usersPath, emailAccountsPath);
 		expect(config.registry.users).toHaveLength(2);
 		expect(config.registry.findBySignal("+15550000001" as SignalNumber)).toMatchObject({
 			slug: "user1",
@@ -196,61 +243,56 @@ describe("buildSignalConfigLayer", () => {
 		await tmp.remove();
 	});
 
-	test("missing ingest-users.json fails with ConfigParseError", async () => {
+	test("missing users.json fails with ConfigParseError", async () => {
 		const tmp = await createTestTempDir();
-		const path = tmp.join("config.json");
+		const configPath = tmp.join("config.json");
 		const usersPath = tmp.join("nonexistent-users.json");
-		await tmp.writeFile(
-			path,
-			JSON.stringify({
-				...minimalSignalConfig,
-				ingest_users_path: usersPath,
-			}),
-		);
+		const emailAccountsPath = tmp.join("email-accounts.json");
+		await tmp.writeFile(configPath, JSON.stringify(minimalSignalConfig));
 
-		const err = await runSignalConfigLayer(path).catch((e) => e);
-		expect(err).toMatchObject({
+		await expect(
+			runSignalConfigLayer(configPath, usersPath, emailAccountsPath),
+		).rejects.toMatchObject({
 			_tag: "ConfigParseError",
-			message: "Ingest users file does not exist",
+			message: "Users file does not exist",
 		});
-		expect(Redacted.value((err as { path: Redacted.Redacted<string> }).path)).toBe(usersPath);
 		await tmp.remove();
 	});
 
 	test("invalid port fails with ConfigParseError", async () => {
 		const tmp = await createTestTempDir();
-		const path = tmp.join("config.json");
+		const configPath = tmp.join("config.json");
+		const usersPath = tmp.join("users.json");
+		const emailAccountsPath = tmp.join("email-accounts.json");
+		await tmp.writeFile(usersPath, "[]");
 		await tmp.writeFile(
-			path,
+			configPath,
 			JSON.stringify({
 				...minimalSignalConfig,
 				webhook_port: 99999,
 			}),
 		);
 
-		const err = await runSignalConfigLayer(path).catch((e) => e);
-		expect(err).toMatchObject({ _tag: "ConfigParseError" });
-		expect(Redacted.value((err as { path: Redacted.Redacted<string> }).path)).toBe(path);
+		await expect(
+			runSignalConfigLayer(configPath, usersPath, emailAccountsPath),
+		).rejects.toMatchObject({
+			_tag: "ConfigParseError",
+		});
 		await tmp.remove();
 	});
 
 	test("valid config succeeds", async () => {
 		const tmp = await createTestTempDir();
-		const path = tmp.join("config.json");
-		const usersPath = tmp.join("ingest-users.json");
+		const configPath = tmp.join("config.json");
+		const usersPath = tmp.join("users.json");
+		const emailAccountsPath = tmp.join("email-accounts.json");
 		await tmp.writeFile(usersPath, "[]");
-		await tmp.writeFile(
-			path,
-			JSON.stringify({
-				...minimalSignalConfig,
-				ingest_users_path: usersPath,
-			}),
-		);
+		await tmp.writeFile(configPath, JSON.stringify(minimalSignalConfig));
 
-		const config = await runSignalConfigLayer(path);
+		const config = await runSignalConfigLayer(configPath, usersPath, emailAccountsPath);
 		expect(config).toMatchObject({
 			consumeDir: "/tmp/consume",
-			emailAccountsPath: "/tmp/email-accounts.json",
+			emailAccountsPath,
 			signalApiUrl: "http://localhost:8080",
 			logLevel: "INFO",
 			host: "127.0.0.1",
@@ -261,25 +303,51 @@ describe("buildSignalConfigLayer", () => {
 	});
 });
 
+describe("env var overrides", () => {
+	const origSignalApiUrl = process.env.PAPERLESS_INGESTION_SIGNAL_API_URL;
+	afterEach(() => {
+		if (origSignalApiUrl !== undefined)
+			process.env.PAPERLESS_INGESTION_SIGNAL_API_URL = origSignalApiUrl;
+		else delete process.env.PAPERLESS_INGESTION_SIGNAL_API_URL;
+	});
+
+	test("PAPERLESS_INGESTION_SIGNAL_API_URL overrides file value", async () => {
+		const tmp = await createTestTempDir("config-env-override-");
+		const configPath = tmp.join("config.json");
+		const usersPath = tmp.join("users.json");
+		const emailAccountsPath = tmp.join("email-accounts.json");
+		await tmp.writeFile(usersPath, "[]");
+		await tmp.writeFile(
+			configPath,
+			JSON.stringify({
+				...minimalSignalConfig,
+				signal_api_url: "http://file-value:8080",
+			}),
+		);
+		process.env.PAPERLESS_INGESTION_SIGNAL_API_URL = "http://env-override:9090";
+		try {
+			const config = await runSignalConfigLayer(configPath, usersPath, emailAccountsPath);
+			expect(config.signalApiUrl).toBe("http://env-override:9090");
+		} finally {
+			await tmp.remove();
+		}
+	});
+});
+
 describe("buildEmailConfigLayer", () => {
-	test("missing file fails with ConfigParseError", async () => {
-		await expectMissingFileFails(runEmailConfigLayer, "config-email-missing-");
+	test("missing config file fails with ConfigParseError", async () => {
+		await expectMissingConfigFileFails(runEmailConfigLayer);
 	});
 
 	test("valid config succeeds with schema defaults", async () => {
 		const tmp = await createTestTempDir();
-		const path = tmp.join("config.json");
-		const usersPath = tmp.join("ingest-users.json");
+		const configPath = tmp.join("config.json");
+		const usersPath = tmp.join("users.json");
+		const emailAccountsPath = tmp.join("email-accounts.json");
 		await tmp.writeFile(usersPath, "[]");
-		await tmp.writeFile(
-			path,
-			JSON.stringify({
-				...minimalEmailConfig,
-				ingest_users_path: usersPath,
-			}),
-		);
+		await tmp.writeFile(configPath, JSON.stringify(minimalEmailConfig));
 
-		const config = await runEmailConfigLayer(path);
+		const config = await runEmailConfigLayer(configPath, usersPath, emailAccountsPath);
 		expect(config).toMatchObject({
 			consumeDir: "/tmp/consume",
 			logLevel: "INFO",

@@ -10,6 +10,7 @@ RUN npm ci --ignore-scripts
 
 COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
+COPY scripts ./scripts
 COPY config.example.json ./
 RUN npm run build
 
@@ -29,6 +30,6 @@ RUN npm ci --omit=dev --ignore-scripts
 USER app
 
 ENV NODE_ENV=production
-ENV PAPERLESS_INGESTION_CONFIG=/etc/paperless-ingestion-bot/config.json
+# Config: file at default path. Override individual keys with PAPERLESS_INGESTION_* env vars (12-factor).
 
 ENTRYPOINT ["node", "dist/cli.js"]

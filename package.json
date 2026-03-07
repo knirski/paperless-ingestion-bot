@@ -25,7 +25,7 @@
 	"type": "module",
 	"scripts": {
 		"start": "tsx --env-file .env src/cli.ts",
-		"build": "tsc -p tsconfig.build.json",
+		"build": "tsc -p tsconfig.build.json && tsx scripts/generate-schema.ts",
 		"test": "vitest run --coverage --typecheck",
 		"test:integration": "vitest run test/integration --coverage=false",
 		"test:watch": "vitest",

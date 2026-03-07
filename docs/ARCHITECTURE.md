@@ -74,7 +74,7 @@ flowchart LR
 - **`src/domain/`** — Types, errors, MIME utilities. Shared by core and shell.
 - **`src/interfaces/`** — Tagless Final service interfaces. Abstract contracts for I/O.
 - **`src/live/`** — Live interpreters. Implements interfaces for production.
-- **Config** — JSON. Resolution: `--config` > `PAPERLESS_INGESTION_CONFIG` env > default.
+- **Config** — JSON. Resolution: `--config` or default path. 12-factor: only individual values override via env.
 
 **Container flow:** `Result` (core) → `Effect` (shell). Bridge with `Effect.fromResult`.
 
@@ -101,9 +101,26 @@ flowchart LR
 
 JSON config. Schema-based validation in [`src/shell/config.ts`](../src/shell/config.ts). `RawSignalConfigSchema` and `RawEmailConfigSchema` define the shape; shared fields (`consume_dir`, `signal_api_url`, etc.) plus pipeline-specific fields (Signal: `webhook_host`, `webhook_port`; Email: `ollama_url`, `ollama_vision_model`, etc.). Config as service — pipelines `yield* SignalConfig` / `yield* EmailConfig`.
 
-**Paths:** `email_accounts_path` → `email-accounts.json` (accounts, metadata); `ingest_users_path` → `ingest-users.json` (registry: slug, signal_number, consume_subdir). Loaded via [`runtime.ts`](../src/shell/runtime.ts) (`loadAllAccounts`, `saveAllAccounts`).
+**Resolution:** `--config` or `PAPERLESS_INGESTION_CONFIG` or default path. `loadConfiguration(schema, configPath)` loads from file, applies env overrides (12-factor: individual vars like `PAPERLESS_INGESTION_SIGNAL_API_URL` override file values), and decodes with the given schema.
 
-**Consume dir layout:** `consumeDir/{userSlug}/` — each user has a subdir. Email: slug from email; Signal: `consume_subdir` from ingest-users.
+**Ingest users:** Always in separate file. Path from `--users` or `PAPERLESS_INGESTION_USERS_PATH` (default: `/var/lib/paperless-ingestion-bot/users.json`).
+
+**JSON Schema:** Emitted at build time to `dist/config.schema.json` via `scripts/generate-schema.ts`.
+
+**Startup validation (Signal):** Before starting the webhook server, validates `consume_dir` (exists + writable) and `signal_api_url` (reachability). Use `--skip-reachability-check` to bypass the API check.
+
+**Paths:** config.json → `--config` or `PAPERLESS_INGESTION_CONFIG`; users.json → `--users` or `PAPERLESS_INGESTION_USERS_PATH`; email-accounts.json → `--email-accounts` or `PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH`. Loaded via [`runtime.ts`](../src/shell/runtime.ts) (`loadAllAccounts`, `saveAllAccounts`).
+
+**Consume dir layout:** `consumeDir/{userSlug}/` — each user has a subdir. Email: slug from email; Signal: `consume_subdir` from users.json.
+
+## Configuration vs user-generated data
+
+| Kind | Files | Set by | Examples |
+|------|-------|--------|----------|
+| **Configuration** | config.json (infra), users.json (registry) | Admin/deployer | consume_dir, signal_api_url, --users, --email-accounts, webhook_port |
+| **User-generated data** | email-accounts.json | Users via `gmail add` | Gmail accounts, pause/resume/remove state |
+
+Config is split: config.json has infra only; users.json is always a separate file (path from `--users` or env). Env vars override config.json. User-generated data is loaded/saved at runtime; passwords in OS keyring.
 
 ## Gmail vs Generic IMAP (ADT + Match.exhaustive)
 
@@ -122,7 +139,7 @@ Abstract interfaces in `interfaces/`, live interpreters in `live/`:
 - `SignalClient` — Signal API
 - `EmailClient` — IMAP
 - `OllamaClient` — document assessment
-- `CredentialsStore` — credential storage (keytar or file)
+- `CredentialsStore` — credential storage (OS keyring)
 - `SignalConfig`, `EmailConfig` — config layers
 
 Tests provide mocks via `fixtures/config`, `fixtures/credentials`, `fixtures/imap-mock`, `fixtures/signal-mock`; OllamaClient is stubbed inline with `Layer.succeed`.
