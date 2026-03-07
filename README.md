@@ -5,7 +5,9 @@
 [![Coverage](https://codecov.io/gh/knirski/paperless-ingestion-bot/graph/badge.svg)](https://codecov.io/gh/knirski/paperless-ingestion-bot)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/knirski/paperless-ingestion-bot/badge)](https://scorecard.dev/viewer/?uri=github.com/knirski/paperless-ingestion-bot)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-Support-ea4aaa.svg)](https://github.com/sponsors/knirski)
 [![Liberapay](https://img.shields.io/badge/Liberapay-Support-yellow.svg)](https://liberapay.com/knirski/)
+[![CII Best Practices](https://img.shields.io/badge/CII%20Best%20Practices-register-green)](https://bestpractices.coreinfrastructure.org/en/projects/new?project_url=https%3A%2F%2Fgithub.com%2Fknirski%2Fpaperless-ingestion-bot)
 
 Signal and Gmail document ingestion for [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx). Basic implementation for now - core features work.
 
@@ -190,6 +192,9 @@ TypeScript implementation using [Effect](https://effect.website/) and functional
 - [SECURITY.md](SECURITY.md): Vulnerability reporting
 - [SUPPORT.md](SUPPORT.md): Getting help
 - [test/integration/README.md](test/integration/README.md): Integration test guide
+- [docs/adr/](docs/adr/): Architecture Decision Records
+
+**CII Best Practices:** Complete the [self-assessment](https://bestpractices.coreinfrastructure.org/en/projects/new?project_url=https%3A%2F%2Fgithub.com%2Fknirski%2Fpaperless-ingestion-bot) to earn the badge and improve OpenSSF Scorecard.
 
 This project was developed with assistance from [Cursor](https://cursor.com/).
 
