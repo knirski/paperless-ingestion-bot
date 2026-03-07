@@ -1,8 +1,8 @@
 /**
- * CredentialsStore — abstract password storage (keytar).
+ * CredentialsStore — abstract password storage (system keychain).
  *
  * Metadata (email, enabled, removed, excludeLabels) in JSON,
- * passwords in system keychain via keytar.
+ * passwords in system keychain via @napi-rs/keyring.
  */
 
 import type { Option, Redacted } from "effect";

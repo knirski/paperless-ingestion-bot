@@ -82,6 +82,7 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 | Domain errors    | `Schema.TaggedErrorClass` in `domain/`                                     |
 | Optional returns | Use `Option<T>`; avoid `T \| null` or `T \| undefined`                     |
 | Optional params  | `param?: T` or `param: T \| undefined`; accept `null` only at API boundary |
+| Credentials      | OS keyring only; no file fallback. See [SECURITY.md](SECURITY.md#security-considerations). |
 | File names       | kebab-case for multi-word                                                  |
 
 ## Avoid

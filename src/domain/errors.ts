@@ -6,7 +6,8 @@
  *
  * - **ConfigValidationError**: `path` — not all validation failures are file-related; `fix` — only when we have a concrete suggestion.
  * - **SignalApiHttpError**: `message` — HTTP 4xx/5xx or underlying error text.
- * - **FileSystemError**: `fix` — only keytar and similar cases have a known fix.
+ * - **FileSystemError**: `fix` — only when we have a concrete suggestion.
+ * - **KeyringError**: `fix` — always present (libsecret hint).
  * - **ConfigParseError**: `fix` — only when we have a hint (e.g. ingest-users template).
  */
 
@@ -61,6 +62,13 @@ export class FileSystemError extends Schema.TaggedErrorClass<FileSystemError>()(
 	fix: Schema.optional(Schema.String),
 }) {}
 
+/** System keychain errors (unavailable, init failed, get/set/delete failed). */
+export class KeyringError extends Schema.TaggedErrorClass<KeyringError>()("KeyringError", {
+	message: Schema.String,
+	operation: Schema.optional(Schema.String),
+	fix: Schema.String,
+}) {}
+
 /** Wrap raw FS errors as FileSystemError. Use with Effect.mapError. */
 export function wrapFs(path: string, op: string, fix?: string) {
 	return (e: unknown) =>
@@ -113,7 +121,8 @@ export type DomainError =
 	| OllamaRequestError
 	| ImapConnectionError
 	| ConfigParseError
-	| FileSystemError;
+	| FileSystemError
+	| KeyringError;
 
 function formatWithFix(base: string, fix?: string): string {
 	return fix ? `${base}. Fix: ${fix}` : base;
@@ -132,6 +141,12 @@ export const formatDomainError: (err: DomainError) => string = Match.type<Domain
 	),
 	Match.tag("FileSystemError", ({ path, operation, message, fix }) =>
 		formatWithFix(`File system error: ${operation} at ${path} (${message})`, fix),
+	),
+	Match.tag("KeyringError", ({ message, operation, fix }) =>
+		formatWithFix(
+			operation ? `Keyring error (${operation}): ${message}` : `Keyring error: ${message}`,
+			fix,
+		),
 	),
 	Match.tag(
 		"AttachmentTooLargeError",
