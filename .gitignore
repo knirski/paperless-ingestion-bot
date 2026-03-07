@@ -6,5 +6,6 @@ dist/
 .DS_Store
 coverage/
 test-report.junit.xml
+sbom.json
 result
 .pr-body.md
