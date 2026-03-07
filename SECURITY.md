@@ -35,6 +35,6 @@ This project handles:
 
 - **Credentials** — Gmail app passwords, Signal API access. Stored via keytar (system keychain) or file-based fallback. Run as a dedicated user with minimal permissions.
 - **Document ingestion** — Files are written to a consume directory. Ensure the consume path is not world-writable.
-- **Webhook** — The Signal webhook receives HTTP requests. Run behind a reverse proxy or firewall; do not expose directly to the internet without authentication.
+- **Webhook** — Token-bucket rate limiting (120/min); excess returns 429. Token-bucket (vs fixed-window) avoids boundary bursts (e.g. 120 at 0:59 + 120 at 1:01). Same-host deployment recommended: bind to `127.0.0.1`. For multi-instance deployments, Effect RateLimiter supports `layerStoreRedis`. See [ADR 0002](docs/adr/0002-signal-webhook-security.md), [ADR 0003](docs/adr/0003-rate-limiting.md).
 
 See [README.md](README.md#security) for configuration guidance.

@@ -12,8 +12,46 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'src/**'
+              - 'test/**'
+              - '*.ts'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'tsconfig*.json'
+              - 'vitest.config.ts'
+              - 'vitest.setup.ts'
+              - 'knip.json'
+              - 'biome.json'
+              - '.editorconfig'
+              - 'flake.nix'
+              - 'flake.lock'
+              - 'default.nix'
+              - 'shell.nix'
+              - 'config.example.json'
+              - 'scripts/**'
+              - '.github/workflows/**'
+              - '.husky/**'
+              - '.nvmrc'
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'release-please-config.json'
+
   dependency-review:
-    if: github.event_name == 'pull_request'
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -23,33 +61,43 @@ jobs:
       - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
 
   check:
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
+      - name: Docs-only (skip full CI)
+        if: needs.changes.outputs.code != 'true'
+        run: echo "Documentation-only change, skipping full CI"
+
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        if: needs.changes.outputs.code == 'true'
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
 
       - run: npm ci
+        if: needs.changes.outputs.code == 'true'
 
       - name: Generate SBOM
+        if: needs.changes.outputs.code == 'true'
         run: npx @cyclonedx/cyclonedx-npm@4.2.0 --output-file sbom.json
 
       - name: Upload SBOM
+        if: needs.changes.outputs.code == 'true'
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: sbom
           path: sbom.json
 
       - name: Audit dependencies
+        if: needs.changes.outputs.code == 'true'
         run: npm audit --audit-level=high
 
       - name: Validate commit messages
-        if: github.actor != 'dependabot[bot]'
+        if: needs.changes.outputs.code == 'true' && github.actor != 'dependabot[bot]'
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             npx commitlint --from=origin/main --to=HEAD
@@ -63,8 +111,10 @@ jobs:
           fi
 
       - run: npm run check
+        if: needs.changes.outputs.code == 'true'
 
       - name: Upload coverage to Codecov
+        if: needs.changes.outputs.code == 'true'
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -72,14 +122,16 @@ jobs:
           fail_ci_if_error: false
 
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1.2.1
+        if: needs.changes.outputs.code == 'true'
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./test-report.junit.xml
+          report_type: test_results
 
   nix:
-    if: github.event_name == 'push'
+    needs: changes
+    if: github.event_name == 'push' && needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4

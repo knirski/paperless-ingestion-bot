@@ -114,55 +114,50 @@ const alwaysAcceptOllamaLayer = Layer.succeed(OllamaClient)(
 );
 
 describe.skipIf(!hasGmailCreds)("gmail live", () => {
-	it(
-		"runs full pipeline with mocked writes, logs confidence",
-		{
-			timeout: 30_000,
-		},
-		async () => {
-			const email = process.env.GMAIL_TEST_EMAIL;
-			const appPassword = process.env.GMAIL_APP_PASSWORD;
-			if (!email || !appPassword)
-				throw new Error("GMAIL_TEST_EMAIL and GMAIL_APP_PASSWORD required");
+	it("runs full pipeline with mocked writes, logs confidence", {
+		timeout: 30_000,
+	}, async () => {
+		const email = process.env.GMAIL_TEST_EMAIL;
+		const appPassword = process.env.GMAIL_APP_PASSWORD;
+		if (!email || !appPassword) throw new Error("GMAIL_TEST_EMAIL and GMAIL_APP_PASSWORD required");
 
-			const tmp = await createTestTempDir("gmail-live-");
-			const accountsPath = tmp.join("email-accounts.json");
-			await tmp.writeFile(
-				accountsPath,
-				JSON.stringify([
-					{
-						email,
-						enabled: true,
-						removed: false,
-						exclude_labels: [],
-						added_by: "user1",
-						details: { type: "gmail" },
-					},
-				]),
-			);
+		const tmp = await createTestTempDir("gmail-live-");
+		const accountsPath = tmp.join("email-accounts.json");
+		await tmp.writeFile(
+			accountsPath,
+			JSON.stringify([
+				{
+					email,
+					enabled: true,
+					removed: false,
+					exclude_labels: [],
+					added_by: "user1",
+					details: { type: "gmail" },
+				},
+			]),
+		);
 
-			const layer = Layer.mergeAll(
-				TestBaseLayer,
-				Http.FetchHttpClient.layer,
-				emailConfigTest({
-					consumeDir: tmp.path,
-					emailAccountsPath: accountsPath,
-					markProcessedLabel: "paperless",
-				}),
-				credentialsStoreTest({ [email]: appPassword }),
-				ReadOnlyFileSystemLayer,
-				ReadOnlyEmailClientLayer,
-				alwaysAcceptOllamaLayer,
-			);
+		const layer = Layer.mergeAll(
+			TestBaseLayer,
+			Http.FetchHttpClient.layer,
+			emailConfigTest({
+				consumeDir: tmp.path,
+				emailAccountsPath: accountsPath,
+				markProcessedLabel: "paperless",
+			}),
+			credentialsStoreTest({ [email]: appPassword }),
+			ReadOnlyFileSystemLayer,
+			ReadOnlyEmailClientLayer,
+			alwaysAcceptOllamaLayer,
+		);
 
-			const program = runEmailPipeline().pipe(Effect.provide(layer));
-			const result = await Effect.runPromise(program as Effect.Effect<{ saved: number }>);
+		const program = runEmailPipeline().pipe(Effect.provide(layer));
+		const result = await Effect.runPromise(program as Effect.Effect<{ saved: number }>);
 
-			expect(result).toHaveProperty("saved");
-			expect(typeof result.saved).toBe("number");
-			expect(result.saved).toBeGreaterThanOrEqual(0);
+		expect(result).toHaveProperty("saved");
+		expect(typeof result.saved).toBe("number");
+		expect(result.saved).toBeGreaterThanOrEqual(0);
 
-			await tmp.remove();
-		},
-	);
+		await tmp.remove();
+	});
 });

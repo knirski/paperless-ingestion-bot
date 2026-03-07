@@ -30,9 +30,9 @@
 		"test:integration": "vitest run test/integration --coverage=false",
 		"test:watch": "vitest",
 		"check": "npm run test && npm run lint && npm run knip && npm run typecheck",
-		"lint": "oxlint && oxfmt --check",
-		"lint:fix": "oxlint --fix && oxfmt --write",
-		"format": "oxfmt --write",
+		"lint": "biome check .",
+		"lint:fix": "biome check . --write --unsafe",
+		"format": "biome format --write .",
 		"knip": "knip",
 		"typecheck": "tsc --noEmit",
 		"prepare": "husky",
@@ -52,6 +52,7 @@
 		"mime": "^4.1.0"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "^2.4.6",
 		"@commitlint/cli": "^19.6.0",
 		"@commitlint/config-conventional": "^19.6.0",
 		"@effect/vitest": "4.0.0-beta.28",
@@ -61,17 +62,14 @@
 		"husky": "^9.1.7",
 		"knip": "^5.85.0",
 		"lint-staged": "^15.4.3",
-		"oxfmt": "^0.36.0",
-		"oxlint": "^1.51.0",
 		"publint": "^0.3.18",
 		"tsx": "^4.21.0",
 		"typescript": "^5.7.0",
 		"vitest": "^4.0.18"
 	},
 	"lint-staged": {
-		"*.ts": [
-			"oxlint --fix",
-			"oxfmt --write"
+		"*.{ts,tsx,mjs}": [
+			"npx biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true"
 		]
 	},
 	"commitlint": {

@@ -107,12 +107,15 @@ describe("core", () => {
 			},
 			{ id: "x", custom: "my-file", ct: "image/png", ft: undefined, expected: "my-file.png" },
 			{ id: "x", custom: "doc", ct: undefined, ft: { ext: "pdf" }, expected: "doc.pdf" },
-		])(
-			"buildSignalAttachmentBaseFilename($id, $custom, $ct, $ft) -> $expected",
-			({ id, custom, ct, ft, expected }) => {
-				expect(buildSignalAttachmentBaseFilename(id, custom, ct, ft)).toBe(expected);
-			},
-		);
+		])("buildSignalAttachmentBaseFilename($id, $custom, $ct, $ft) -> $expected", ({
+			id,
+			custom,
+			ct,
+			ft,
+			expected,
+		}) => {
+			expect(buildSignalAttachmentBaseFilename(id, custom, ct, ft)).toBe(expected);
+		});
 
 		test("safeFilename truncates to maxLen", () => {
 			expect(safeFilename("a".repeat(300))).toHaveLength(200);
@@ -263,18 +266,20 @@ describe("core", () => {
 			{ defaults: ["SPAM"], account: [], processed: "", expected: ["SPAM"] },
 			{ defaults: [], account: [], processed: "", expected: [] },
 			{ defaults: ["a"], account: [], processed: "x", expected: ["a", "x"] },
-		])(
-			"mergeExcludeLabels($defaults, $account, $processed) -> $expected",
-			({ defaults, account, processed, expected }) => {
-				expect(
-					mergeExcludeLabels(
-						defaults as EmailLabel[],
-						account as EmailLabel[],
-						processed as EmailLabel,
-					),
-				).toEqual(expected);
-			},
-		);
+		])("mergeExcludeLabels($defaults, $account, $processed) -> $expected", ({
+			defaults,
+			account,
+			processed,
+			expected,
+		}) => {
+			expect(
+				mergeExcludeLabels(
+					defaults as EmailLabel[],
+					account as EmailLabel[],
+					processed as EmailLabel,
+				),
+			).toEqual(expected);
+		});
 
 		test("mergeExcludeLabels: output is deduplicated (PBT)", () => {
 			fc.assert(
@@ -422,12 +427,14 @@ describe("core", () => {
 			{ stem: "doc", suffix: ".pdf", idx: 1, expected: "doc_1.pdf" },
 			{ stem: "file", suffix: "", idx: 2, expected: "file_2" },
 			{ stem: "a", suffix: ".x", idx: 0, expected: "a_0.x" },
-		])(
-			"collisionCandidateFilename($stem, $suffix, $idx) -> $expected",
-			({ stem, suffix, idx, expected }) => {
-				expect(collisionCandidateFilename(stem, suffix, idx)).toBe(expected);
-			},
-		);
+		])("collisionCandidateFilename($stem, $suffix, $idx) -> $expected", ({
+			stem,
+			suffix,
+			idx,
+			expected,
+		}) => {
+			expect(collisionCandidateFilename(stem, suffix, idx)).toBe(expected);
+		});
 
 		test("collisionCandidateFilename: output format stem_idx suffix (PBT)", () => {
 			fc.assert(
@@ -454,12 +461,14 @@ describe("core", () => {
 			{ filename: undefined, contentType: "image/png", fallback: 3, expected: "attachment_3.png" },
 			{ filename: "doc", contentType: undefined, fallback: 1, expected: "doc" },
 			{ filename: "x.pdf", contentType: "image/jpeg", fallback: 0, expected: "x.jpg" },
-		])(
-			"attachmentBaseFilename($filename, $contentType, $fallback) -> $expected",
-			({ filename, contentType, fallback, expected }) => {
-				expect(attachmentBaseFilename(filename, contentType, fallback)).toBe(expected);
-			},
-		);
+		])("attachmentBaseFilename($filename, $contentType, $fallback) -> $expected", ({
+			filename,
+			contentType,
+			fallback,
+			expected,
+		}) => {
+			expect(attachmentBaseFilename(filename, contentType, fallback)).toBe(expected);
+		});
 
 		test("attachmentBaseFilename: output has no invalid filename chars (PBT)", () => {
 			fc.assert(
