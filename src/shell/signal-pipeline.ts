@@ -5,9 +5,20 @@
  */
 
 import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
-import { Effect, FileSystem, Layer, Option, Path, Redacted, Result, Schema } from "effect";
+import {
+	Duration,
+	Effect,
+	FileSystem,
+	Layer,
+	Option,
+	Path,
+	Redacted,
+	Result,
+	Schema,
+} from "effect";
 import * as Arr from "effect/Array";
 import * as Http from "effect/unstable/http";
+import { RateLimiter } from "effect/unstable/persistence";
 import { fileTypeFromBuffer } from "file-type";
 // Use "http" (not node:http) per project preference to avoid node: imports
 // biome-ignore lint/style/useNodejsImportProtocol: intentional - Effect-native style
@@ -141,6 +152,24 @@ const FILE_TYPES_MSG =
 
 /** Webhook handler for POST /webhook. Used by HttpRouter. */
 const webhookHandler = Effect.fn("webhookHandler")(function* () {
+	const limiter = yield* RateLimiter.RateLimiter;
+	const rateLimitResult = yield* limiter
+		.consume({
+			key: "webhook",
+			limit: WEBHOOK_RATE_LIMIT_PER_MINUTE,
+			window: Duration.minutes(1),
+			algorithm: "token-bucket",
+			onExceeded: "fail",
+		})
+		.pipe(
+			Effect.catchIf(
+				(e): e is RateLimiter.RateLimiterError => e instanceof RateLimiter.RateLimiterError,
+				() => Effect.succeed(null),
+			),
+		);
+	if (rateLimitResult === null) {
+		return Http.HttpServerResponse.jsonUnsafe({ error: "Too Many Requests" }, { status: 429 });
+	}
 	const req = yield* Http.HttpServerRequest.HttpServerRequest;
 	const body = yield* req.json;
 	const payload = decodeWebhookPayload(body);
@@ -176,12 +205,18 @@ const ensureUserConsumeDirs = Effect.fn("ensureUserConsumeDirs")(function* () {
 
 const MAX_BODY_SIZE = FileSystem.Size(50 * 1024 * 1024);
 
+/** Max webhook requests per minute (fixed window). Protects against runaway senders. */
+const WEBHOOK_RATE_LIMIT_PER_MINUTE = 120;
+
+const WebhookRateLimiterLayer = RateLimiter.layer.pipe(Layer.provide(RateLimiter.layerStoreMemory));
+
 /** Build signal server layer: HttpRouter.serve + NodeHttpServer.layer. Use with Layer.launch. */
 export function buildSignalServerLayer(
 	appLayer: SignalAppLayer,
 ): Layer.Layer<never, ConfigValidationError | Layer.Error<SignalAppLayer>, never> {
 	const appWithMaxBody = appLayer.pipe(
 		Layer.provideMerge(Layer.succeed(Http.HttpIncomingMessage.MaxBodySize)(MAX_BODY_SIZE)),
+		Layer.provideMerge(WebhookRateLimiterLayer),
 	);
 
 	const webhookRoutes = Http.HttpRouter.use(
