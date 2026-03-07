@@ -17,7 +17,7 @@ When editing this project, apply these rules. Workflow: apply rules → make cha
 | `npm run check`            | Full verification (test, lint, knip, typecheck). Run before committing.                                                            |
 | `npm test`                 | Unit tests with coverage                                                                                                           |
 | `npm run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
-| `npm run lint`             | Lint (oxlint, oxfmt)                                                                                                               |
+| `npm run lint`             | Lint (Biome)                                                                                                                       |
 | `npm run lint:fix`         | Lint and fix                                                                                                                       |
 | `npm run typecheck`        | TypeScript check                                                                                                                   |
 | `npm run knip`             | Unused code detection                                                                                                              |
@@ -60,7 +60,7 @@ When editing this project, apply these rules. Workflow: apply rules → make cha
 | Rule             | Requirement                                                                |
 | ---------------- | -------------------------------------------------------------------------- |
 | Effect first     | Use `effect` and `@effect/*`                                               |
-| No `any`         | Use `unknown`; oxlint enforces `noExplicitAny`                             |
+| No `any`         | Use `unknown`; Biome enforces `noExplicitAny`                             |
 | No `!`           | No non-null assertions                                                     |
 | No `enum`        | Use string literal unions                                                  |
 | No `console.log` | Use `Effect.log`                                                           |
