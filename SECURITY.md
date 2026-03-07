@@ -38,3 +38,16 @@ This project handles:
 - **Webhook** — Token-bucket rate limiting (120/min); excess returns 429. Token-bucket (vs fixed-window) avoids boundary bursts (e.g. 120 at 0:59 + 120 at 1:01). Same-host deployment recommended: bind to `127.0.0.1`. For multi-instance deployments, Effect RateLimiter supports `layerStoreRedis`. See [ADR 0002](docs/adr/0002-signal-webhook-security.md), [ADR 0003](docs/adr/0003-rate-limiting.md).
 
 See [README.md](README.md#security) for configuration guidance.
+
+**Redacted pattern — use Effect `Redacted` for all PII and secrets:**
+
+| Use case                                    | How                                                         | When to unwrap                                                        |
+| ------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------- |
+| **Secrets** (passwords, API keys)           | `Redacted.make(value)` — no label                           | Only at final use site (IMAP auth, `setPassword`). Never for logging. |
+| **Error PII** (paths, emails, phones, URLs) | `redactedForLog(value, redactFn)` — label = log-safe string | Never unwrap. In formatters use `r.label ?? "<redacted>"`.            |
+
+Redact helpers (`redactPath`, `redactEmail`, `redactPhone`, `redactUrl`) produce the label; they mask the value (e.g. `***@example.com`). Error creation: `redactedForLog(path, redactPath)`. See `src/domain/utils.ts`, `src/domain/errors.ts`, [ADR 0001](docs/adr/0001-delegate-credentials-to-os-keyring.md).
+
+**CII Best Practices badge:** The project aims to pursue the [OpenSSF Best Practices badge](https://bestpractices.coreinfrastructure.org/) (formerly CII). Self-certify at [bestpractices.coreinfrastructure.org](https://bestpractices.coreinfrastructure.org/en/projects/new). Criteria cover security, quality, and community practices. The README links to the registration form.
+
+**Maintainers:** Keep GitHub secret scanning and push protection enabled in **Settings → Security → Code security and analysis**. Do not disable.

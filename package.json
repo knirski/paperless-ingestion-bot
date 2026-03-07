@@ -29,7 +29,7 @@
 		"test": "vitest run --coverage --typecheck",
 		"test:integration": "vitest run test/integration --coverage=false",
 		"test:watch": "vitest",
-		"check": "npm run test && npm run lint && npm run knip && npm run typecheck",
+		"check": "npm audit --audit-level=high && npm run test && npm run lint && npm run knip && npm run typecheck",
 		"lint": "biome check .",
 		"lint:fix": "biome check . --write --unsafe",
 		"format": "biome format --write .",
@@ -47,6 +47,7 @@
 		"@js-temporal/polyfill": "^0.5.1",
 		"@napi-rs/keyring": "1.2.0",
 		"effect": "4.0.0-beta.28",
+		"keytar": "^7.9.0",
 		"file-type": "^21.3.0",
 		"imapflow": "^1.2.12",
 		"mime": "^4.1.0"
