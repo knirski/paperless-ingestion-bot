@@ -93,7 +93,7 @@ Create small, focused commits. If changes span many files or concerns, propose s
 
 ## Pull Requests
 
-When creating a PR (e.g. with GitHub MCP or `gh pr create`), **follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md)**:
+When creating a PR (e.g. with GitHub MCP or `gh pr create`), **follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md)**. After creating the PR, **checkout `main` and pull** so the workspace is left on the default branch.
 
 1. **Description** — What and why (context, not just title restatement).
 2. **Type of change** — Check exactly one.
@@ -104,6 +104,8 @@ When creating a PR (e.g. with GitHub MCP or `gh pr create`), **follow the [PR te
 7. **Breaking changes** — Only when applicable; describe impact and migration.
 
 Use `gh pr create --body-file <file>` with a file that matches the template structure.
+
+**PR workflow:** When adding commits to an existing PR, batch all changes before pushing, or verify the PR is still open before each push. Avoid merging a PR while additional commits are being prepared—merge only after all intended changes are pushed and CI has run. When done with PR creating, checkout main and pull.
 
 ## Verification
 
@@ -126,6 +128,22 @@ Credentials and config paths are sensitive; do not log or expose them.
 
 - [docs/EFFECT_UNSTABLE_PLAN.md](docs/EFFECT_UNSTABLE_PLAN.md) — Effect unstable adoption (observability, AI, persistence, process).
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Entry points, main flows, Gmail vs Generic IMAP (ADT + Match.exhaustive), error model.
+- [docs/adr/](docs/adr/) — Architecture Decision Records. See ADR workflow below.
+
+## ADR Workflow
+
+**When creating or updating an ADR:**
+
+1. Add or update the ADR in `docs/adr/` using the [template](docs/adr/adr-template.md).
+2. Update this AGENTS.md if the decision affects agent instructions: add to Planning, "Where to Put X", or Key Rules as appropriate.
+3. Update [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) if the decision changes high-level structure or flows.
+
+**When making a significant architectural change (or planning one):**
+
+1. Create or update an ADR in `docs/adr/` documenting the decision, context, alternatives, and consequences.
+2. Update AGENTS.md and ARCHITECTURE.md as above.
+
+**Significant** means: affects multiple modules, is hard to reverse, changes design principles, or introduces new patterns. Minor refactors or dependency bumps do not require ADRs.
 
 ## Project Structure
 
