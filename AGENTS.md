@@ -103,7 +103,7 @@ When creating a PR (e.g. with GitHub MCP or `gh pr create`), **follow the [PR te
 6. **Related issues** — Optional; use "Closes #123" to auto-close.
 7. **Breaking changes** — Only when applicable; describe impact and migration.
 
-Use `gh pr create --body-file <file>` with a file that matches the template structure.
+When using `gh pr create` as fallback, write the body to a temp path (e.g. `/tmp/pr-body.md` or `mktemp`) and pass it to `--body-file`; do not create PR body files in the workspace.
 
 **PR workflow:** When adding commits to an existing PR, batch all changes before pushing, or verify the PR is still open before each push. Avoid merging a PR while additional commits are being prepared—merge only after all intended changes are pushed and CI has run. When done with PR creating, checkout main and pull.
 
