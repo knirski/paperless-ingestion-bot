@@ -39,6 +39,13 @@ Examples:
 2. Ensure your commits follow Conventional Commits (the PR template includes a checklist).
 3. Update documentation if your changes affect user-facing behavior.
 
+## When Unsure About Approach
+
+If you’re unsure how to implement something or there are several valid options:
+
+1. **Check official documentation first** — Use the primary source for the tool or library.
+2. **Check popular public repos** — See how active, well-maintained projects (e.g. Next.js, React) handle the same problem.
+
 ## Good First Issues
 
 Issues labeled `good first issue` are suitable for newcomers: they have clear scope, acceptance criteria, and links to relevant code. If you're new to the project, start there.
