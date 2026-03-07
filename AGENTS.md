@@ -126,6 +126,22 @@ Credentials and config paths are sensitive; do not log or expose them.
 
 - [docs/EFFECT_UNSTABLE_PLAN.md](docs/EFFECT_UNSTABLE_PLAN.md) — Effect unstable adoption (observability, AI, persistence, process).
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Entry points, main flows, Gmail vs Generic IMAP (ADT + Match.exhaustive), error model.
+- [docs/adr/](docs/adr/) — Architecture Decision Records. See ADR workflow below.
+
+## ADR Workflow
+
+**When creating or updating an ADR:**
+
+1. Add or update the ADR in `docs/adr/` using the [template](docs/adr/adr-template.md).
+2. Update this AGENTS.md if the decision affects agent instructions: add to Planning, "Where to Put X", or Key Rules as appropriate.
+3. Update [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) if the decision changes high-level structure or flows.
+
+**When making a significant architectural change (or planning one):**
+
+1. Create or update an ADR in `docs/adr/` documenting the decision, context, alternatives, and consequences.
+2. Update AGENTS.md and ARCHITECTURE.md as above.
+
+**Significant** means: affects multiple modules, is hard to reverse, changes design principles, or introduces new patterns. Minor refactors or dependency bumps do not require ADRs.
 
 ## Project Structure
 

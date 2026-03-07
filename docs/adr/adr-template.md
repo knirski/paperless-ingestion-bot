@@ -1,34 +1,22 @@
-# ADR-NNNN: Title of the decision
+# {short title, representative of solved problem and found solution}
 
-**Status:** Proposed | Accepted | Deprecated | Superseded by [ADR-XXXX](xxxx-title.md)
+## Context and Problem Statement
 
-**Date:** YYYY-MM-DD
+{Describe the context and problem statement, e.g., in free form using two to three sentences or in the form of an illustrative story. You may want to articulate the problem in form of a question and add links to collaboration boards or issue management systems.}
 
-**Deciders:** (list of people involved)
+## Considered Options
 
-## Context
+* {title of option 1}
+* {title of option 2}
+* {title of option 3}
+* …
 
-What is the issue that we're seeing that is motivating this decision or change?
+## Decision Outcome
 
-## Decision
+Chosen option: "{title of option 1}", because {justification. e.g., only option, which meets k.o. criterion decision driver | which resolves force {force} | … | comes out best (see below)}.
 
-What is the change that we're proposing and/or doing?
+### Consequences
 
-## Consequences
-
-### Positive
-
--
-
-### Negative
-
--
-
-### Neutral
-
--
-
-## Alternatives Considered
-
-1. **Alternative A:** Description. Why not chosen.
-2. **Alternative B:** Description. Why not chosen.
+* Good, because {positive consequence, e.g., improvement of one or more desired qualities, …}
+* Bad, because {negative consequence, e.g., compromising one or more desired qualities, …}
+* …
