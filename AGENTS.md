@@ -57,18 +57,19 @@ When editing this project, apply these rules. Workflow: apply rules → make cha
 
 ## Key Rules
 
-| Rule             | Requirement                                                                |
-| ---------------- | -------------------------------------------------------------------------- |
-| Effect first     | Use `effect` and `@effect/*`                                               |
-| No `any`         | Use `unknown`; oxlint enforces `noExplicitAny`                             |
-| No `!`           | No non-null assertions                                                     |
-| No `enum`        | Use string literal unions                                                  |
-| No `console.log` | Use `Effect.log`                                                           |
-| Core pure        | No Effect, no I/O in `src/core/`                                           |
-| Domain errors    | `Schema.TaggedErrorClass` in `domain/`                                     |
-| Optional returns | Use `Option<T>`; avoid `T \| null` or `T \| undefined`                     |
-| Optional params  | `param?: T` or `param: T \| undefined`; accept `null` only at API boundary |
-| File names       | kebab-case for multi-word                                                  |
+| Rule             | Requirement                                                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Effect first     | Use `effect` and `@effect/*`                                                                                                    |
+| No `any`         | Use `unknown`; oxlint enforces `noExplicitAny`                                                                                  |
+| No `!`           | No non-null assertions                                                                                                          |
+| No `enum`        | Use string literal unions                                                                                                       |
+| No `console.log` | Use `Effect.log`                                                                                                                |
+| Credentials      | OS keyring only; no file fallback. Use `Redacted` for all PII/secrets (see [SECURITY.md](SECURITY.md#security-considerations)). |
+| Core pure        | No Effect, no I/O in `src/core/`                                                                                                |
+| Domain errors    | `Schema.TaggedErrorClass` in `domain/`                                                                                          |
+| Optional returns | Use `Option<T>`; avoid `T \| null` or `T \| undefined`                                                                          |
+| Optional params  | `param?: T` or `param: T \| undefined`; accept `null` only at API boundary                                                      |
+| File names       | kebab-case for multi-word                                                                                                       |
 
 ## Avoid
 
@@ -76,6 +77,8 @@ When editing this project, apply these rules. Workflow: apply rules → make cha
 - `any`, `as` type assertions — use `unknown`, Schema, or narrowing
 - Forgetting `Effect.fromResult` when calling core from shell
 - `console.log` — use `Effect.log`
+- Logging secrets — never call `Redacted.value()` for logging; keep passwords wrapped until use site
+- PII in errors — use `redactedForLog(value, redactFn)`; in formatters use `r.label ?? "<redacted>"`
 
 ## Commits
 

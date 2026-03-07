@@ -122,7 +122,7 @@ Abstract interfaces in `interfaces/`, live interpreters in `live/`:
 - `SignalClient` — Signal API
 - `EmailClient` — IMAP
 - `OllamaClient` — document assessment
-- `CredentialsStore` — credential storage (keytar or file)
+- `CredentialsStore` — credential storage (system keychain only)
 - `SignalConfig`, `EmailConfig` — config layers
 
 Tests provide mocks via `fixtures/config`, `fixtures/credentials`, `fixtures/imap-mock`, `fixtures/signal-mock`; OllamaClient is stubbed inline with `Layer.succeed`.

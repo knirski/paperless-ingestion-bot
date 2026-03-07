@@ -135,15 +135,15 @@ Plan for integrating `effect/unstable/*` modules into paperless-ingestion-bot. O
 
 ### 3.1 KeyValueStore for Credentials
 
-**Current:** `CredentialsStore` — keytar (system keychain) + file fallback. Interface: `getPassword`, `setPassword`, `deletePassword`.
+**Current:** `CredentialsStore` — @napi-rs/keyring (system keychain). Interface: `getPassword`, `setPassword`, `deletePassword`. See ADR-0001.
 
 **Options:**
 
 - **A)** Implement `CredentialsStore` on top of `KeyValueStore` — use `FileSystemKeyValueStore` or custom backend
 - **B)** Use `KeyValueStore` only for non-secret cache (e.g. last crawl cursor, rate-limit state)
-- **C)** Keep keytar for secrets; use `KeyValueStore` for metadata/cache
+- **C)** Keep keyring for secrets; use `KeyValueStore` for metadata/cache
 
-**Recommendation:** Start with **B** or **C**. Keytar is battle-tested for secrets; `KeyValueStore` fits cache/metadata.
+**Recommendation:** Start with **B** or **C**. CredentialsStore uses OS keyring only (ADR-0001); `KeyValueStore` fits cache/metadata.
 
 ---
 
@@ -187,7 +187,7 @@ Plan for integrating `effect/unstable/*` modules into paperless-ingestion-bot. O
 | 3a    | Add `KeyValueStore` (FileSystemKeyValueStore) to layers    |
 | 3b    | Optional: Crawl state (last UID) in KeyValueStore          |
 | 3c    | Optional: RateLimiter for credential failure notifications |
-| 3d    | Defer: CredentialsStore on KeyValueStore (keep keytar)     |
+| 3d    | Defer: CredentialsStore on KeyValueStore (keep keyring)    |
 
 ---
 

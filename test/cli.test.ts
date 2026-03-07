@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { ConfigValidationError, formatErrorForStructuredLog } from "../src/domain/errors.js";
+import { redactPath, redactedForLog } from "../src/domain/utils.js";
 
 describe("formatErrorForStructuredLog (used by CLI reporter)", () => {
 	test.each([
@@ -7,7 +8,7 @@ describe("formatErrorForStructuredLog (used by CLI reporter)", () => {
 			desc: "DomainError uses formatDomainError",
 			original: new ConfigValidationError({
 				message: "Bad config",
-				path: "/etc/config.json",
+				path: redactedForLog("/etc/config.json", redactPath),
 				fix: "Fix it",
 			}),
 			expectedContain: "Bad config",

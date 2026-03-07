@@ -2,7 +2,7 @@
  * Runtime I/O — JSON writes, credentials load/save.
  * Shell-only; used by pipelines.
  *
- * Metadata in JSON, passwords in keytar (system keychain).
+ * Metadata in JSON, passwords in system keychain.
  */
 
 import { Effect, FileSystem, Option, Path, Redacted, Schema } from "effect";
@@ -18,7 +18,7 @@ import {
 } from "../domain/account.js";
 import { ConfigParseError } from "../domain/errors.js";
 import { AccountEmailSchema, type EmailLabel } from "../domain/types.js";
-import { unknownToMessage } from "../domain/utils.js";
+import { redactPath, redactedForLog, unknownToMessage } from "../domain/utils.js";
 import { CredentialsStore } from "../live/credentials-store.js";
 import { mapFsError } from "./fs-utils.js";
 
@@ -63,7 +63,7 @@ export const accountFromMetadata = Effect.fn("accountFromMetadata")(function* (
 	if (!isImapDetails(obj.details)) {
 		return yield* Effect.fail(
 			new ConfigParseError({
-				path: credentialsPath,
+				path: redactedForLog(credentialsPath, redactPath),
 				message: "Unsupported connection type",
 				fix: "Only gmail and generic_imap are supported.",
 			}),
@@ -73,7 +73,7 @@ export const accountFromMetadata = Effect.fn("accountFromMetadata")(function* (
 		Effect.mapError(
 			(e) =>
 				new ConfigParseError({
-					path: credentialsPath,
+					path: redactedForLog(credentialsPath, redactPath),
 					message: `Invalid email in credentials: ${unknownToMessage(e)}`,
 					fix: `Each account must have valid 'email' field. ${DEFAULT_EMAIL_ACCOUNTS_FIX}`,
 				}),
@@ -118,7 +118,7 @@ export const loadAllAccounts = Effect.fn("loadAllAccounts")(function* (
 				Effect.mapError(
 					(e) =>
 						new ConfigParseError({
-							path: credentialsPath,
+							path: redactedForLog(credentialsPath, redactPath),
 							message: `Invalid JSON or credentials schema: ${unknownToMessage(e)}`,
 							fix,
 						}),
@@ -131,7 +131,7 @@ export const loadAllAccounts = Effect.fn("loadAllAccounts")(function* (
 						Effect.mapError(
 							(e) =>
 								new ConfigParseError({
-									path: credentialsPath,
+									path: redactedForLog(credentialsPath, redactPath),
 									message: `Invalid email in credentials: ${unknownToMessage(e)}`,
 									fix: `Each account must have valid 'email' field. ${DEFAULT_EMAIL_ACCOUNTS_FIX}`,
 								}),

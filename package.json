@@ -45,10 +45,10 @@
 		"@effect/platform-node": "4.0.0-beta.28",
 		"@effect/platform-node-shared": "4.0.0-beta.28",
 		"@js-temporal/polyfill": "^0.5.1",
+		"@napi-rs/keyring": "1.2.0",
 		"effect": "4.0.0-beta.28",
 		"file-type": "^21.3.0",
 		"imapflow": "^1.2.12",
-		"keytar": "^7.9.0",
 		"mime": "^4.1.0"
 	},
 	"devDependencies": {

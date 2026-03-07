@@ -6,18 +6,19 @@
  *
  * - **ConfigValidationError**: `path` — not all validation failures are file-related; `fix` — only when we have a concrete suggestion.
  * - **SignalApiHttpError**: `message` — HTTP 4xx/5xx or underlying error text.
- * - **FileSystemError**: `fix` — only keytar and similar cases have a known fix.
+ * - **FileSystemError**: `fix` — only when we have a concrete suggestion.
+ * - **KeyringError**: `fix` — always present (libsecret hint).
  * - **ConfigParseError**: `fix` — only when we have a hint (e.g. ingest-users template).
  */
 
 import { Match, Schema } from "effect";
 import { AttachmentIdSchema, SignalNumberSchema } from "./signal-types.js";
 import { AccountEmailSchema } from "./types.js";
-import { errorToLogMessage, unknownToMessage } from "./utils.js";
+import { errorToLogMessage, redactPath, redactedForLog, unknownToMessage } from "./utils.js";
 
 export class InvalidEmailError extends Schema.TaggedErrorClass<InvalidEmailError>()(
 	"InvalidEmailError",
-	{ email: Schema.String },
+	{ email: Schema.Redacted(Schema.String) },
 ) {}
 
 export class AppPasswordTooShortError extends Schema.TaggedErrorClass<AppPasswordTooShortError>()(
@@ -30,32 +31,32 @@ export class IneligibleAttachmentError extends Schema.TaggedErrorClass<Ineligibl
 	{ message: Schema.String },
 ) {}
 
-/** Config validation errors (no users, keytar unavailable, etc.). */
+/** Config validation errors (no users, invalid config, etc.). */
 export class ConfigValidationError extends Schema.TaggedErrorClass<ConfigValidationError>()(
 	"ConfigValidationError",
 	{
 		message: Schema.String,
-		path: Schema.optional(Schema.String),
+		path: Schema.optional(Schema.Redacted(Schema.String)),
 		fix: Schema.optional(Schema.String),
 	},
 ) {}
 
 export class UnauthorizedUserError extends Schema.TaggedErrorClass<UnauthorizedUserError>()(
 	"UnauthorizedUserError",
-	{ source: SignalNumberSchema },
+	{ source: Schema.Redacted(SignalNumberSchema) },
 ) {}
 
 export class SignalApiHttpError extends Schema.TaggedErrorClass<SignalApiHttpError>()(
 	"SignalApiHttpError",
 	{
 		status: Schema.Number,
-		url: Schema.String,
+		url: Schema.Redacted(Schema.String),
 		message: Schema.String,
 	},
 ) {}
 
 export class FileSystemError extends Schema.TaggedErrorClass<FileSystemError>()("FileSystemError", {
-	path: Schema.String,
+	path: Schema.Redacted(Schema.String),
 	operation: Schema.String,
 	message: Schema.String,
 	fix: Schema.optional(Schema.String),
@@ -64,8 +65,20 @@ export class FileSystemError extends Schema.TaggedErrorClass<FileSystemError>()(
 /** Wrap raw FS errors as FileSystemError. Use with Effect.mapError. */
 export function wrapFs(path: string, op: string, fix?: string) {
 	return (e: unknown) =>
-		new FileSystemError({ path, operation: op, message: unknownToMessage(e), fix });
+		new FileSystemError({
+			path: redactedForLog(path, redactPath),
+			operation: op,
+			message: unknownToMessage(e),
+			fix,
+		});
 }
+
+/** System keychain errors (unavailable, init failed, get/set/delete failed). */
+export class KeyringError extends Schema.TaggedErrorClass<KeyringError>()("KeyringError", {
+	message: Schema.String,
+	operation: Schema.optional(Schema.String),
+	fix: Schema.String,
+}) {}
 
 export class AttachmentTooLargeError extends Schema.TaggedErrorClass<AttachmentTooLargeError>()(
 	"AttachmentTooLargeError",
@@ -83,19 +96,19 @@ export class PayloadTooLargeError extends Schema.TaggedErrorClass<PayloadTooLarg
 
 export class OllamaRequestError extends Schema.TaggedErrorClass<OllamaRequestError>()(
 	"OllamaRequestError",
-	{ url: Schema.String, message: Schema.String },
+	{ url: Schema.Redacted(Schema.String), message: Schema.String },
 ) {}
 
 export class ImapConnectionError extends Schema.TaggedErrorClass<ImapConnectionError>()(
 	"ImapConnectionError",
-	{ email: AccountEmailSchema, message: Schema.String },
+	{ email: Schema.Redacted(AccountEmailSchema), message: Schema.String },
 ) {}
 
 /** File parse errors (config, credentials, ingest-users). path + message required. */
 export class ConfigParseError extends Schema.TaggedErrorClass<ConfigParseError>()(
 	"ConfigParseError",
 	{
-		path: Schema.String,
+		path: Schema.Redacted(Schema.String),
 		message: Schema.String,
 		fix: Schema.optional(Schema.String),
 	},
@@ -113,25 +126,42 @@ export type DomainError =
 	| OllamaRequestError
 	| ImapConnectionError
 	| ConfigParseError
-	| FileSystemError;
+	| FileSystemError
+	| KeyringError;
 
 function formatWithFix(base: string, fix?: string): string {
 	return fix ? `${base}. Fix: ${fix}` : base;
 }
 
+/** Format domain error for logs. Redacted fields: use r.label ?? "<redacted>". */
 export const formatDomainError: (err: DomainError) => string = Match.type<DomainError>().pipe(
-	Match.tag("InvalidEmailError", ({ email }) => `Invalid email format: ${email}`),
+	Match.tag(
+		"InvalidEmailError",
+		({ email }) => `Invalid email format: ${email.label ?? "<redacted>"}`,
+	),
 	Match.tag("AppPasswordTooShortError", ({ message }) => message),
 	Match.tag("IneligibleAttachmentError", ({ message }) => message),
 	Match.tag("ConfigValidationError", ({ message, path, fix }) =>
-		formatWithFix(`${path ? `${path}: ` : ""}${message}`, fix),
+		formatWithFix(`${path ? `${path.label ?? "<redacted>"}: ` : ""}${message}`, fix),
 	),
-	Match.tag("UnauthorizedUserError", ({ source }) => `Unknown Signal number: ${source}`),
+	Match.tag(
+		"UnauthorizedUserError",
+		({ source }) => `Unknown Signal number: ${source.label ?? "<redacted>"}`,
+	),
 	Match.tag("SignalApiHttpError", ({ status, url, message }) =>
-		status === 0 ? message : `Signal API HTTP ${status} at ${url}`,
+		status === 0 ? message : `Signal API HTTP ${status} at ${url.label ?? "<redacted>"}`,
 	),
 	Match.tag("FileSystemError", ({ path, operation, message, fix }) =>
-		formatWithFix(`File system error: ${operation} at ${path} (${message})`, fix),
+		formatWithFix(
+			`File system error: ${operation} at ${path.label ?? "<redacted>"} (${message})`,
+			fix,
+		),
+	),
+	Match.tag("KeyringError", ({ message, operation, fix }) =>
+		formatWithFix(
+			operation ? `Keyring error (${operation}): ${message}` : `Keyring error: ${message}`,
+			fix,
+		),
 	),
 	Match.tag(
 		"AttachmentTooLargeError",
@@ -143,14 +173,15 @@ export const formatDomainError: (err: DomainError) => string = Match.type<Domain
 	),
 	Match.tag(
 		"OllamaRequestError",
-		({ url, message }) => `Ollama request failed: ${url} (${message})`,
+		({ url, message }) => `Ollama request failed: ${url.label ?? "<redacted>"} (${message})`,
 	),
 	Match.tag(
 		"ImapConnectionError",
-		({ email, message }) => `IMAP connection failed for ${email} (${message})`,
+		({ email, message }) =>
+			`IMAP connection failed for ${email.label ?? "<redacted>"} (${message})`,
 	),
 	Match.tag("ConfigParseError", ({ path, message, fix }) =>
-		formatWithFix(`Config parse error at ${path}: ${message}`, fix),
+		formatWithFix(`Config parse error at ${path.label ?? "<redacted>"}: ${message}`, fix),
 	),
 	Match.exhaustive,
 );

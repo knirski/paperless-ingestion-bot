@@ -25,15 +25,22 @@ GMAIL_TEST_EMAIL=your@gmail.com GMAIL_APP_PASSWORD=xxxx npm run test:integration
 
 Requires a Gmail account with 2FA enabled and an [app password](https://support.google.com/accounts/answer/185833). Skips when credentials are not set.
 
-## Optional: Keytar Availability Test
+## Optional: Keyring Availability Test
 
-Verifies that keytar (system keychain) can be imported and performs a round-trip: `setPassword` → `getPassword` → `deletePassword`. Skips when keytar is unavailable (common in CI, headless Linux, or when native modules fail to build). No setup required; runs automatically with `npm run test:integration`.
+Verifies that @napi-rs/keyring (system keychain) can be imported and performs a round-trip: `setPassword` → `getPassword` → `deletePassword`. Skips when `KEYRING_TEST` is not set (like the Gmail test). When set, runs the test; fails if keyring is unavailable (e.g. headless Linux, CI without keychain).
+
+```bash
+KEYRING_TEST=1 npm run test:integration
+```
+
+Requires a system keychain (libsecret/Secret Service, e.g. gnome-keyring, kwallet). Skips when `KEYRING_TEST` is not set.
 
 ## Strategy
 
 - **Tagless Final**: Mock layers (`createImapMockLayer`, `createSignalMockLayer`, `Layer.succeed(OllamaClient)(...)`) replace live services.
 - **Effect.runPromise** at the boundary; no `@effect/vitest` (incompatible with Effect v4).
 - **Fixtures**: `integrationTest` provides `tmpDir` and `emailAccountsPath`; `buildTestLayer` composes layers per test.
+- **Optional live tests** (keyring, Gmail): For availability probes at load time, use `Effect.gen` + `Layer.build` + `Effect.exit`; run with `Effect.runPromise(Effect.scoped(...))`. Test the service layer (e.g. `CredentialsStore.live`), not the underlying library.
 
 ## Fixtures
 

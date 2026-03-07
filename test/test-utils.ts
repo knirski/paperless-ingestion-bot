@@ -112,6 +112,22 @@ export async function readTestDirectory(
 	);
 }
 
+/** Read directory contents; returns [] if path does not exist or read fails. */
+export async function readTestDirectoryOrEmpty(
+	path: string,
+	options?: { recursive?: boolean },
+): Promise<string[]> {
+	return Effect.runPromise(
+		Effect.gen(function* () {
+			const fs = yield* FileSystem.FileSystem;
+			return yield* fs.readDirectory(path, options);
+		}).pipe(
+			Effect.catch(() => Effect.succeed([])),
+			Effect.provide(PlatformServicesLayer),
+		),
+	);
+}
+
 /** Read file at path using Effect FileSystem. */
 export async function readTestFile(path: string, encoding?: "utf-8"): Promise<string | Uint8Array> {
 	return Effect.runPromise(

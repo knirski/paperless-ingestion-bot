@@ -29,6 +29,7 @@ import {
 	credentialsStoreTest,
 	joinPathSync,
 	readTestDirectory,
+	readTestDirectoryOrEmpty,
 	signalConfigTest,
 	TestBaseLayer,
 } from "../test-utils.js";
@@ -395,7 +396,7 @@ describe("signal-pipeline integration", () => {
 				if (Option.isSome(err)) {
 					expect(err.value).toMatchObject({ _tag: "ConfigValidationError" });
 				}
-				const files = await readTestDirectory(joinPathSync(consumeDir, "user1")).catch(() => []);
+				const files = await readTestDirectoryOrEmpty(joinPathSync(consumeDir, "user1"));
 				expect(files).toHaveLength(0);
 			},
 		);
@@ -556,7 +557,7 @@ describe("signal-pipeline integration", () => {
 						],
 					},
 				});
-				const files = await readTestDirectory(joinPathSync(consumeDir, "user1")).catch(() => []);
+				const files = await readTestDirectoryOrEmpty(joinPathSync(consumeDir, "user1"));
 				expect(files).toHaveLength(0);
 				expect(spy.sendMessageCalls).toHaveLength(1);
 				expect(spy.sendMessageCalls[0]?.message).toContain("Valid types");
@@ -580,7 +581,7 @@ describe("signal-pipeline integration", () => {
 						attachments: [{ id: "unknown", contentType: "application/pdf" }],
 					},
 				});
-				const files = await readTestDirectory(joinPathSync(consumeDir, "user1")).catch(() => []);
+				const files = await readTestDirectoryOrEmpty(joinPathSync(consumeDir, "user1"));
 				expect(files).toHaveLength(0);
 				expect(spy.sendMessageCalls).toHaveLength(1);
 				expect(spy.sendMessageCalls[0]?.message).toContain("Valid types");

@@ -11,3 +11,5 @@ This repository is configured for [Allstar](https://github.com/ossf/allstar), an
 ## Policies
 
 The policy files in this directory enable Allstar checks with `action: issue` — violations will create GitHub issues for maintainers to address.
+
+- `secret_scanning` — Ensures GitHub secret scanning and push protection remain enabled.

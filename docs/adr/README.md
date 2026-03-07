@@ -10,6 +10,8 @@ When creating or editing ADRs, follow the workflow in [AGENTS.md](../../AGENTS.m
 
 ## Index
 
-| ADR  | Title                       |
-| ---- | --------------------------- |
-| 0000 | [Template](adr-template.md) |
+| ADR  | Title                                       |
+| ---- | ------------------------------------------- |
+| 0000 | [Template](adr-template.md)                |
+| 0001 | [Delegate credentials to OS keyring](0001-delegate-credentials-to-os-keyring.md) |
+| 0002 | [Signal webhook security](0002-signal-webhook-security.md) |

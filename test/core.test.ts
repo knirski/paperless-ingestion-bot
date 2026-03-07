@@ -39,6 +39,7 @@ import {
 	ImapConnectionError,
 	IneligibleAttachmentError,
 	InvalidEmailError,
+	KeyringError,
 	OllamaRequestError,
 	PayloadTooLargeError,
 	SignalApiHttpError,
@@ -52,6 +53,13 @@ import {
 } from "../src/domain/imap-provider.js";
 import { extensionFromContentType } from "../src/domain/mime.js";
 import type { SignalNumber } from "../src/domain/signal-types.js";
+import {
+	redactEmail,
+	redactPath,
+	redactPhone,
+	redactUrl,
+	redactedForLog,
+} from "../src/domain/utils.js";
 import {
 	decodeWebhookPayload,
 	getDataMessage,
@@ -655,7 +663,7 @@ describe("core", () => {
 		test.each([
 			{
 				name: "InvalidEmailError",
-				errFn: () => new InvalidEmailError({ email: "x" }),
+				errFn: () => new InvalidEmailError({ email: redactedForLog("x", redactEmail) }),
 				matcher: "Invalid email",
 			},
 			{
@@ -675,17 +683,29 @@ describe("core", () => {
 			},
 			{
 				name: "ConfigValidationError with path",
-				errFn: () => new ConfigValidationError({ message: "bad", path: "/etc/config.json" }),
-				matcher: (s: string) => s === "/etc/config.json: bad",
+				errFn: () =>
+					new ConfigValidationError({
+						message: "bad",
+						path: redactedForLog("/etc/config.json", redactPath),
+					}),
+				matcher: (s: string) => s === "config.json: bad",
 			},
 			{
 				name: "UnauthorizedUserError",
-				errFn: () => new UnauthorizedUserError({ source: "+15550000001" as SignalNumber }),
-				matcher: "+15550000001",
+				errFn: () =>
+					new UnauthorizedUserError({
+						source: redactedForLog("+15550000001" as SignalNumber, redactPhone),
+					}),
+				matcher: "***0001",
 			},
 			{
 				name: "SignalApiHttpError",
-				errFn: () => new SignalApiHttpError({ status: 500, url: "http://x", message: "err" }),
+				errFn: () =>
+					new SignalApiHttpError({
+						status: 500,
+						url: redactedForLog("http://x", redactUrl),
+						message: "err",
+					}),
 				matcher: "HTTP 500",
 			},
 			{
@@ -700,32 +720,52 @@ describe("core", () => {
 			},
 			{
 				name: "OllamaRequestError",
-				errFn: () => new OllamaRequestError({ url: "http://ollama", message: "x" }),
+				errFn: () =>
+					new OllamaRequestError({
+						url: redactedForLog("http://ollama", redactUrl),
+						message: "x",
+					}),
 				matcher: "Ollama",
 			},
 			{
 				name: "ImapConnectionError",
 				errFn: () =>
 					new ImapConnectionError({
-						email: "a@example.com" as AccountEmail,
+						email: redactedForLog("a@example.com" as AccountEmail, redactEmail),
 						message: "x",
 					}),
-				matcher: "a@example.com",
+				matcher: "***@example.com",
 			},
 			{
 				name: "ConfigParseError",
-				errFn: () => new ConfigParseError({ path: "/x", message: "invalid" }),
-				matcher: "/x",
+				errFn: () =>
+					new ConfigParseError({
+						path: redactedForLog("/x", redactPath),
+						message: "invalid",
+					}),
+				matcher: "x",
 			},
 			{
 				name: "FileSystemError",
 				errFn: () =>
 					new FileSystemError({
-						path: "/tmp/x",
+						path: redactedForLog("/tmp/x", redactPath),
 						operation: "writeFile",
 						message: "EACCES",
 					}),
 				matcher: "File system error",
+			},
+			{
+				name: "KeyringError",
+				errFn: () =>
+					new KeyringError({
+						message: "System keychain unavailable",
+						operation: "init",
+						fix: "Install a Secret Service implementation (see https://specifications.freedesktop.org/secret-service/ for options)",
+					}),
+				matcher: (s: string) =>
+					s.includes("Keyring error (init): System keychain unavailable") &&
+					s.includes("specifications.freedesktop.org/secret-service/"),
 			},
 		])("formats $name", ({ errFn, matcher }) => {
 			const result = formatDomainError(errFn());
@@ -744,9 +784,9 @@ describe("core", () => {
 			expect(wrapped).toBeInstanceOf(FileSystemError);
 			expect(wrapped).toMatchObject({
 				_tag: "FileSystemError",
-				path: "/tmp/x",
 				operation: "writeFile",
 			});
+			expect(Redacted.value(wrapped.path)).toBe("/tmp/x");
 		});
 	});
 
