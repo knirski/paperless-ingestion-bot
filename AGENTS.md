@@ -93,7 +93,7 @@ Create small, focused commits. If changes span many files or concerns, propose s
 
 ## Pull Requests
 
-When creating a PR (e.g. with GitHub MCP or `gh pr create`), **follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md)**:
+When creating a PR (e.g. with GitHub MCP or `gh pr create`), **follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md)**. After creating the PR, **checkout `main` and pull** so the workspace is left on the default branch.
 
 1. **Description** — What and why (context, not just title restatement).
 2. **Type of change** — Check exactly one.
@@ -104,6 +104,8 @@ When creating a PR (e.g. with GitHub MCP or `gh pr create`), **follow the [PR te
 7. **Breaking changes** — Only when applicable; describe impact and migration.
 
 Use `gh pr create --body-file <file>` with a file that matches the template structure.
+
+**PR workflow:** When adding commits to an existing PR, batch all changes before pushing, or verify the PR is still open before each push. Avoid merging a PR while additional commits are being prepared—merge only after all intended changes are pushed and CI has run. When done with PR creating, checkout main and pull.
 
 ## Verification
 
