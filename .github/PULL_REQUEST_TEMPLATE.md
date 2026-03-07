@@ -4,11 +4,7 @@
 
 ## Type of change
 
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to change)
-- [ ] Documentation update
-- [ ] Chore (tooling, CI, automation, refactor)
+Select one: **Bug fix** | **New feature** | **Breaking change** | **Documentation update** | **Chore**
 
 ## Changes made
 
