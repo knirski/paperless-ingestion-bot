@@ -80,12 +80,13 @@ describe("imap-body-structure", () => {
 	});
 
 	describe("collectAttachmentParts", () => {
-		test.each([{ structure: null }, { structure: {} }, { structure: "invalid" }])(
-			"returns empty for invalid: $structure",
-			({ structure }) => {
-				expect(collectAttachmentParts(structure)).toEqual([]);
-			},
-		);
+		test.each([
+			{ structure: null },
+			{ structure: {} },
+			{ structure: "invalid" },
+		])("returns empty for invalid: $structure", ({ structure }) => {
+			expect(collectAttachmentParts(structure)).toEqual([]);
+		});
 
 		test("returns empty when disposition is not attachment", () => {
 			expect(
