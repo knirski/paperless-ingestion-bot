@@ -700,6 +700,16 @@ describe("core", () => {
 				matcher: (s: string) => s === "config.json: bad",
 			},
 			{
+				name: "ConfigValidationError with path and fix",
+				errFn: () =>
+					new ConfigValidationError({
+						message: "bad",
+						path: redactedForLog("/etc/config.json", redactPath),
+						fix: "Check schema",
+					}),
+				matcher: (s: string) => s.includes("config.json: bad") && s.includes("Fix: Check schema"),
+			},
+			{
 				name: "UnauthorizedUserError",
 				errFn: () =>
 					new UnauthorizedUserError({
@@ -716,6 +726,16 @@ describe("core", () => {
 						message: "err",
 					}),
 				matcher: "HTTP 500",
+			},
+			{
+				name: "SignalApiHttpError status 0 (message only)",
+				errFn: () =>
+					new SignalApiHttpError({
+						status: 0,
+						url: redactedForLog("http://x", redactUrl),
+						message: "Connection refused",
+					}),
+				matcher: (s: string) => s === "Connection refused",
 			},
 			{
 				name: "AttachmentTooLargeError",
@@ -755,6 +775,17 @@ describe("core", () => {
 				matcher: "x",
 			},
 			{
+				name: "ConfigParseError with fix",
+				errFn: () =>
+					new ConfigParseError({
+						path: redactedForLog("/x", redactPath),
+						message: "invalid json",
+						fix: "See config.example.json",
+					}),
+				matcher: (s: string) =>
+					s.includes("invalid json") && s.includes("Fix: See config.example.json"),
+			},
+			{
 				name: "FileSystemError",
 				errFn: () =>
 					new FileSystemError({
@@ -763,6 +794,17 @@ describe("core", () => {
 						message: "EACCES",
 					}),
 				matcher: "File system error",
+			},
+			{
+				name: "FileSystemError with fix",
+				errFn: () =>
+					new FileSystemError({
+						path: redactedForLog("/tmp/x", redactPath),
+						operation: "writeFile",
+						message: "EACCES",
+						fix: "chmod 600",
+					}),
+				matcher: (s: string) => s.includes("File system error") && s.includes("Fix: chmod 600"),
 			},
 			{
 				name: "KeyringError",
@@ -775,6 +817,16 @@ describe("core", () => {
 				matcher: (s: string) =>
 					s.includes("Keyring error (init): System keychain unavailable") &&
 					s.includes("specifications.freedesktop.org/secret-service/"),
+			},
+			{
+				name: "KeyringError without operation",
+				errFn: () =>
+					new KeyringError({
+						message: "getPassword failed",
+						fix: "Check keyring",
+					}),
+				matcher: (s: string) =>
+					s.includes("Keyring error: getPassword failed") && s.includes("Fix: Check keyring"),
 			},
 		])("formats $name", ({ errFn, matcher }) => {
 			const result = formatDomainError(errFn());

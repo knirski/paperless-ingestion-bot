@@ -96,9 +96,16 @@ describe("log redaction", () => {
 		expect(redactPath("/x")).toBe("x");
 		expect(redactPath("config.json")).toBe("config.json");
 	});
+	test("redactPath returns path when no slash (basename fallback)", () => {
+		expect(redactPath("filename")).toBe("filename");
+		expect(redactPath("")).toBe("");
+	});
 	test("redactEmail shows domain only", () => {
 		expect(redactEmail("user@example.com")).toBe("***@example.com");
 		expect(redactEmail("a@b.com")).toBe("***@b.com");
+	});
+	test("redactEmail returns *** when no @", () => {
+		expect(redactEmail("notanemail")).toBe("***");
 	});
 	test("redactPhone shows last 4 digits", () => {
 		expect(redactPhone("+15551234567")).toBe("***4567");
@@ -109,6 +116,10 @@ describe("log redaction", () => {
 			"http://localhost:8080/v1/send",
 		);
 		expect(redactUrl("http://x")).toBe("http://x");
+	});
+	test("redactUrl strips fragment", () => {
+		expect(redactUrl("http://localhost:8080/page#section")).toBe("http://localhost:8080/page");
+		expect(redactUrl("http://x?q=1#anchor")).toBe("http://x");
 	});
 });
 
