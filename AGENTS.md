@@ -4,6 +4,20 @@ Paperless-ingestion-bot ingests documents from Signal and Gmail into Paperless-n
 
 When editing this project, apply these rules. Workflow: apply rules → make changes → run `npm run check` → fix until pass.
 
+## Research and Decision-Making
+
+When unsure about how to implement something or when multiple approaches exist:
+
+**Use GitHub MCP (or other relevant MCP) first when available** — Prefer MCP tools over web search or manual lookup: `mcp_github_search_code`, `mcp_github_get_file_contents`, `mcp_context7_query-docs`, etc. Fall back to web fetch or CLI only when MCP has no matching capability.
+
+1. **Check official documentation first** — Use the primary source (library docs, GitHub Actions docs, etc.) to understand intended behavior and options.
+2. **When still uncertain, check popular and respectable public repos** — Look at how active, well-maintained projects handle the same problem (e.g. Next.js, React, GitHub’s own repos). This is mandatory when:
+   - There are different valid options or paths.
+   - There is no obvious solution.
+   - You need to validate that an approach aligns with common practice.
+
+Docs give the “what” and “how”; real-world usage shows trade-offs and consensus.
+
 ## Setup
 
 - Install: `npm install`
@@ -140,8 +154,9 @@ Credentials and config paths are sensitive; do not log or expose them.
 
 **When making a significant architectural change (or planning one):**
 
-1. Create or update an ADR in `docs/adr/` documenting the decision, context, alternatives, and consequences.
-2. Update AGENTS.md and ARCHITECTURE.md as above.
+1. Follow [Research and Decision-Making](#research-and-decision-making): check official docs, then how popular repos handle similar decisions.
+2. Create or update an ADR in `docs/adr/` documenting the decision, context, alternatives, and consequences.
+3. Update AGENTS.md and ARCHITECTURE.md as above.
 
 **Significant** means: affects multiple modules, is hard to reverse, changes design principles, or introduces new patterns. Minor refactors or dependency bumps do not require ADRs.
 
