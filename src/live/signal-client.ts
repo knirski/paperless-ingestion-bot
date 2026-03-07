@@ -10,7 +10,7 @@ import {
 	type SignalNumber,
 	SignalNumberSchema,
 } from "../domain/signal-types.js";
-import { redactUrl, redactedForLog, unknownToMessage } from "../domain/utils.js";
+import { redactedForLog, redactUrl, unknownToMessage } from "../domain/utils.js";
 import type { SignalClientService } from "../interfaces/signal-client.js";
 
 export class SignalClient extends ServiceMap.Service<SignalClient, SignalClientService>()(

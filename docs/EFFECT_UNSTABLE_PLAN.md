@@ -171,11 +171,14 @@ Plan for integrating `effect/unstable/*` modules into paperless-ingestion-bot. O
 
 ### 3.3 RateLimiter
 
+**Adopted.** Used for Signal webhook (120/min, token-bucket). See [ADR 0003](adr/0003-rate-limiting.md). For multi-instance deployments, `layerStoreRedis` is available.
+
 **Use case:** Throttle Signal notifications (credential failure) or Ollama requests.
 
 **Implementation:**
 
 - `effect/unstable/persistence` includes `RateLimiter`
+- Webhook: `RateLimiter.layer` + `layerStoreMemory` in `signal-pipeline.ts`
 - Add to `credential-failure.ts` if we want stricter throttling than current logic
 
 ---

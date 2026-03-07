@@ -16,7 +16,7 @@ import {
 	type User,
 	UserSlugSchema,
 } from "../domain/types.js";
-import { redactPath, redactedForLog, unknownToMessage } from "../domain/utils.js";
+import { redactedForLog, redactPath, unknownToMessage } from "../domain/utils.js";
 import { mapFsError } from "./fs-utils.js";
 
 /** Log level for config. */

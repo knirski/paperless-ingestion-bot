@@ -11,7 +11,7 @@
  * fails if keyring is unavailable (e.g. headless Linux, CI without keychain).
  */
 
-import { Effect, Exit, Layer, Option, Redacted, pipe } from "effect";
+import { Effect, Exit, Layer, Option, pipe, Redacted } from "effect";
 import { describe, expect, it } from "vitest";
 import type { AccountEmail } from "../../src/domain/types.js";
 import { CredentialsStore } from "../../src/live/credentials-store.js";

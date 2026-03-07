@@ -7,7 +7,7 @@ import { Duration, Effect, Layer, Option, Schema, ServiceMap } from "effect";
 import { HttpBody, HttpClient, HttpClientRequest } from "effect/unstable/http";
 import { parseOllamaYesNo } from "../core/index.js";
 import { OllamaRequestError } from "../domain/errors.js";
-import { redactUrl, redactedForLog, unknownToMessage } from "../domain/utils.js";
+import { redactedForLog, redactUrl, unknownToMessage } from "../domain/utils.js";
 import type { OllamaClientService, OllamaRequest } from "../interfaces/ollama-client.js";
 
 export class OllamaClient extends ServiceMap.Service<OllamaClient, OllamaClientService>()(

@@ -9,13 +9,13 @@
 [![Liberapay](https://img.shields.io/badge/Liberapay-Support-yellow.svg)](https://liberapay.com/knirski/)
 [![CII Best Practices](https://img.shields.io/badge/CII%20Best%20Practices-register-green)](https://bestpractices.coreinfrastructure.org/en/projects/new?project_url=https%3A%2F%2Fgithub.com%2Fknirski%2Fpaperless-ingestion-bot)
 
-Signal and Gmail document ingestion for [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx). Basic implementation for now - core features work.
+Signal and Gmail document ingestion for [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx).
 
 **Stop drowning in paper.** Hundreds of emails with receipts, contracts, and attachments buried in your Gmail, or physical docs piling up on your desk? Scan or snap, send via [Signal](https://signal.org/) or email, and let [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx) do the rest. Optional AI (local [Ollama](https://ollama.ai/)) filters junk; pair with [paperless-ai](https://github.com/clusterzx/paperless-ai) for tags and summaries. Find any document when you need it.
 
 **Privacy-first:** Runs fully locally. No cloud APIs, no telemetry. Signal is a privacy-focused IM; AI uses local Ollama. Your documents stay on your machine.
 
-Setup is a bit involved. Geeks will feel at home - determined non-geeks can get there too. Linux and macOS, Windows may work with WSL.
+Setup is a bit involved. Geeks will feel at home - determined non-geeks can get there too. Linux and macOS, Windows may work (WSL could help).
 
 ## Prerequisites
 
@@ -170,8 +170,13 @@ See [config.example.json](config.example.json) for a full example.
 
 ## Security
 
-- The email-accounts file (metadata; passwords in system keychain) is written with mode `0600` (owner read/write only). Ensure the process runs as a dedicated user.
-- **Credentials store:** Uses the OS keychain only (no file fallback). On headless Linux, ensure libsecret/Secret Service is available (e.g. gnome-keyring, kwallet).
+**Security-first design.** This project takes supply chain and operational security seriously:
+
+- **Credentials** — Stored only in the OS keychain (@napi-rs/keyring). No file fallback; fails clearly when keyring unavailable. Gmail app passwords and Signal API access never touch disk in plaintext.
+- **Webhook** — Token-bucket rate limiting (120/min); excess returns 429. Same-host deployment recommended: bind to `127.0.0.1` so only local processes (signal-cli-rest-api) can reach it. See [ADR 0002](docs/adr/0002-signal-webhook-security.md).
+- **PII in errors** — Paths, emails, phones, URLs are redacted in logs via Effect `Redacted`; raw values never appear in structured logs.
+- **Supply chain** — `npm audit --audit-level=high` in every check. CycloneDX SBOM generated in CI. Dependabot, CodeQL, OpenSSF Scorecard with least-privilege workflow permissions.
+- **File permissions** — email-accounts metadata written with mode `0600`. Run as a dedicated user.
 
 **Trust model:** All family members in the config share the same Gmail account registry. Anyone can run `gmail status` to see all configured accounts and use pause/resume/remove on any of them. The design assumes a trusted group.
 
@@ -194,7 +199,7 @@ npm run check
 
 Runs tests, lint, and typecheck.
 
-**CI:** GitHub Actions runs `npm run check` on push and PR. Commits must follow [Conventional Commits](https://www.conventionalcommits.org/) (enforced by commitlint).
+**CI:** GitHub Actions runs `npm run check` on push and PR. Commits must follow [Conventional Commits](https://www.conventionalcommits.org/) (enforced by commitlint). A CycloneDX SBOM is generated and uploaded as a workflow artifact.
 
 ## Documentation
 
@@ -208,7 +213,7 @@ TypeScript implementation using [Effect](https://effect.website/) and functional
 - [test/integration/README.md](test/integration/README.md): Integration test guide
 - [docs/adr/](docs/adr/): Architecture Decision Records
 
-**CII Best Practices:** Complete the [self-assessment](https://bestpractices.coreinfrastructure.org/en/projects/new?project_url=https%3A%2F%2Fgithub.com%2Fknirski%2Fpaperless-ingestion-bot) to earn the badge and improve OpenSSF Scorecard.
+**CII Best Practices:** See [docs/CII.md](docs/CII.md) for progress. Complete the [self-assessment](https://bestpractices.coreinfrastructure.org/en/projects/new?project_url=https%3A%2F%2Fgithub.com%2Fknirski%2Fpaperless-ingestion-bot) to earn the badge.
 
 This project was developed with assistance from [Cursor](https://cursor.com/).
 

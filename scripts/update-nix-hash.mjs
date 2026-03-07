@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 /**
  * Updates npmDepsHash in default.nix. For contributors without Nix.
  * Usage: node scripts/update-nix-hash.mjs <sha256-hash>
@@ -8,9 +9,9 @@
  * nix run .#update-npm-deps-hash (requires Nix).
  */
 
-import { fileURLToPath } from "url";
-import path from "path";
-import fs from "fs";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

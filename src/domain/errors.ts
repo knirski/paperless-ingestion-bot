@@ -14,7 +14,7 @@
 import { Match, Schema } from "effect";
 import { AttachmentIdSchema, SignalNumberSchema } from "./signal-types.js";
 import { AccountEmailSchema } from "./types.js";
-import { errorToLogMessage, redactPath, redactedForLog, unknownToMessage } from "./utils.js";
+import { errorToLogMessage, redactedForLog, redactPath, unknownToMessage } from "./utils.js";
 
 export class InvalidEmailError extends Schema.TaggedErrorClass<InvalidEmailError>()(
 	"InvalidEmailError",

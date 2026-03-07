@@ -42,7 +42,7 @@ import {
 } from "../domain/signal-types.js";
 import type { AccountEmail, AppEffect, User, UserSlug } from "../domain/types.js";
 import { AccountEmailSchema } from "../domain/types.js";
-import { assertNever, redactPath, redactedForLog, unknownToMessage } from "../domain/utils.js";
+import { assertNever, redactedForLog, redactPath, unknownToMessage } from "../domain/utils.js";
 import type { CredentialsStore } from "../live/credentials-store.js";
 import { SignalClient } from "../live/signal-client.js";
 import { ingestUsersHint, SignalConfig } from "./config.js";

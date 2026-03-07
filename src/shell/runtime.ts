@@ -18,7 +18,7 @@ import {
 } from "../domain/account.js";
 import { ConfigParseError } from "../domain/errors.js";
 import { AccountEmailSchema, type EmailLabel } from "../domain/types.js";
-import { redactPath, redactedForLog, unknownToMessage } from "../domain/utils.js";
+import { redactedForLog, redactPath, unknownToMessage } from "../domain/utils.js";
 import { CredentialsStore } from "../live/credentials-store.js";
 import { mapFsError } from "./fs-utils.js";
 

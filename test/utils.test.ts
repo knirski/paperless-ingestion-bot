@@ -1,3 +1,4 @@
+import { Redacted } from "effect";
 import { describe, expect, test } from "vitest";
 import {
 	ConfigParseError,
@@ -5,15 +6,14 @@ import {
 	ImapConnectionError,
 } from "../src/domain/errors.js";
 import type { AccountEmail } from "../src/domain/types.js";
-import { Redacted } from "effect";
 import {
 	assertNever,
 	errorToLogMessage,
 	redactEmail,
+	redactedForLog,
 	redactPath,
 	redactPhone,
 	redactUrl,
-	redactedForLog,
 	unknownToMessage,
 } from "../src/domain/utils.js";
 

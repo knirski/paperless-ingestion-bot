@@ -4,7 +4,7 @@ import { Result } from "effect";
 import { UnauthorizedUserError } from "../domain/errors.js";
 import type { SignalNumber } from "../domain/signal-types.js";
 import type { User, UserRegistry } from "../domain/types.js";
-import { redactPhone, redactedForLog } from "../domain/utils.js";
+import { redactedForLog, redactPhone } from "../domain/utils.js";
 
 export function authorizeSource(
 	registry: UserRegistry,
