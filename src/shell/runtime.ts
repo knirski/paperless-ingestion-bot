@@ -2,6 +2,8 @@
  * Runtime I/O — JSON writes, credentials load/save.
  * Shell-only; used by pipelines.
  *
+ * **User-generated data:** loadAllAccounts / saveAllAccounts operate on email-accounts.json
+ * (path from config.emailAccountsPath). Created via `gmail add`; not configuration.
  * Metadata in JSON, passwords in system keychain.
  */
 

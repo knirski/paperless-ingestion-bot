@@ -18,6 +18,7 @@ import {
 } from "effect";
 import * as Arr from "effect/Array";
 import * as Http from "effect/unstable/http";
+import { HttpClient, HttpClientRequest } from "effect/unstable/http";
 import { RateLimiter } from "effect/unstable/persistence";
 import { fileTypeFromBuffer } from "file-type";
 // Use "http" (not node:http) per project preference to avoid node: imports
@@ -53,10 +54,16 @@ import {
 } from "../domain/signal-types.js";
 import type { AccountEmail, AppEffect, User, UserSlug } from "../domain/types.js";
 import { AccountEmailSchema } from "../domain/types.js";
-import { assertNever, redactedForLog, redactPath, unknownToMessage } from "../domain/utils.js";
+import {
+	assertNever,
+	redactedForLog,
+	redactPath,
+	redactUrl,
+	unknownToMessage,
+} from "../domain/utils.js";
 import type { CredentialsStore } from "../live/credentials-store.js";
 import { SignalClient } from "../live/signal-client.js";
-import { ingestUsersHint, SignalConfig } from "./config.js";
+import { SignalConfig, usersHint } from "./config.js";
 import { mapFsError, resolveOutputPath } from "./fs-utils.js";
 import type { SignalAppLayer } from "./layers.js";
 import { loadAllAccounts, saveAllAccounts } from "./runtime.js";
@@ -186,6 +193,53 @@ const webhookHandler = Effect.fn("webhookHandler")(function* () {
 	return Http.HttpServerResponse.jsonUnsafe({ ok: true });
 });
 
+/** Validate consume_dir exists and is writable (writes temp file, then removes). Exported for testing. */
+export const validateConsumeDir = Effect.fn("validateConsumeDir")(function* (consumeDir: string) {
+	const fs = yield* FileSystem.FileSystem;
+	const pathApi = yield* Path.Path;
+	const exists = yield* fs.exists(consumeDir).pipe(mapFsError(consumeDir, "exists"));
+	if (!exists) {
+		yield* Effect.fail(
+			new ConfigValidationError({
+				message: "consume_dir does not exist",
+				path: redactedForLog(consumeDir, redactPath),
+				fix: `Create the directory: mkdir -p ${consumeDir}`,
+			}),
+		);
+	}
+	const probePath = pathApi.join(consumeDir, ".paperless-ingestion-bot-probe");
+	yield* fs.writeFileString(probePath, "").pipe(mapFsError(consumeDir, "writeFileString"));
+	yield* fs.remove(probePath).pipe(mapFsError(probePath, "remove"));
+});
+
+/** Validate signal_api_url is reachable (HEAD request). */
+const validateSignalApiReachability = Effect.fn("validateSignalApiReachability")(function* (
+	url: string,
+) {
+	const client = yield* HttpClient.HttpClient;
+	const base = url.replace(/\/$/, "");
+	const req = HttpClientRequest.head(`${base}/v1/accounts`);
+	const res = yield* client.execute(req).pipe(
+		Effect.mapError(
+			(e) =>
+				new ConfigValidationError({
+					message: `signal_api_url not reachable: ${unknownToMessage(e)}`,
+					path: redactedForLog(url, redactUrl),
+					fix: "Ensure Signal REST API is running and reachable. Use --skip-reachability-check to bypass.",
+				}),
+		),
+	);
+	if (res.status >= 500) {
+		yield* Effect.fail(
+			new ConfigValidationError({
+				message: `signal_api_url returned HTTP ${res.status}`,
+				path: redactedForLog(url, redactUrl),
+				fix: "Check Signal REST API health. Use --skip-reachability-check to bypass.",
+			}),
+		);
+	}
+});
+
 /** Ensure consume dirs exist for all registry users. Exported for testing. */
 const ensureUserConsumeDirs = Effect.fn("ensureUserConsumeDirs")(function* () {
 	const config = yield* SignalConfig;
@@ -210,9 +264,18 @@ const WEBHOOK_RATE_LIMIT_PER_MINUTE = 120;
 
 const WebhookRateLimiterLayer = RateLimiter.layer.pipe(Layer.provide(RateLimiter.layerStoreMemory));
 
-/** Build signal server layer: HttpRouter.serve + NodeHttpServer.layer. Use with Layer.launch. */
+/**
+ * Options for buildSignalServerLayer. Public API for consumers.
+ * @lintignore
+ */
+export interface SignalServerOptions {
+	/** Skip startup validation of signal_api_url reachability. */
+	readonly skipReachabilityCheck?: boolean;
+}
+
 export function buildSignalServerLayer(
 	appLayer: SignalAppLayer,
+	options?: SignalServerOptions,
 ): Layer.Layer<never, ConfigValidationError | Layer.Error<SignalAppLayer>, never> {
 	const appWithMaxBody = appLayer.pipe(
 		Layer.provideMerge(Layer.succeed(Http.HttpIncomingMessage.MaxBodySize)(MAX_BODY_SIZE)),
@@ -225,16 +288,21 @@ export function buildSignalServerLayer(
 		}),
 	);
 
+	const skipReachabilityCheck = options?.skipReachabilityCheck ?? false;
 	const buildServerLayer = Effect.fn("buildSignalServerLayer")(function* () {
 		const config = yield* SignalConfig;
 		if (config.registry.users.length === 0) {
 			yield* Effect.fail(
 				new ConfigValidationError({
 					message: "No users configured",
-					path: redactedForLog(config.ingestUsersPath, redactPath),
-					fix: ingestUsersHint(config.ingestUsersPath),
+					path: redactedForLog(config.usersPath, redactPath),
+					fix: usersHint(config.usersPath),
 				}),
 			);
+		}
+		yield* validateConsumeDir(config.consumeDir);
+		if (!skipReachabilityCheck) {
+			yield* validateSignalApiReachability(config.signalApiUrl);
 		}
 		yield* ensureUserConsumeDirs();
 
@@ -496,7 +564,7 @@ function handleTextCommand(
 	});
 }
 
-/** Validate, upsert account, persist. Returns isReactivation. Exported for testing. */
+/** Validate, upsert account, persist to email-accounts.json (user-generated data). Returns isReactivation. Exported for testing. */
 const validateAndUpsertAccount = Effect.fn("validateAndUpsertAccount")(function* (
 	validatedEmailRaw: string,
 	validatedPwRaw: string,
@@ -528,6 +596,7 @@ const validateAndUpsertAccount = Effect.fn("validateAndUpsertAccount")(function*
 	return accounts.some((a) => a.email === emailAddrForReactivation);
 });
 
+/** Handle `gmail add` — writes user-generated data to email-accounts.json. */
 function handleAddGmailAccount(
 	emailAddr: string,
 	appPassword: string,

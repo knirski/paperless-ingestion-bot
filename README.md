@@ -65,7 +65,7 @@ npm install && npm run build
 
 ```bash
 nix build .#default          # Build package
-nix develop                   # Development shell
+nix develop                  # Development shell
 nix run .#default -- signal --config /path/to/config.json
 ```
 
@@ -81,11 +81,13 @@ docker run --rm \
   paperless-ingestion-bot signal
 ```
 
-Mount your config directory at `/etc/paperless-ingestion-bot` (must contain `config.json`) and a data directory at `/var/lib/paperless-ingestion-bot` (for consume, email-accounts.json, ingest-users.json). For headless Linux, set `PAPERLESS_INGESTION_CREDENTIALS=file`.
+Mount your config directory at `/etc/paperless-ingestion-bot` (must contain `config.json`) and a data directory at `/var/lib/paperless-ingestion-bot` (for consume, email-accounts.json, users.json). Headless Linux requires a system credential store (libsecret/Secret Service); see [Troubleshooting](#troubleshooting).
+
+**Env overrides:** Override file values with individual env vars (e.g. `-e PAPERLESS_INGESTION_SIGNAL_API_URL=http://signal:8080`). Use `--skip-reachability-check` when the Signal API starts after the bot (e.g. Docker Compose).
 
 ### Commands
 
-- `paperless-ingestion-bot signal`: Run Signal webhook server
+- `paperless-ingestion-bot signal`: Run Signal webhook server (validates `consume_dir` and `signal_api_url` at startup; use `--skip-reachability-check` to bypass API reachability check)
 - `paperless-ingestion-bot email`: Scan Gmail inboxes for attachments (one-shot; use with cron/systemd timer)
 - `paperless-ingestion-bot --version`: Show version
 - `paperless-ingestion-bot email --json`: Output `{ "saved": N }` to stdout for scripting
@@ -97,7 +99,7 @@ Mount your config directory at `/etc/paperless-ingestion-bot` (must contain `con
 1. Run [signal-cli-rest-api](https://github.com/bbernhard/signal-cli-rest-api) (e.g. via Docker).
 2. Link your device: open `http://<signal-api-host>/v1/qrcodelink` in a browser.
 3. Configure the webhook URL in signal-cli-rest-api: `RECEIVE_WEBHOOK_URL=http://<ingestion-bot-host>:<port>/webhook`.
-4. Create `ingest-users.json` at the path in config (see Config schema below). Do not commit this file.
+4. Create `users.json` at `--users` path or default (see Config schema below). Do not commit this file.
 5. Start the ingestion bot: `paperless-ingestion-bot signal --config /path/to/config.json`.
 
 ### Gmail
@@ -115,16 +117,16 @@ Generic IMAP is supported but adding accounts via Signal isn't implemented yet. 
 
 JSON config (often Nix-generated via `builtins.toJSON`). Standalone: no parent-repo structure, just clone and run.
 
-**Resolution order:** `--config` flag > `PAPERLESS_INGESTION_CONFIG` env > `/etc/paperless-ingestion-bot/config.json`
+**Resolution:** `--config` flag or `PAPERLESS_INGESTION_CONFIG` env or default `/etc/paperless-ingestion-bot/config.json`. 12-factor: individual values and paths override via env (e.g. `PAPERLESS_INGESTION_SIGNAL_API_URL`).
+
+**Env overrides (12-factor):** Individual env vars override file values when set: `PAPERLESS_INGESTION_CONSUME_DIR`, `PAPERLESS_INGESTION_SIGNAL_API_URL`, `PAPERLESS_INGESTION_WEBHOOK_HOST`, `PAPERLESS_INGESTION_WEBHOOK_PORT`, `PAPERLESS_INGESTION_LOG_LEVEL`, etc. See schema for full list.
 
 ### Schema
 
 ```json
 {
 	"consume_dir": "/path/to/paperless/consume",
-	"email_accounts_path": "/var/lib/paperless-ingestion-bot/email-accounts.json",
 	"signal_api_url": "http://127.0.0.1:8080",
-	"ingest_users_path": "/var/lib/paperless-ingestion-bot/ingest-users.json",
 	"log_level": "INFO",
 	"webhook_host": "127.0.0.1",
 	"webhook_port": 8089,
@@ -137,18 +139,21 @@ JSON config (often Nix-generated via `builtins.toJSON`). Standalone: no parent-r
 ```
 
 - `consume_dir`: Paperless-ngx consume directory (bot writes files here)
-- `email_accounts_path`: Path to `email-accounts.json` (Gmail/IMAP account metadata; passwords in system keychain)
 - `signal_api_url`: signal-cli-rest-api base URL (e.g. `http://127.0.0.1:8080`)
-- `ingest_users_path`: Path to `ingest-users.json` (user registry). Create manually, don't commit
+- Config path: `--config` or `PAPERLESS_INGESTION_CONFIG` (default: `/etc/paperless-ingestion-bot/config.json`).
+- Users path: `--users` or `PAPERLESS_INGESTION_USERS_PATH` (default: `/var/lib/paperless-ingestion-bot/users.json`). Create manually, don't commit.
+- Email accounts path: `--email-accounts` or `PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH` (default: `/var/lib/paperless-ingestion-bot/email-accounts.json`). Gmail/IMAP account metadata; passwords in system keychain.
 - `webhook_host`, `webhook_port`: Signal webhook server bind address
 - `ollama_url`, `ollama_vision_model`, `ollama_text_model`: Ollama endpoint and models for AI eligibility (optional)
 - `log_level`: `DEBUG` | `INFO` | `WARN` | `ERROR`
 - `mark_processed_label`: Gmail label for processed messages; empty string disables labeling
 - `page_size`: Email fetch batch size
 
-See [config.example.json](config.example.json) for a full example.
+**Env overrides:** Each key can be overridden by an env var: `PAPERLESS_INGESTION_` + UPPER_SNAKE_CASE of the key (e.g. `consume_dir` → `PAPERLESS_INGESTION_CONSUME_DIR`).
 
-**ingest-users.json** format (array of user objects):
+See [config.example.json](config.example.json) for a full example. A JSON Schema is emitted at build time: `dist/config.schema.json`.
+
+**users.json** format (array of user objects):
 
 ```json
 [
@@ -185,8 +190,10 @@ See [config.example.json](config.example.json) for a full example.
 | Issue                                                              | Solution                                                                                                                                                                                     |
 | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `System keychain unavailable` or `File system error: getPassword at keyring` | Ensure libsecret/Secret Service is available (e.g. gnome-keyring, kwallet). On headless Linux, run a secret service or use a session with keychain support.                                  |
-| `Config file not found`                                            | Pass `--config /path/to/config.json` or set `PAPERLESS_INGESTION_CONFIG`.                                                                                                                    |
-| `No users configured`                                              | Create `ingest-users.json` at the path in config: `[{"slug":"krzysiek","signal_number":"+48...","consume_subdir":"krzysiek","display_name":"Krzysiek","tag_name":"Added by Krzysiek"},...]`. |
+| `Config file not found`                                            | Pass `--config /path/to/config.json` or set `PAPERLESS_INGESTION_CONFIG`.                                                                                |
+| `consume_dir does not exist`                                       | Create the directory: `mkdir -p /path/to/consume`.                                                                                                                                            |
+| `signal_api_url not reachable`                                     | Ensure Signal REST API is running. Use `--skip-reachability-check` to bypass (e.g. API starts after bot).                                                                                     |
+| `No users configured`                                              | Create `users.json` at `--users` path or `PAPERLESS_INGESTION_USERS_PATH`: `[{"slug":"krzysiek","signal_number":"+48...","consume_subdir":"krzysiek","display_name":"Krzysiek","tag_name":"Added by Krzysiek"},...]`. |
 | `No account found` for gmail commands                              | Run `gmail status` to list accounts. Add with `gmail add email@example.com <app_password>`.                                                                                                  |
 | IMAP connection fails                                              | Enable IMAP in Gmail; use App Password, not main password.                                                                                                                                   |
 | Ollama assessment timeout                                          | Increase model load or reduce prompt; timeout is 60s.                                                                                                                                        |
