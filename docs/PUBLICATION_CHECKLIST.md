@@ -14,7 +14,7 @@ Use this checklist when preparing paperless-ingestion-bot for independent public
 - [x] package.json metadata (license, repository, keywords)
 - [x] Conventional commits (commitlint + husky + lint-staged)
 - [x] release-please (version + changelog automation)
-- [x] Renovate (dependency updates)
+- [x] Dependabot (dependency updates)
 - [x] GitHub Actions CI
 - [x] PR template
 - [x] CODE_OF_CONDUCT.md (Contributor Covenant 2.1)
@@ -76,6 +76,12 @@ In **Settings → Branches → Add rule** for `main`:
 - [x] Nix CI job (added to `.github/workflows/ci.yml`)
 - [x] Badges (CI, Version, Coverage, License, etc.) in README
 - [x] .editorconfig (editor consistency)
+- [x] Docker image (Dockerfile + `.github/workflows/docker.yml`; experimental, build-only — publishing disabled)
+- [x] Allstar config (`.allstar/` for security policy enforcement)
+- [x] CII Best Practices badge link (README)
+- [x] GitHub Sponsors (FUNDING.yml)
+- [x] Architecture diagrams (Mermaid in docs/ARCHITECTURE.md)
+- [x] ADRs (docs/adr/)
 
 ## Manual Steps (GitHub UI)
 
@@ -117,7 +123,16 @@ New public repos often have these on by default.
 
 ### 6. Labels (optional)
 
-**Issues → Labels** — Create `good first issue` and `help wanted` for contributor guidance.
+**Issues → Labels** — Create `good first issue` and `help wanted` for contributor guidance. Via `gh`:
+
+```bash
+gh label create "good first issue" --color "0e8a16" --description "Good for newcomers"
+gh label create "help wanted" --color "5319e7" --description "Extra attention is needed"
+```
+
+### 7. Allstar (optional)
+
+**Install** the [Allstar app](https://github.com/apps/allstar-app) for continuous security policy enforcement. This repo includes `.allstar/` configs; create a `knirski/.allstar` repo from the [quickstart template](https://github.com/ossf/dot-allstar-quickstart) for org-level setup.
 
 ## Integration with homelab NixOS config
 

@@ -2,6 +2,63 @@
 
 Bleeding edge: this project uses the latest [Effect](https://effect.website/) version (v4 beta). Expect occasional breaking changes as Effect stabilizes.
 
+## High-Level Structure
+
+```mermaid
+flowchart TB
+    subgraph Shell["Imperative Shell (src/shell/)"]
+        CLI[cli.ts]
+        EP[email-pipeline]
+        SP[signal-pipeline]
+        Layers[layers.ts]
+    end
+
+    subgraph Core["Functional Core (src/core/)"]
+        Validation[validation]
+        Eligibility[eligibility]
+        Commands[commands]
+    end
+
+    subgraph Domain["Domain (src/domain/)"]
+        Types[types]
+        Errors[errors]
+        MIME[mime]
+    end
+
+    subgraph Live["Live Interpreters (src/live/)"]
+        SignalClient[SignalClient]
+        EmailClient[EmailClient]
+        OllamaClient[OllamaClient]
+    end
+
+    CLI --> EP
+    CLI --> SP
+    EP --> Layers
+    SP --> Layers
+    Layers --> Core
+    Layers --> Live
+    Core --> Domain
+```
+
+## Main Flows (Mermaid)
+
+```mermaid
+flowchart LR
+    subgraph Email["Email Pipeline"]
+        IMAP[IMAP search] --> Fetch[Fetch attachments]
+        Fetch --> Ollama[Ollama eligibility]
+        Ollama --> Save[Save to consume]
+        Save --> Label[Mark processed]
+    end
+
+    subgraph Signal["Signal Pipeline"]
+        Webhook[Webhook payload] --> Attach[Fetch attachment]
+        Attach --> MIME[MIME eligibility]
+        MIME --> SaveS[Save to consume]
+        SaveS --> Reply[Send reply]
+    end
+```
+
 ## Where to Start
 
 - **Entry point:** [`src/cli.ts`](../src/cli.ts) — parses args, delegates to pipelines.
