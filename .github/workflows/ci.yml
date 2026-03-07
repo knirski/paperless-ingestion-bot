@@ -40,7 +40,12 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             npx commitlint --from=origin/main --to=HEAD
           else
-            npx commitlint --from=${{ github.event.before }} --to=${{ github.sha }}
+            BEFORE="${{ github.event.before }}"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              echo "Skipping commitlint: initial push (no previous commit)"
+            else
+              npx commitlint --from="$BEFORE" --to=${{ github.sha }}
+            fi
           fi
 
       - run: npm run check
