@@ -1,0 +1,26 @@
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+	test: {
+		setupFiles: ["./vitest.setup.ts"],
+		coverage: {
+			provider: "v8",
+			reporter: ["text", "text-summary", "lcov"],
+			include: ["src/**/*.ts"],
+			exclude: [
+				"**/*.test.ts",
+				"**/test/**",
+				"**/index.ts",
+				"src/cli.ts",
+				"src/live/**",
+				"src/shell/**",
+			],
+			thresholds: {
+				lines: 90,
+				functions: 90,
+				statements: 90,
+				branches: 85,
+			},
+		},
+	},
+});

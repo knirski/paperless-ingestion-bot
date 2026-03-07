@@ -1,0 +1,25 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"ignorePatterns": ["dist/**", "node_modules/**", "coverage/**"],
+	"categories": {
+		"correctness": "error",
+		"suspicious": "error"
+	},
+	"plugins": ["typescript", "unicorn", "oxc"],
+	"rules": {
+		"no-console": "error",
+		"no-var": "error",
+		"prefer-const": "error",
+		"prefer-template": "error",
+		"typescript/no-explicit-any": "error",
+		"typescript/consistent-type-imports": ["error", { "disallowTypeAnnotations": true }],
+		"eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+		"oxc/no-parameter-assign": "error",
+		"oxc/no-non-null-assertion": "error",
+		"unicorn/no-array-for-each": "error",
+		"unicorn/prefer-optional-chain": "error",
+		"unicorn/prefer-array-flat-map": "error",
+		"unicorn/prefer-spread": "error",
+		"unicorn/consistent-function-scoping": "off"
+	}
+}

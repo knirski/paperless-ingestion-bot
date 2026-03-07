@@ -1,0 +1,160 @@
+/** Domain errors — discriminated union for shell pattern-matching.
+ *
+ * Flat payloads (no nested Cause). Idiomatic Effect: Fail = typed domain errors, Die = defects.
+ *
+ * ## Optional fields
+ *
+ * - **ConfigValidationError**: `path` — not all validation failures are file-related; `fix` — only when we have a concrete suggestion.
+ * - **SignalApiHttpError**: `message` — HTTP 4xx/5xx or underlying error text.
+ * - **FileSystemError**: `fix` — only keytar and similar cases have a known fix.
+ * - **ConfigParseError**: `fix` — only when we have a hint (e.g. ingest-users template).
+ */
+
+import { Match, Schema } from "effect";
+import { AttachmentIdSchema, SignalNumberSchema } from "./signal-types.js";
+import { AccountEmailSchema } from "./types.js";
+import { errorToLogMessage, unknownToMessage } from "./utils.js";
+
+export class InvalidEmailError extends Schema.TaggedErrorClass<InvalidEmailError>()(
+	"InvalidEmailError",
+	{ email: Schema.String },
+) {}
+
+export class AppPasswordTooShortError extends Schema.TaggedErrorClass<AppPasswordTooShortError>()(
+	"AppPasswordTooShortError",
+	{ message: Schema.String },
+) {}
+
+export class IneligibleAttachmentError extends Schema.TaggedErrorClass<IneligibleAttachmentError>()(
+	"IneligibleAttachmentError",
+	{ message: Schema.String },
+) {}
+
+/** Config validation errors (no users, keytar unavailable, etc.). */
+export class ConfigValidationError extends Schema.TaggedErrorClass<ConfigValidationError>()(
+	"ConfigValidationError",
+	{
+		message: Schema.String,
+		path: Schema.optional(Schema.String),
+		fix: Schema.optional(Schema.String),
+	},
+) {}
+
+export class UnauthorizedUserError extends Schema.TaggedErrorClass<UnauthorizedUserError>()(
+	"UnauthorizedUserError",
+	{ source: SignalNumberSchema },
+) {}
+
+export class SignalApiHttpError extends Schema.TaggedErrorClass<SignalApiHttpError>()(
+	"SignalApiHttpError",
+	{
+		status: Schema.Number,
+		url: Schema.String,
+		message: Schema.String,
+	},
+) {}
+
+export class FileSystemError extends Schema.TaggedErrorClass<FileSystemError>()("FileSystemError", {
+	path: Schema.String,
+	operation: Schema.String,
+	message: Schema.String,
+	fix: Schema.optional(Schema.String),
+}) {}
+
+/** Wrap raw FS errors as FileSystemError. Use with Effect.mapError. */
+export function wrapFs(path: string, op: string, fix?: string) {
+	return (e: unknown) =>
+		new FileSystemError({ path, operation: op, message: unknownToMessage(e), fix });
+}
+
+export class AttachmentTooLargeError extends Schema.TaggedErrorClass<AttachmentTooLargeError>()(
+	"AttachmentTooLargeError",
+	{
+		size: Schema.Number,
+		maxSize: Schema.Number,
+		attachmentId: Schema.optional(AttachmentIdSchema),
+	},
+) {}
+
+export class PayloadTooLargeError extends Schema.TaggedErrorClass<PayloadTooLargeError>()(
+	"PayloadTooLargeError",
+	{ size: Schema.Number, maxSize: Schema.Number },
+) {}
+
+export class OllamaRequestError extends Schema.TaggedErrorClass<OllamaRequestError>()(
+	"OllamaRequestError",
+	{ url: Schema.String, message: Schema.String },
+) {}
+
+export class ImapConnectionError extends Schema.TaggedErrorClass<ImapConnectionError>()(
+	"ImapConnectionError",
+	{ email: AccountEmailSchema, message: Schema.String },
+) {}
+
+/** File parse errors (config, credentials, ingest-users). path + message required. */
+export class ConfigParseError extends Schema.TaggedErrorClass<ConfigParseError>()(
+	"ConfigParseError",
+	{
+		path: Schema.String,
+		message: Schema.String,
+		fix: Schema.optional(Schema.String),
+	},
+) {}
+
+export type DomainError =
+	| InvalidEmailError
+	| AppPasswordTooShortError
+	| IneligibleAttachmentError
+	| ConfigValidationError
+	| UnauthorizedUserError
+	| SignalApiHttpError
+	| AttachmentTooLargeError
+	| PayloadTooLargeError
+	| OllamaRequestError
+	| ImapConnectionError
+	| ConfigParseError
+	| FileSystemError;
+
+function formatWithFix(base: string, fix?: string): string {
+	return fix ? `${base}. Fix: ${fix}` : base;
+}
+
+export const formatDomainError: (err: DomainError) => string = Match.type<DomainError>().pipe(
+	Match.tag("InvalidEmailError", ({ email }) => `Invalid email format: ${email}`),
+	Match.tag("AppPasswordTooShortError", ({ message }) => message),
+	Match.tag("IneligibleAttachmentError", ({ message }) => message),
+	Match.tag("ConfigValidationError", ({ message, path, fix }) =>
+		formatWithFix(`${path ? `${path}: ` : ""}${message}`, fix),
+	),
+	Match.tag("UnauthorizedUserError", ({ source }) => `Unknown Signal number: ${source}`),
+	Match.tag("SignalApiHttpError", ({ status, url, message }) =>
+		status === 0 ? message : `Signal API HTTP ${status} at ${url}`,
+	),
+	Match.tag("FileSystemError", ({ path, operation, message, fix }) =>
+		formatWithFix(`File system error: ${operation} at ${path} (${message})`, fix),
+	),
+	Match.tag(
+		"AttachmentTooLargeError",
+		({ size, maxSize }) => `Attachment too large: ${size} bytes (max ${maxSize})`,
+	),
+	Match.tag(
+		"PayloadTooLargeError",
+		({ size, maxSize }) => `Payload too large: ${size} bytes (max ${maxSize})`,
+	),
+	Match.tag(
+		"OllamaRequestError",
+		({ url, message }) => `Ollama request failed: ${url} (${message})`,
+	),
+	Match.tag(
+		"ImapConnectionError",
+		({ email, message }) => `IMAP connection failed for ${email} (${message})`,
+	),
+	Match.tag("ConfigParseError", ({ path, message, fix }) =>
+		formatWithFix(`Config parse error at ${path}: ${message}`, fix),
+	),
+	Match.exhaustive,
+);
+
+/** Format error for structured logs. DomainError via formatDomainError, else unknownToMessage. */
+export const formatErrorForStructuredLog = (e: unknown) =>
+	errorToLogMessage(e, (err) => formatDomainError(err as DomainError));

@@ -1,0 +1,86 @@
+{
+	"name": "paperless-ingestion-bot",
+	"version": "0.1.0",
+	"description": "Signal and Gmail document ingestion for Paperless-ngx",
+	"keywords": [
+		"document-ingestion",
+		"gmail",
+		"imap",
+		"paperless",
+		"paperless-ngx",
+		"signal"
+	],
+	"license": "Apache-2.0",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/knirski/paperless-ingestion-bot.git"
+	},
+	"bin": {
+		"paperless-ingestion-bot": "./dist/cli.js"
+	},
+	"files": [
+		"dist",
+		"config.example.json"
+	],
+	"type": "module",
+	"scripts": {
+		"start": "tsx --env-file .env src/cli.ts",
+		"build": "tsc -p tsconfig.build.json",
+		"test": "vitest run --coverage --typecheck",
+		"test:integration": "vitest run test/integration --coverage=false",
+		"test:watch": "vitest",
+		"check": "npm run test && npm run lint && npm run knip && npm run typecheck",
+		"lint": "oxlint && oxfmt --check",
+		"lint:fix": "oxlint --fix && oxfmt --write",
+		"format": "oxfmt --write",
+		"knip": "knip",
+		"typecheck": "tsc --noEmit",
+		"prepare": "husky",
+		"prepublishOnly": "npm run build",
+		"publint": "publint",
+		"pack:dry": "npm run build && npm pack --dry-run"
+	},
+	"dependencies": {
+		"@effect/platform-node": "4.0.0-beta.28",
+		"@effect/platform-node-shared": "4.0.0-beta.28",
+		"@js-temporal/polyfill": "^0.5.1",
+		"effect": "4.0.0-beta.28",
+		"file-type": "^21.3.0",
+		"imapflow": "^1.2.12",
+		"keytar": "^7.9.0",
+		"mime": "^4.1.0"
+	},
+	"devDependencies": {
+		"@commitlint/cli": "^19.6.0",
+		"@commitlint/config-conventional": "^19.6.0",
+		"@effect/vitest": "4.0.0-beta.28",
+		"@types/node": "^25.3.5",
+		"@vitest/coverage-v8": "^4.0.18",
+		"fast-check": "^4.5.3",
+		"husky": "^9.1.7",
+		"knip": "^5.85.0",
+		"lint-staged": "^15.4.3",
+		"oxfmt": "^0.36.0",
+		"oxlint": "^1.51.0",
+		"publint": "^0.3.18",
+		"tsx": "^4.21.0",
+		"typescript": "^5.7.0",
+		"vitest": "^4.0.18"
+	},
+	"lint-staged": {
+		"*.ts": [
+			"oxlint --fix",
+			"oxfmt --write"
+		]
+	},
+	"commitlint": {
+		"extends": [
+			"@commitlint/config-conventional"
+		]
+	},
+	"engines": {
+		"node": ">=24.0.0",
+		"typescript": ">=5.0.0"
+	},
+	"// @js-temporal/polyfill": "TC39 Temporal API polyfill; will become built-in in JS runtimes (Node, browsers) once the proposal reaches Stage 4."
+}

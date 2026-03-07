@@ -1,0 +1,14 @@
+{
+	"consume_dir": "/var/lib/paperless-ingestion-bot/consume",
+	"email_accounts_path": "/var/lib/paperless-ingestion-bot/email-accounts.json",
+	"signal_api_url": "http://127.0.0.1:8080",
+	"ingest_users_path": "/var/lib/paperless-ingestion-bot/ingest-users.json",
+	"log_level": "INFO",
+	"webhook_host": "127.0.0.1",
+	"webhook_port": 8089,
+	"ollama_url": "http://127.0.0.1:11434",
+	"ollama_vision_model": "moondream",
+	"ollama_text_model": "llama3.2",
+	"mark_processed_label": "paperless",
+	"page_size": 50
+}
