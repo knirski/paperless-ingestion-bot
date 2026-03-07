@@ -4,7 +4,7 @@
 
 ## Type of change
 
-Select one: **Bug fix** | **New feature** | **Breaking change** | **Documentation update** | **Chore**
+Select one (delete the others): **Bug fix** | **New feature** | **Breaking change** | **Documentation update** | **Chore**. See [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## Changes made
 
