@@ -38,7 +38,7 @@ export interface IntegrationFixture {
 }
 
 export const integrationTest = test.extend<IntegrationFixture>({
-	// oxlint-disable-next-line no-empty-pattern -- Vitest root fixture has no dependencies
+	// biome-ignore lint/correctness/noEmptyPattern: Vitest root fixture has no dependencies
 	tmpDir: async ({}, use) => {
 		const tmp = await createTestTempDir("ingestion-integration-");
 		await use(tmp.path);
