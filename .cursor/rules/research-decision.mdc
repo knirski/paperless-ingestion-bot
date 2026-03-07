@@ -1,0 +1,18 @@
+---
+description: Research and decision-making when unsure. Check official docs first, then popular repos.
+alwaysApply: true
+---
+
+# Research and Decision-Making
+
+When unsure about how to implement something or when multiple approaches exist:
+
+**Use GitHub MCP (or other relevant MCP) first when available** — Prefer MCP tools over web search or manual lookup: `mcp_github_search_code`, `mcp_github_get_file_contents`, `mcp_context7_query-docs`, etc. Fall back to web fetch or CLI only when MCP has no matching capability.
+
+1. **Check official documentation first** — Use the primary source (library docs, GitHub Actions docs, etc.) to understand intended behavior and options.
+2. **When still uncertain, check popular and respectable public repos** — Look at how active, well-maintained projects handle the same problem (e.g. Next.js, React, GitHub’s own repos). Mandatory when:
+   - There are different valid options or paths.
+   - There is no obvious solution.
+   - You need to validate that an approach aligns with common practice.
+
+Docs give the "what" and "how"; real-world usage shows trade-offs and consensus.

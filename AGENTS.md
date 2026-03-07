@@ -4,6 +4,20 @@ Paperless-ingestion-bot ingests documents from Signal and Gmail into Paperless-n
 
 When editing this project, apply these rules. Workflow: apply rules → make changes → run `npm run check` → fix until pass.
 
+## Research and Decision-Making
+
+When unsure about how to implement something or when multiple approaches exist:
+
+**Use GitHub MCP (or other relevant MCP) first when available** — Prefer MCP tools over web search or manual lookup: `mcp_github_search_code`, `mcp_github_get_file_contents`, `mcp_context7_query-docs`, etc. Fall back to web fetch or CLI only when MCP has no matching capability.
+
+1. **Check official documentation first** — Use the primary source (library docs, GitHub Actions docs, etc.) to understand intended behavior and options.
+2. **When still uncertain, check popular and respectable public repos** — Look at how active, well-maintained projects handle the same problem (e.g. Next.js, React, GitHub’s own repos). This is mandatory when:
+   - There are different valid options or paths.
+   - There is no obvious solution.
+   - You need to validate that an approach aligns with common practice.
+
+Docs give the “what” and “how”; real-world usage shows trade-offs and consensus.
+
 ## Setup
 
 - Install: `npm install`
@@ -17,7 +31,7 @@ When editing this project, apply these rules. Workflow: apply rules → make cha
 | `npm run check`            | Full verification (test, lint, knip, typecheck). Run before committing.                                                            |
 | `npm test`                 | Unit tests with coverage                                                                                                           |
 | `npm run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
-| `npm run lint`             | Lint (oxlint, oxfmt)                                                                                                               |
+| `npm run lint`             | Lint (Biome)                                                                                                                       |
 | `npm run lint:fix`         | Lint and fix                                                                                                                       |
 | `npm run typecheck`        | TypeScript check                                                                                                                   |
 | `npm run knip`             | Unused code detection                                                                                                              |
@@ -60,7 +74,7 @@ When editing this project, apply these rules. Workflow: apply rules → make cha
 | Rule             | Requirement                                                                |
 | ---------------- | -------------------------------------------------------------------------- |
 | Effect first     | Use `effect` and `@effect/*`                                               |
-| No `any`         | Use `unknown`; oxlint enforces `noExplicitAny`                             |
+| No `any`         | Use `unknown`; Biome enforces `noExplicitAny`                             |
 | No `!`           | No non-null assertions                                                     |
 | No `enum`        | Use string literal unions                                                  |
 | No `console.log` | Use `Effect.log`                                                           |
@@ -93,7 +107,14 @@ Create small, focused commits. If changes span many files or concerns, propose s
 
 ## Pull Requests
 
-When creating a PR (e.g. with GitHub MCP or `gh pr create`), **follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md)**. After creating the PR, **checkout `main` and pull** so the workspace is left on the default branch.
+When creating a PR (e.g. with GitHub MCP or `gh pr create`):
+
+1. **Assess changes** — Inspect uncommitted and committed-but-not-pushed changes. Divide and group them logically (e.g. feature vs docs vs chore). Create separate branches and separate PRs for each logical group.
+2. Create branch, commit, push
+3. Create PR — follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md)
+4. **Checkout main and pull** — `git checkout main && git pull`. Do not finish until this is done; the workspace must be left on `main`.
+
+**PR body:** Include:
 
 1. **Description** — What and why (context, not just title restatement).
 2. **Type of change** — Check exactly one.
@@ -103,7 +124,7 @@ When creating a PR (e.g. with GitHub MCP or `gh pr create`), **follow the [PR te
 6. **Related issues** — Optional; use "Closes #123" to auto-close.
 7. **Breaking changes** — Only when applicable; describe impact and migration.
 
-Use `gh pr create --body-file <file>` with a file that matches the template structure.
+When using `gh pr create` as fallback, write the body to a temp path (e.g. `/tmp/pr-body.md` or `mktemp`) and pass it to `--body-file`; do not create PR body files in the workspace.
 
 **PR workflow:** When adding commits to an existing PR, batch all changes before pushing, or verify the PR is still open before each push. Avoid merging a PR while additional commits are being prepared—merge only after all intended changes are pushed and CI has run. When done with PR creating, checkout main and pull.
 
@@ -140,8 +161,9 @@ Credentials and config paths are sensitive; do not log or expose them.
 
 **When making a significant architectural change (or planning one):**
 
-1. Create or update an ADR in `docs/adr/` documenting the decision, context, alternatives, and consequences.
-2. Update AGENTS.md and ARCHITECTURE.md as above.
+1. Follow [Research and Decision-Making](#research-and-decision-making): check official docs, then how popular repos handle similar decisions.
+2. Create or update an ADR in `docs/adr/` documenting the decision, context, alternatives, and consequences.
+3. Update AGENTS.md and ARCHITECTURE.md as above.
 
 **Significant** means: affects multiple modules, is hard to reverse, changes design principles, or introduces new patterns. Minor refactors or dependency bumps do not require ADRs.
 

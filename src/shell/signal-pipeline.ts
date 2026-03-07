@@ -39,7 +39,6 @@ import {
 	type DomainError,
 	formatErrorForStructuredLog,
 } from "../domain/errors.js";
-import { redactPath, redactedForLog } from "../domain/utils.js";
 import {
 	type AttachmentId,
 	AttachmentIdSchema,
@@ -232,7 +231,7 @@ export function buildSignalServerLayer(
 			yield* Effect.fail(
 				new ConfigValidationError({
 					message: "No users configured",
-					path: redactedForLog(config.ingestUsersPath, redactPath),
+					path: config.ingestUsersPath,
 					fix: ingestUsersHint(config.ingestUsersPath),
 				}),
 			);
@@ -511,7 +510,7 @@ const validateAndUpsertAccount = Effect.fn("validateAndUpsertAccount")(function*
 		Effect.mapError(
 			(e) =>
 				new ConfigParseError({
-					path: redactedForLog(config.emailAccountsPath, redactPath),
+					path: config.emailAccountsPath,
 					message: `Invalid email after validation: ${unknownToMessage(e)}`,
 				}),
 		),
