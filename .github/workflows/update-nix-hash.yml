@@ -1,11 +1,10 @@
-# Updates npmDepsHash in default.nix when package-lock.json changes.
-# Runs on any PR that touches package-lock.json; pushes the update so contributors
-# don't need Nix locally.
+# Updates npmDepsHash in default.nix when package-lock.json changes on main.
+# Runs after merge; nix job is skipped on PRs (see ci.yml).
 
 name: Update Nix hash
 
 on:
-  pull_request:
+  push:
     branches: [main]
     paths: [package-lock.json]
 
@@ -16,9 +15,6 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
 
       - uses: DeterminateSystems/nix-installer-action@d96bc962e61b3049ce8128d03d57a1144fa96539 # main
 
@@ -33,40 +29,16 @@ jobs:
           CURRENT_HASH=$(grep -oP 'npmDepsHash = "\K[^"]+' default.nix)
           if [ "$NEW_HASH" = "$CURRENT_HASH" ]; then
             echo "Hash already correct, nothing to update"
-            echo "updated=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           echo "hash=$NEW_HASH" >> "$GITHUB_OUTPUT"
-          echo "updated=true" >> "$GITHUB_OUTPUT"
           sed -i "s|npmDepsHash = \"sha256-[^\"]*\"|npmDepsHash = \"$NEW_HASH\"|" default.nix
 
-      - name: Commit and push (same-repo only)
-        if: steps.hash.outputs.updated == 'true' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      - name: Commit and push
+        if: steps.hash.outputs.hash != ''
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add default.nix
           git commit -m "fix(nix): update npmDepsHash for package-lock.json"
-          git push origin HEAD:"$HEAD_REF"
-
-      - name: Comment hash for fork PRs
-        if: steps.hash.outputs.updated == 'true' && github.event.pull_request.head.repo.full_name != github.repository
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c37963445 # v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## Nix hash update needed
-
-              \`package-lock.json\` changed. Update the hash in \`default.nix\`:
-
-              \`\`\`bash
-              npm run update-nix-hash -- ${{ steps.hash.outputs.hash }}
-              \`\`\`
-
-              Then commit and push. (Requires no Nix—just Node.)`
-            })
+          git push
