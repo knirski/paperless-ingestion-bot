@@ -109,7 +109,7 @@ Mount your config directory at `/etc/paperless-ingestion-bot` (must contain `con
 
 ### Generic IMAP
 
-Generic IMAP is supported but adding accounts via Signal isn't implemented yet. Add entries manually to `email-accounts.json` (array of account objects). Each needs `email`, `enabled`, `removed`, `exclude_labels`, `added_by`, and `details` with `type: "generic_imap"`, `host`, `port`, `secure`, `mailbox`. Gmail passwords go in keytar via `gmail add`; for generic IMAP you add credentials to the system keychain yourself.
+Generic IMAP is supported but adding accounts via Signal isn't implemented yet. Add entries manually to `email-accounts.json` (array of account objects). Each needs `email`, `enabled`, `removed`, `exclude_labels`, `added_by`, and `details` with `type: "generic_imap"`, `host`, `port`, `secure`, `mailbox`. Gmail passwords go in the system keychain via `gmail add`; for generic IMAP you add credentials to the system keychain yourself.
 
 ## Config
 
@@ -137,7 +137,7 @@ JSON config (often Nix-generated via `builtins.toJSON`). Standalone: no parent-r
 ```
 
 - `consume_dir`: Paperless-ngx consume directory (bot writes files here)
-- `email_accounts_path`: Path to `email-accounts.json` (Gmail/IMAP account metadata; passwords in keytar)
+- `email_accounts_path`: Path to `email-accounts.json` (Gmail/IMAP account metadata; passwords in system keychain)
 - `signal_api_url`: signal-cli-rest-api base URL (e.g. `http://127.0.0.1:8080`)
 - `ingest_users_path`: Path to `ingest-users.json` (user registry). Create manually, don't commit
 - `webhook_host`, `webhook_port`: Signal webhook server bind address
@@ -170,21 +170,21 @@ See [config.example.json](config.example.json) for a full example.
 
 ## Security
 
-- The email-accounts file (metadata; passwords in keytar) is written with mode `0600` (owner read/write only). Ensure the process runs as a dedicated user.
-- **Credentials store:** By default uses keytar (system keychain). On headless Linux, set `PAPERLESS_INGESTION_CREDENTIALS=file` and optionally `PAPERLESS_INGESTION_CREDENTIALS_FILE` for a file-based fallback (less secure).
+- The email-accounts file (metadata; passwords in system keychain) is written with mode `0600` (owner read/write only). Ensure the process runs as a dedicated user.
+- **Credentials store:** Uses the OS keychain. On headless Linux, ensure libsecret/Secret Service is available (e.g. gnome-keyring, kwallet).
 
 **Trust model:** All family members in the config share the same Gmail account registry. Anyone can run `gmail status` to see all configured accounts and use pause/resume/remove on any of them. The design assumes a trusted group.
 
 ## Troubleshooting
 
-| Issue                                                              | Solution                                                                                                                                                                                     |
-| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `keytar unavailable` or `File system error: getPassword at keytar` | Set `PAPERLESS_INGESTION_CREDENTIALS=file` for file-based store (e.g. headless Linux).                                                                                                       |
-| `Config file not found`                                            | Pass `--config /path/to/config.json` or set `PAPERLESS_INGESTION_CONFIG`.                                                                                                                    |
-| `No users configured`                                              | Create `ingest-users.json` at the path in config: `[{"slug":"krzysiek","signal_number":"+48...","consume_subdir":"krzysiek","display_name":"Krzysiek","tag_name":"Added by Krzysiek"},...]`. |
-| `No account found` for gmail commands                              | Run `gmail status` to list accounts. Add with `gmail add email@example.com <app_password>`.                                                                                                  |
-| IMAP connection fails                                              | Enable IMAP in Gmail; use App Password, not main password.                                                                                                                                   |
-| Ollama assessment timeout                                          | Increase model load or reduce prompt; timeout is 60s.                                                                                                                                        |
+| Issue                                                                        | Solution                                                                                                                                                                                     |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `System keychain unavailable` or `File system error: getPassword at keyring` | Ensure libsecret/Secret Service is available (e.g. gnome-keyring, kwallet). On headless Linux, run a secret service or use a session with keychain support.                                  |
+| `Config file not found`                                                      | Pass `--config /path/to/config.json` or set `PAPERLESS_INGESTION_CONFIG`.                                                                                                                    |
+| `No users configured`                                                        | Create `ingest-users.json` at the path in config: `[{"slug":"krzysiek","signal_number":"+48...","consume_subdir":"krzysiek","display_name":"Krzysiek","tag_name":"Added by Krzysiek"},...]`. |
+| `No account found` for gmail commands                                        | Run `gmail status` to list accounts. Add with `gmail add email@example.com <app_password>`.                                                                                                  |
+| IMAP connection fails                                                        | Enable IMAP in Gmail; use App Password, not main password.                                                                                                                                   |
+| Ollama assessment timeout                                                    | Increase model load or reduce prompt; timeout is 60s.                                                                                                                                        |
 
 ## Verification
 
@@ -194,7 +194,7 @@ npm run check
 
 Runs tests, lint, and typecheck.
 
-**CI:** GitHub Actions runs `npm run check` on push and PR. Commits must follow [Conventional Commits](https://www.conventionalcommits.org/) (enforced by commitlint).
+**CI:** GitHub Actions runs `npm run check` on push and PR. Commits must follow [Conventional Commits](https://www.conventionalcommits.org/) (enforced by commitlint). A CycloneDX SBOM is generated and uploaded as a workflow artifact.
 
 ## Documentation
 
