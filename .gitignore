@@ -6,5 +6,5 @@ dist/
 .DS_Store
 coverage/
 test-report.junit.xml
-result
 sbom.json
+result

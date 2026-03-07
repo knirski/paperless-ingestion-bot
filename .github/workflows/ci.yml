@@ -81,6 +81,17 @@ jobs:
       - run: npm ci
         if: needs.changes.outputs.code == 'true'
 
+      - name: Generate SBOM
+        if: needs.changes.outputs.code == 'true'
+        run: npx @cyclonedx/cyclonedx-npm@4.2.0 --output-file sbom.json
+
+      - name: Upload SBOM
+        if: needs.changes.outputs.code == 'true'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: sbom
+          path: sbom.json
+
       - name: Audit dependencies
         if: needs.changes.outputs.code == 'true'
         run: npm audit --audit-level=high
