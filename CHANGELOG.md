@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.0 (2026-03-07)
+
+
+### Bug Fixes
+
+* **ci:** handle initial push in commitlint, pin scorecard-action to v2.3.1 ([2265a4a](https://github.com/knirski/paperless-ingestion-bot/commit/2265a4a61087fc0543815200ddb656e32fa67f49))
+* **ci:** remove custom CodeQL workflow, drop magic-nix-cache-action ([155d435](https://github.com/knirski/paperless-ingestion-bot/commit/155d4352cdf19c34f2c9674dfd819d908d862c3c))
+
 ## [Unreleased]
 
 ## [0.1.0] - 2025-03-07
