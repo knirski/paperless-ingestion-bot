@@ -49,7 +49,7 @@ Install below, then follow [Setup](#setup) (Signal or Gmail) before running comm
 
 ### Installation
 
-No Docker image yet. Use npm or Nix:
+**npm or Nix:**
 
 **npm (from source):**
 
@@ -66,6 +66,20 @@ nix build .#default          # Build package
 nix develop                   # Development shell
 nix run .#default -- signal --config /path/to/config.json
 ```
+
+**Docker (experimental, in progress):**
+
+A Dockerfile is available; image publishing to GHCR is not yet enabled. You can build locally:
+
+```bash
+docker build -t paperless-ingestion-bot .
+docker run --rm \
+  -v /path/to/config:/etc/paperless-ingestion-bot:ro \
+  -v /path/to/data:/var/lib/paperless-ingestion-bot \
+  paperless-ingestion-bot signal
+```
+
+Mount your config directory at `/etc/paperless-ingestion-bot` (must contain `config.json`) and a data directory at `/var/lib/paperless-ingestion-bot` (for consume, email-accounts.json, ingest-users.json). For headless Linux, set `PAPERLESS_INGESTION_CREDENTIALS=file`.
 
 ### Commands
 

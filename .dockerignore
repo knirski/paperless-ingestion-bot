@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+.git
+.github
+*.md
+!config.example.json
+test
+*.test.ts
+.env
+.env.*
+*.log
+.nix
+result
