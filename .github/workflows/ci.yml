@@ -40,6 +40,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Validate commit messages
+        if: github.actor != 'dependabot[bot]'
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             npx commitlint --from=origin/main --to=HEAD
