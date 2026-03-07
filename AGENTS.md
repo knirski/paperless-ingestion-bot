@@ -105,6 +105,8 @@ When creating a PR (e.g. with GitHub MCP or `gh pr create`), **follow the [PR te
 
 Use `gh pr create --body-file <file>` with a file that matches the template structure.
 
+**PR workflow:** When adding commits to an existing PR, batch all changes before pushing, or verify the PR is still open before each push. Avoid merging a PR while additional commits are being prepared—merge only after all intended changes are pushed and CI has run.
+
 ## Verification
 
 ```bash
