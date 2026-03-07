@@ -10,7 +10,7 @@ import {
 	type SignalNumber,
 	SignalNumberSchema,
 } from "../domain/signal-types.js";
-import { unknownToMessage } from "../domain/utils.js";
+import { redactedForLog, redactUrl, unknownToMessage } from "../domain/utils.js";
 import type { SignalClientService } from "../interfaces/signal-client.js";
 
 export class SignalClient extends ServiceMap.Service<SignalClient, SignalClientService>()(
@@ -37,7 +37,7 @@ function withRetry<T, E>(effect: Effect.Effect<T, E>): Effect.Effect<T, E> {
 function toSignalApiError(url: string, e: unknown): SignalApiHttpError {
 	return new SignalApiHttpError({
 		status: 0,
-		url,
+		url: redactedForLog(url, redactUrl),
 		message: unknownToMessage(e),
 	});
 }
@@ -64,7 +64,7 @@ export function createSignalClient(baseUrl: string): SignalClientService {
 				if (res.status >= 400) {
 					throw new SignalApiHttpError({
 						status: res.status,
-						url,
+						url: redactedForLog(url, redactUrl),
 						message: `HTTP ${res.status}`,
 					});
 				}
@@ -99,7 +99,7 @@ export function createSignalClient(baseUrl: string): SignalClientService {
 					if (res.status >= 400) {
 						throw new SignalApiHttpError({
 							status: res.status,
-							url,
+							url: redactedForLog(url, redactUrl),
 							message: `HTTP ${res.status}`,
 						});
 					}

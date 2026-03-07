@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect";
 import type { ImapSearchQuery } from "../../src/core/search.js";
 import { ImapConnectionError } from "../../src/domain/errors.js";
 import type { MessageUid } from "../../src/domain/types.js";
-import { unknownToMessage } from "../../src/domain/utils.js";
+import { redactEmail, redactedForLog, unknownToMessage } from "../../src/domain/utils.js";
 import type { EmailSession, RawAttachment } from "../../src/interfaces/email-client.js";
 import { EmailClient } from "../../src/live/imap-email-client.js";
 
@@ -40,7 +40,7 @@ export function createImapMockLayer(
 			withConnection: (account, fn) => {
 				const toDomainError = (cause: unknown) =>
 					new ImapConnectionError({
-						email: account.email,
+						email: redactedForLog(account.email, redactEmail),
 						message: unknownToMessage(cause),
 					});
 				if (scenario.connectFail !== undefined) {

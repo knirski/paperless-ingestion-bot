@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* **PII redaction:** Effect `Redacted` for paths, emails, phones, URLs in domain errors. `redactedForLog`, `redactPath`, `redactEmail`, `redactPhone`, `redactUrl` in domain/utils. Raw values never appear in structured logs.
+
 ## [0.1.0] - 2025-03-07
 
 ### Added

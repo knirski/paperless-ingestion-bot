@@ -10,8 +10,9 @@ When creating or editing ADRs, follow the workflow in [AGENTS.md](../../AGENTS.m
 
 ## Index
 
-| ADR  | Title                       |
-| ---- | --------------------------- |
-| 0000 | [Template](adr-template.md) |
-| 0003 | [Webhook rate limiting](0003-rate-limiting.md) |
-| 0004 | [Biome migration](0004-biome-migration.md) |
+| ADR  | Title                                                       |
+| ---- | ----------------------------------------------------------- |
+| 0000 | [Template](adr-template.md)                                 |
+| 0002 | [Signal webhook security](0002-signal-webhook-security.md)   |
+| 0003 | [Webhook rate limiting](0003-rate-limiting.md)               |
+| 0004 | [Biome migration](0004-biome-migration.md)                    |

@@ -42,7 +42,7 @@ import {
 } from "../domain/signal-types.js";
 import type { AccountEmail, AppEffect, User, UserSlug } from "../domain/types.js";
 import { AccountEmailSchema } from "../domain/types.js";
-import { assertNever, unknownToMessage } from "../domain/utils.js";
+import { assertNever, redactedForLog, redactPath, unknownToMessage } from "../domain/utils.js";
 import type { CredentialsStore } from "../live/credentials-store.js";
 import { SignalClient } from "../live/signal-client.js";
 import { ingestUsersHint, SignalConfig } from "./config.js";
@@ -196,7 +196,7 @@ export function buildSignalServerLayer(
 			yield* Effect.fail(
 				new ConfigValidationError({
 					message: "No users configured",
-					path: config.ingestUsersPath,
+					path: redactedForLog(config.ingestUsersPath, redactPath),
 					fix: ingestUsersHint(config.ingestUsersPath),
 				}),
 			);
@@ -475,7 +475,7 @@ const validateAndUpsertAccount = Effect.fn("validateAndUpsertAccount")(function*
 		Effect.mapError(
 			(e) =>
 				new ConfigParseError({
-					path: config.emailAccountsPath,
+					path: redactedForLog(config.emailAccountsPath, redactPath),
 					message: `Invalid email after validation: ${unknownToMessage(e)}`,
 				}),
 		),

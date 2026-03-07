@@ -18,7 +18,7 @@ import {
 	ServiceMap,
 } from "effect";
 import { FileSystemError } from "../domain/errors.js";
-import { unknownToMessage } from "../domain/utils.js";
+import { redactedForLog, redactPath, unknownToMessage } from "../domain/utils.js";
 import type { CredentialsStoreService } from "../interfaces/credentials-store.js";
 import { mapFsError } from "../shell/fs-utils.js";
 
@@ -64,7 +64,7 @@ function createKeytarStore(keytar: KeytarModule): CredentialsStoreService {
 				try: () => keytar.getPassword(SERVICE_NAME, account),
 				catch: (e) =>
 					new FileSystemError({
-						path: KEYTAR_PATH,
+						path: redactedForLog(KEYTAR_PATH, redactPath),
 						operation: "getPassword",
 						message: unknownToMessage(e),
 						fix: "Set PAPERLESS_INGESTION_CREDENTIALS=file for file-based fallback (e.g. headless Linux).",
@@ -79,7 +79,7 @@ function createKeytarStore(keytar: KeytarModule): CredentialsStoreService {
 				try: () => keytar.setPassword(SERVICE_NAME, account, password),
 				catch: (e) =>
 					new FileSystemError({
-						path: KEYTAR_PATH,
+						path: redactedForLog(KEYTAR_PATH, redactPath),
 						operation: "setPassword",
 						message: unknownToMessage(e),
 						fix: "Set PAPERLESS_INGESTION_CREDENTIALS=file for file-based fallback (e.g. headless Linux).",
@@ -92,7 +92,7 @@ function createKeytarStore(keytar: KeytarModule): CredentialsStoreService {
 					try: () => keytar.deletePassword(SERVICE_NAME, account),
 					catch: (e) =>
 						new FileSystemError({
-							path: KEYTAR_PATH,
+							path: redactedForLog(KEYTAR_PATH, redactPath),
 							operation: "deletePassword",
 							message: unknownToMessage(e),
 							fix: "Set PAPERLESS_INGESTION_CREDENTIALS=file for file-based fallback (e.g. headless Linux).",

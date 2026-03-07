@@ -2,6 +2,7 @@
 
 import { Result } from "effect";
 import { AppPasswordTooShortError, InvalidEmailError } from "../domain/errors.js";
+import { redactEmail, redactedForLog } from "../domain/utils.js";
 
 const EMAIL_PATTERN = /^[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}$/;
 const APP_PASSWORD_MIN_LEN = 16;
@@ -9,7 +10,7 @@ const APP_PASSWORD_MIN_LEN = 16;
 export function validateEmail(email: string): Result.Result<string, InvalidEmailError> {
 	const trimmed = email.trim();
 	if (!EMAIL_PATTERN.test(trimmed)) {
-		return Result.fail(new InvalidEmailError({ email }));
+		return Result.fail(new InvalidEmailError({ email: redactedForLog(email, redactEmail) }));
 	}
 	return Result.succeed(trimmed);
 }

@@ -24,7 +24,7 @@ import type { ImapSearchQuery } from "../core/search.js";
 import type { Account } from "../domain/account.js";
 import { ImapConnectionError } from "../domain/errors.js";
 import type { AppEffect, MessageUid } from "../domain/types.js";
-import { unknownToMessage } from "../domain/utils.js";
+import { redactEmail, redactedForLog, unknownToMessage } from "../domain/utils.js";
 import type {
 	EmailClientService,
 	EmailSession,
@@ -76,7 +76,10 @@ function connectClient(account: Account): ImapFlow {
 }
 
 function toImapError(account: Account, e: unknown): ImapConnectionError {
-	return new ImapConnectionError({ email: account.email, message: unknownToMessage(e) });
+	return new ImapConnectionError({
+		email: redactedForLog(account.email, redactEmail),
+		message: unknownToMessage(e),
+	});
 }
 
 function imap<T>(account: Account, try_: () => Promise<T>) {
