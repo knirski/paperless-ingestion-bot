@@ -213,7 +213,7 @@ TypeScript implementation using [Effect](https://effect.website/) and functional
 - [test/integration/README.md](test/integration/README.md): Integration test guide
 - [docs/adr/](docs/adr/): Architecture Decision Records
 
-**CII Best Practices:** Complete the [self-assessment](https://bestpractices.coreinfrastructure.org/en/projects/new?project_url=https%3A%2F%2Fgithub.com%2Fknirski%2Fpaperless-ingestion-bot) to earn the badge and improve OpenSSF Scorecard.
+**CII Best Practices:** See [docs/CII.md](docs/CII.md) for progress. Complete the [self-assessment](https://bestpractices.coreinfrastructure.org/en/projects/new?project_url=https%3A%2F%2Fgithub.com%2Fknirski%2Fpaperless-ingestion-bot) to earn the badge.
 
 This project was developed with assistance from [Cursor](https://cursor.com/).
 

@@ -13,3 +13,4 @@ When creating or editing ADRs, follow the workflow in [AGENTS.md](../../AGENTS.m
 | ADR  | Title                       |
 | ---- | --------------------------- |
 | 0000 | [Template](adr-template.md) |
+| 0003 | [Webhook rate limiting](0003-rate-limiting.md) |
