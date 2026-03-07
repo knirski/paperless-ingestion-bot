@@ -8,3 +8,5 @@ coverage/
 test-report.junit.xml
 sbom.json
 result
+.cursor/
+pr-body.md
