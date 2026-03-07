@@ -85,10 +85,11 @@ Create small, focused commits. If changes span many files or concerns, propose s
 
 ## GitHub Operations
 
-When interacting with GitHub (repos, PRs, issues, etc.):
+**Use GitHub MCP first.** Check `mcps/user-github/tools/` before using `gh` CLI.
 
-1. **Prefer GitHub MCP** — Use MCP tools when available (check Available Tools).
-2. **Fallback to gh CLI** — Use `gh` when MCP is unavailable or for operations MCP doesn't support.
+- PRs: `create_pull_request`, `update_pull_request`, `merge_pull_request`, `pull_request_read`
+- Issues: `issue_write`, `add_issue_comment`, `issue_read`
+- Fallback to `gh` only when MCP has no matching tool.
 
 ## Pull Requests
 
