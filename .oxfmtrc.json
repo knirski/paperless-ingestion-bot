@@ -10,8 +10,8 @@
 		"dist/**",
 		"node_modules/**",
 		"coverage/**",
-		"CHANGELOG.md",
-		".github/PULL_REQUEST_TEMPLATE.md",
-		"docs/adr/**"
+		"**/*.md",
+		".oxfmtrc.json",
+		".oxlintrc.json"
 	]
 }
