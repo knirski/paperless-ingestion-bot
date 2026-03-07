@@ -14,7 +14,7 @@ Security updates are provided for the latest major version. Older major versions
 
 If you believe you have found a security vulnerability, please report it privately:
 
-1. **GitHub Private Vulnerability Reporting** — Use the "Report a vulnerability" button on the Security tab of this repository. This creates a private advisory and notifies maintainers.
+1. **GitHub Private Vulnerability Reporting** — [Open a private security advisory](https://github.com/knirski/paperless-ingestion-bot/security/advisories/new). This creates a private advisory and notifies maintainers.
 
 2. **Alternative** — Open a new issue and add the `security` label. Do not include sensitive details in the issue body; describe that you have a security report and request private contact.
 
@@ -27,7 +27,7 @@ Please include as much of the following as possible:
 - Impact and potential attack vectors
 - Proof-of-concept or exploit code (if available)
 
-We will acknowledge receipt within 48 hours and provide an initial assessment within 7 days.
+We follow coordinated disclosure practices. We will acknowledge receipt within 48 hours and provide an initial assessment within 7 days. We aim to address critical vulnerabilities within 30 days when possible.
 
 ## Security Considerations
 
