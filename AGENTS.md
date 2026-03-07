@@ -8,6 +8,8 @@ When editing this project, apply these rules. Workflow: apply rules → make cha
 
 When unsure about how to implement something or when multiple approaches exist:
 
+**Use GitHub MCP (or other relevant MCP) first when available** — Prefer MCP tools over web search or manual lookup: `mcp_github_search_code`, `mcp_github_get_file_contents`, `mcp_context7_query-docs`, etc. Fall back to web fetch or CLI only when MCP has no matching capability.
+
 1. **Check official documentation first** — Use the primary source (library docs, GitHub Actions docs, etc.) to understand intended behavior and options.
 2. **When still uncertain, check popular and respectable public repos** — Look at how active, well-maintained projects handle the same problem (e.g. Next.js, React, GitHub’s own repos). This is mandatory when:
    - There are different valid options or paths.
