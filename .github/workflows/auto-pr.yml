@@ -52,9 +52,10 @@ jobs:
         if: steps.commits.outputs.count != '1'
         uses: ai-action/setup-ollama@71ea83e32be8721c648fa946c5da9853679a3803 # v2
 
-      - name: Cache Ollama model
+      - name: Restore Ollama model cache
         if: steps.commits.outputs.count != '1'
-        uses: actions/cache@v4
+        id: ollama-cache
+        uses: actions/cache/restore@v4
         with:
           path: ~/.ollama
           key: ollama-llama3.1-8b-${{ runner.os }}
@@ -62,6 +63,13 @@ jobs:
       - name: Ensure model loaded
         if: steps.commits.outputs.count != '1'
         run: ollama pull llama3.1:8b
+
+      - name: Save Ollama model cache
+        if: steps.commits.outputs.count != '1' && steps.ollama-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.ollama
+          key: ollama-llama3.1-8b-${{ runner.os }}
 
       - name: Set PR title
         id: title
