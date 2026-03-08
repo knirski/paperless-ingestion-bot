@@ -79,7 +79,7 @@ jobs:
             } > prompt.txt
             BODY=$(jq -n --rawfile p prompt.txt '{model: "llama3.1:8b", prompt: $p, stream: false}')
             RAW=$(curl -s http://localhost:11434/api/generate -d "$BODY" | jq -r '.response')
-            TITLE=$(echo "$RAW" | sed 's/^"//;s/"$//' | head -1 | cut -c1-72)
+            TITLE=$(echo "$RAW" | sed 's/^"//;s/"$//' | head -1)
             if [ -z "$TITLE" ] || [ "$TITLE" = "null" ]; then
               echo "::error::Failed to generate PR title with Ollama. Using first commit subject as fallback."
               TITLE=$(head -1 subjects.txt)
