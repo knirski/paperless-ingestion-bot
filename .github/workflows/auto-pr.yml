@@ -51,8 +51,6 @@ jobs:
       - name: Setup Ollama
         if: steps.commits.outputs.count != '1'
         uses: ai-action/setup-ollama@71ea83e32be8721c648fa946c5da9853679a3803 # v2
-        with:
-          version: "0.17.7"
 
       - name: Cache Ollama model
         if: steps.commits.outputs.count != '1'
@@ -75,7 +73,8 @@ jobs:
               echo "Commits:"
               sed 's/^/- /' subjects.txt
             } > prompt.txt
-            RAW=$(ollama run --quiet llama3.1:8b < prompt.txt)
+            BODY=$(jq -n --rawfile p prompt.txt '{model: "llama3.1:8b", prompt: $p, stream: false}')
+            RAW=$(curl -s http://localhost:11434/api/generate -d "$BODY" | jq -r '.response')
             TITLE=$(echo "$RAW" | sed 's/^"//;s/"$//' | head -1 | cut -c1-72)
           fi
           echo "title=$TITLE" >> $GITHUB_OUTPUT
