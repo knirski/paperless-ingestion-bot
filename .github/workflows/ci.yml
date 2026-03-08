@@ -40,11 +40,13 @@ jobs:
               - '**/*.json'
               - '**/*.nix'
               - '.github/**'
+              - '.allstar/**'
               - '.husky/**'
               - '**/Dockerfile'
               - '**/.dockerignore'
               - '**/.nvmrc'
               - '**/.editorconfig'
+              - 'CODEOWNERS'
             nix:
               - '**/*.nix'
               - 'package*.json'
