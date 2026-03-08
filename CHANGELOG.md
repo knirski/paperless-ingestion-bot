@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* **ci:** Modern CI (2026): reusable workflows (check.yml, nix.yml), `secrets: inherit`, GitHub-provided actions (checkout@v4, setup-node@v4 with built-in npm cache, upload-artifact@v4). Add packageManager to package.json for reproducibility. Determinate Nix tooling, modular composite actions.
 * **PII redaction:** Effect `Redacted` for paths, emails, phones, URLs in domain errors. `redactedForLog`, `redactPath`, `redactEmail`, `redactPhone`, `redactUrl` in domain/utils. Raw values never appear in structured logs.
 
 ### Breaking Changes

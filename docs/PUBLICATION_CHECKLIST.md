@@ -74,6 +74,7 @@ In **Settings → Branches → Add rule** for `main`:
 ## Recommended Additions
 
 - [x] Nix CI job (added to `.github/workflows/ci.yml`)
+- [x] update-flake-lock workflow (weekly flake.lock updates; `.github/workflows/update-flake-lock.yml`). Runs on schedule from the default branch. See [docs/SCHEDULED_WORKFLOWS.md](SCHEDULED_WORKFLOWS.md) for enabling scheduled workflows. PRs from this workflow must pass CI (`check`, `nix`, `dependency-review`) before merging.
 - [x] Badges (CI, Version, Coverage, License, etc.) in README
 - [x] .editorconfig (editor consistency)
 - [x] Docker image (Dockerfile + `.github/workflows/docker.yml`; experimental, build-only — publishing disabled)
@@ -123,12 +124,18 @@ New public repos often have these on by default.
 
 ### 6. Labels (optional)
 
-**Issues → Labels** — Create `good first issue` and `help wanted` for contributor guidance. Via `gh`:
+**Issues → Labels** — Create labels for contributor guidance and automation:
 
 ```bash
 gh label create "good first issue" --color "0e8a16" --description "Good for newcomers"
 gh label create "help wanted" --color "5319e7" --description "Extra attention is needed"
+# Required for update-flake-lock workflow PRs (or run: ./scripts/create-labels.sh)
+gh label create "dependencies" --color "0366d6" --description "Dependency updates"
+gh label create "nix" --color "7f7f7f" --description "Nix-related changes"
+gh label create "automated" --color "ededed" --description "Automated by CI"
 ```
+
+The `dependencies`, `nix`, and `automated` labels are used by the [update-flake-lock](.github/workflows/update-flake-lock.yml) workflow. Create them before the first scheduled run, or PR creation may fail. See [scripts/create-labels.sh](../scripts/create-labels.sh).
 
 ### 7. Allstar (optional)
 

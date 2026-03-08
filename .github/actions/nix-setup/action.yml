@@ -1,0 +1,32 @@
+# Composite action: checkout, install Nix, enable magic cache.
+# Reused by ci (nix job), update-nix-hash, update-flake-lock.
+#
+# Inputs:
+#   ref: Checkout ref (e.g. PR head for ci). Omit for default.
+#   fetch-depth: Git fetch depth. Default 0 (full history).
+
+name: "Nix setup"
+description: "Checkout repo, install Nix, enable magic-nix-cache"
+
+inputs:
+  ref:
+    description: "Checkout ref (e.g. PR head for ci). Omit for default."
+    required: false
+    default: ""
+  fetch-depth:
+    description: "Git fetch depth (0 = full history)"
+    required: false
+    default: "0"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        fetch-depth: ${{ inputs.fetch-depth }}
+        ref: ${{ inputs.ref || github.ref }}
+
+    # Pinned to main; consider pinning to a tag in a future PR
+    - uses: DeterminateSystems/nix-installer-action@d96bc962e61b3049ce8128d03d57a1144fa96539 # main
+
+    - uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13

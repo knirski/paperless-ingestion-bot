@@ -84,5 +84,6 @@
 		"node": ">=24.0.0",
 		"typescript": ">=5.0.0"
 	},
+	"packageManager": "npm@10.9.0",
 	"// @js-temporal/polyfill": "TC39 Temporal API polyfill; will become built-in in JS runtimes (Node, browsers) once the proposal reaches Stage 4."
 }
