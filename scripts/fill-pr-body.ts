@@ -138,6 +138,11 @@ export function inferTypeOfChange(commits: readonly CommitInfo[]): TypeOfChange 
 	return TYPE_MAP[prefix] ?? "Chore";
 }
 
+function getTitle(commits: readonly CommitInfo[]): string {
+	const first = commits[0];
+	return first?.subject ?? "";
+}
+
 export function getDescription(first: CommitInfo): string {
 	const body = first.body.trim();
 	const firstLine = body.split("\n")[0] ?? "";
@@ -322,9 +327,12 @@ export function fetchCommitsAndFiles(
 	);
 }
 
+export type OutputFormat = "body" | "title-body";
+
 export function runFillBody(
 	baseArg: string | undefined,
 	templatePath: string | undefined,
+	format: OutputFormat = "body",
 ): Effect.Effect<string, Error | ParseError, FileSystem.FileSystem | GitClient | Path.Path> {
 	return Effect.gen(function* () {
 		const path = yield* Path.Path.asEffect();
@@ -343,6 +351,7 @@ export function runFillBody(
 			status: "started",
 			base,
 			templatePath: resolvedTemplatePath,
+			format,
 		});
 
 		const template = yield* readTemplate(resolvedTemplatePath);
@@ -353,13 +362,24 @@ export function runFillBody(
 		const commits = yield* Effect.fromResult(parseResult);
 
 		const data = fillTemplate(commits, files);
-		const result = renderFromTemplate(template, data);
-		if (result.includes("{{")) {
+		const body = renderFromTemplate(template, data);
+		if (body.includes("{{")) {
 			yield* Effect.logWarning({
 				event: "fill_pr_body",
 				message: "Output contains unreplaced {{placeholder}}s",
 			});
 		}
+
+		const title = getTitle(commits);
+		if (format === "title-body" && !title.trim()) {
+			return yield* Effect.fail(
+				new Error(
+					"PR title is empty. Add at least one conventional commit (e.g. feat: add X) before pushing.",
+				),
+			);
+		}
+
+		const result = format === "title-body" ? `${title}\n\n${body}` : body;
 
 		yield* Effect.log({
 			event: "fill_pr_body",
@@ -382,13 +402,22 @@ const templateFlag = Flag.string("template").pipe(
 	Flag.withDescription("Path to template file (default: .github/PULL_REQUEST_TEMPLATE.md)"),
 );
 
+const formatFlag = Flag.string("format").pipe(
+	Flag.optional,
+	Flag.withDescription("Output format: 'body' (default) or 'title-body' (first line = PR title)."),
+);
+
 const fillCommand = Command.make(
 	"fill-pr-body",
-	{ base: baseArg, template: templateFlag },
-	({ base, template }) =>
-		runFillBody(Option.getOrUndefined(base), Option.getOrUndefined(template)).pipe(
-			Effect.flatMap(Console.log),
-		),
+	{ base: baseArg, template: templateFlag, format: formatFlag },
+	({ base, template, format }) => {
+		const formatVal = Option.getOrUndefined(format) === "title-body" ? "title-body" : "body";
+		return runFillBody(
+			Option.getOrUndefined(base),
+			Option.getOrUndefined(template),
+			formatVal,
+		).pipe(Effect.flatMap(Console.log));
+	},
 );
 
 const cliProgram = Command.run(fillCommand, { version: pkg.version });

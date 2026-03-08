@@ -109,6 +109,14 @@ Create small, focused commits. If changes span many files or concerns, propose s
 - Issues: `issue_write`, `add_issue_comment`, `issue_read`
 - Fallback to `gh` only when MCP has no matching tool.
 
+## Branch names (auto-PR workflow)
+
+Use `ai/` prefix when pushing so the [auto-PR workflow](.github/workflows/auto-pr.yml) auto-creates a PR with title and body from conventional commits:
+
+- `ai/feature-name` or `ai/fix-bug-description`
+
+The workflow runs on push to `ai/**` branches and creates/updates the PR using `fill-pr-body.ts`.
+
 ## Pull Requests
 
 When creating a PR (e.g. with GitHub MCP or `gh pr create`):

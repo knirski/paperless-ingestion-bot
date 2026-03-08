@@ -1,12 +1,12 @@
-# GitHub App Setup for Cursor PR Creation (Option B)
+# GitHub App Setup for Auto-PR Creation (Option B)
 
-This guide walks you through setting up a GitHub App so that when Cursor pushes a branch, a workflow automatically creates a pull request **opened by the bot**. You can then approve it as the repo owner.
+This guide walks you through setting up a GitHub App so that when an AI agent (or any tool) pushes a branch with the `ai/` prefix, a workflow automatically creates or updates a pull request **opened by the bot**. You can then approve it as the repo owner.
 
 ## Overview
 
-1. **Cursor** pushes a branch (e.g. `cursor/feature-x` or `agent/fix-y`)
-2. **Workflow** runs on push to those branches
-3. **GitHub App** creates the PR using its token
+1. **AI agent** (or terminal) pushes a branch (e.g. `ai/feature-x` or `ai/fix-y`)
+2. **Workflow** runs on push to `ai/**` branches
+3. **GitHub App** creates or updates the PR using its token
 4. **PR** is opened by `your-app-name[bot]` → you can approve it
 
 ---
@@ -15,7 +15,7 @@ This guide walks you through setting up a GitHub App so that when Cursor pushes 
 
 1. Go to [github.com/settings/apps/new](https://github.com/settings/apps/new)
 2. Fill in:
-   - **GitHub App name**: e.g. `knirski-cursor-pr-bot` (must be unique)
+   - **GitHub App name**: e.g. `knirski-auto-pr-bot` (must be unique)
    - **Homepage URL**: Your repo URL, e.g. `https://github.com/knirski/paperless-ingestion-bot`
    - **Webhook**: Uncheck **Active** (we don't need webhooks)
 3. Under **Repository permissions**:
@@ -60,16 +60,19 @@ This guide walks you through setting up a GitHub App so that when Cursor pushes 
 
 ## Step 5: Add the Workflow File
 
-Create `.github/workflows/cursor-pr.yml` with:
+Create `.github/workflows/auto-pr.yml` with:
 
 ```yaml
-name: Create PR from Cursor branch
+name: Create PR from AI branch
 
 on:
   push:
     branches:
-      - 'cursor/**'
-      - 'agent/**'
+      - 'ai/**'
+
+concurrency:
+  group: auto-pr-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -77,6 +80,7 @@ permissions:
 
 jobs:
   create-pr:
+    if: github.event.repository.fork != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,28 +95,34 @@ jobs:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Create pull request if not exists
+      - name: Create or update pull request
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           BRANCH="${{ github.ref_name }}"
           DEFAULT="${{ github.event.repository.default_branch }}"
+          OUTPUT=$(npx tsx scripts/fill-pr-body.ts "$DEFAULT" --format title-body)
+          TITLE=$(echo "$OUTPUT" | head -1)
+          if [ -z "$TITLE" ]; then
+            echo "::error::PR title is empty. Add at least one conventional commit (e.g. feat: add X) before pushing."
+            exit 1
+          fi
+          echo "$OUTPUT" | tail -n +3 > /tmp/pr-body.md
           if ! gh pr view --head "$BRANCH" 2>/dev/null; then
-            npx tsx scripts/fill-pr-body.ts "$DEFAULT" > /tmp/pr-body.md
-            TITLE=$(git log "$DEFAULT"..HEAD --format=%s -1)
             gh pr create --base "$DEFAULT" --title "$TITLE" --body-file /tmp/pr-body.md
+          else
+            gh pr edit "$BRANCH" --title "$TITLE" --body-file /tmp/pr-body.md
           fi
 ```
 
 ---
 
-## Step 6: Use the Right Branch Names in Cursor
+## Step 6: Use the Right Branch Names
 
-When creating changes in Cursor, use branch names that match the workflow:
+When creating changes (from any AI agent or terminal), use branch names that match the workflow:
 
-- `cursor/feature-name`
-- `cursor/fix-bug-description`
-- `agent/anything`
+- `ai/feature-name`
+- `ai/fix-bug-description`
 
 Or adjust the `branches` filter in the workflow to match your preferred prefix.
 
@@ -122,11 +132,11 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
 
 **Workflow validation is manual.** There is no GitHub API mock for integration tests. To verify the workflow:
 
-1. From Cursor (or your terminal), create and push a branch:
+1. Create and push a branch:
    ```bash
-   git checkout -b cursor/test-setup
-   git commit --allow-empty -m "chore: test cursor PR workflow"
-   git push origin cursor/test-setup
+   git checkout -b ai/test-setup
+   git commit --allow-empty -m "chore: test auto-PR workflow"
+   git push origin ai/test-setup
    ```
 2. Check **Actions** in your repo — the workflow should run
 3. A new PR should appear, opened by `your-app-name[bot]`
@@ -134,11 +144,25 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
 
 ---
 
+## Known limitations and edge cases
+
+| Area | Limitation | Notes |
+|------|------------|-------|
+| **Forks** | Workflow does not run on forks | `if: github.event.repository.fork != true` skips the job. Pushing to `ai/**` on a fork creates no PR; create the PR to upstream manually. |
+| **PR title length** | No enforced limit | Very long titles (>72 chars) may truncate in some UIs. Conventional commits typically stay short. |
+| **Empty title** | Fails with clear error | Requires at least one conventional commit with non-empty subject. |
+| **gh auth / rate limit** | Unclear errors possible | If token scope is wrong or rate limited, `gh` fails. Retry later or check app permissions. |
+| **Token scope** | Requires `pull_requests: write` | App must have Pull requests: Read and write. |
+| **fill-pr-body** | Base branch must exist | If default branch was renamed, pass correct base via `--base` or fix `origin/HEAD`. |
+| **npmDepsHash** | CI cannot push to fork PRs | See [CONTRIBUTING](../CONTRIBUTING.md). Update locally: `nix run .#update-npm-deps-hash`. |
+
+---
+
 ## Troubleshooting
 
 | Issue | Fix |
 |-------|-----|
-| Workflow doesn't run | Ensure branch name matches `cursor/**` or `agent/**` |
+| Workflow doesn't run | Ensure branch name matches `ai/**`; workflow skips on forks |
 | "Resource not accessible" | Check app permissions (Contents, Pull requests: read & write) |
 | "Secret not found" | Verify `APP_ID` and `APP_PRIVATE_KEY` in repo secrets |
 | PR already exists | Workflow updates the PR title and body from the latest commits |
@@ -166,8 +190,8 @@ The script is TypeScript (Effect, pure core + shell) for type safety, readabilit
 
 - **Script (pure logic):** Unit tests in `test/scripts/fill-pr-body.test.ts`
 - **Script (git + output):** Integration test in `test/integration/fill-pr-body.integration.test.ts` (temp git repo)
-- **Workflow:** No GitHub API mock exists. Validate by pushing to `cursor/**` and checking Actions/PR
+- **Workflow:** No GitHub API mock exists. Validate by pushing to `ai/**` and checking Actions/PR
 
 ## Optional: Add labels
 
-To tag Cursor PRs, add `--label "cursor"` to the `gh pr create` command (requires a `cursor` label in the repo).
+To tag auto-created PRs, add `--label "ai"` to the `gh pr create` command (requires an `ai` label in the repo).
