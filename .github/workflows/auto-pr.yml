@@ -42,13 +42,16 @@ jobs:
           path: ~/.ollama
           key: ollama-${{ runner.os }}-llama3.2-1b
 
-      - name: Pull Ollama model
+      - name: Start Ollama
         run: |
-          ollama pull llama3.2:1b
+          nohup ollama serve &
           if ! timeout 30 bash -c 'until curl -sf http://localhost:11434/api/tags >/dev/null; do sleep 1; done'; then
-            echo "::error::Ollama not reachable within 30s (ollama pull should start it)"
+            echo "::error::Ollama failed to start within 30s"
             exit 1
           fi
+
+      - name: Pull Ollama model
+        run: ollama pull llama3.2:1b
 
       - name: Generate GitHub App token
         id: app-token
