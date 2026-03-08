@@ -5,8 +5,8 @@
  * Usage: node scripts/update-nix-hash.mjs <sha256-hash>
  * Or: npm run update-nix-hash -- sha256-...
  *
- * The hash can be obtained from CI when it fails, or by running
- * nix run .#update-npm-deps-hash (requires Nix).
+ * The hash can be obtained from the failed nix CI job: expand the
+ * "Verify npmDepsHash" step and copy it from the "Without Nix: ..." line.
  */
 
 import fs from "node:fs";
@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const hash = process.argv[2];
+const hash = process.argv[2]?.trim();
 if (!hash || !hash.startsWith("sha256-")) {
 	console.error("Usage: node scripts/update-nix-hash.mjs <sha256-hash>");
 	process.exit(1);

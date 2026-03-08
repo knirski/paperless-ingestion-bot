@@ -12,9 +12,16 @@ npm install && npm run build
 
 If you change `package-lock.json` (e.g. add a dependency), the Nix hash must be updated:
 
-- **Same-repo PRs:** Updated automatically by CI. No action needed.
-- **Fork PRs:** CI will comment the hash and command. Run `npm run update-nix-hash -- <hash>` (no Nix required).
-- **Local (with Nix):** Run `nix run .#update-npm-deps-hash` before pushing.
+**With Nix:**
+1. Run `npm run check` — it updates `default.nix` when package files changed.
+2. Commit `default.nix` with your changes: `git add default.nix && git commit -m "fix(nix): update npmDepsHash for package-lock.json"`
+
+**Without Nix:**
+1. Push your branch; the nix CI job will fail with a clear error.
+2. In the failed job, expand the "Verify npmDepsHash" step and copy the hash from the line `Without Nix: npm run update-nix-hash -- <hash>`. Run that command.
+3. Commit `default.nix` with your changes.
+
+**Recommendation:** Install [Nix](https://nixos.org/download/) so `npm run check` can keep the hash in sync.
 
 See [README.md](README.md) for runtime requirements and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for project structure.
 

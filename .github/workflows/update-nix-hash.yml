@@ -1,5 +1,5 @@
 # Updates npmDepsHash in default.nix when package-lock.json changes on main.
-# Runs after merge; nix job is skipped on PRs (see ci.yml).
+# Runs after merge. PR authors must update the hash before merge (CI enforces).
 
 name: Update Nix hash
 
@@ -26,7 +26,7 @@ jobs:
             echo "prefetch-npm-deps failed or returned empty"
             exit 1
           fi
-          CURRENT_HASH=$(grep -oP 'npmDepsHash = "\K[^"]+' default.nix)
+          CURRENT_HASH=$(sed -n 's/.*npmDepsHash = "\([^"]*\)".*/\1/p' default.nix | head -1)
           if [ "$NEW_HASH" = "$CURRENT_HASH" ]; then
             echo "Hash already correct, nothing to update"
             exit 0

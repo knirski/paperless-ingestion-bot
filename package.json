@@ -30,7 +30,7 @@
 		"test:unit": "vitest run --coverage=false --typecheck",
 		"test:integration": "vitest run test/integration --coverage=false",
 		"test:watch": "vitest",
-		"check": "npm audit --audit-level=high && npm run test && npm run lint && npm run knip && npm run typecheck",
+		"check": "bash scripts/check-nix-hash.sh && npm audit --audit-level=high && npm run test && npm run lint && npm run knip && npm run typecheck",
 		"lint": "biome check .",
 		"lint:fix": "biome check . --write --unsafe",
 		"format": "biome format --write .",
