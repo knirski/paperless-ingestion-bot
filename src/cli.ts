@@ -8,11 +8,11 @@
  *   email [--config path] [--users path] [--email-accounts path] [--json]  — Run email crawl pipeline
  */
 
-import { createRequire } from "node:module";
 import * as NodeRuntime from "@effect/platform-node-shared/NodeRuntime";
 import { Cause, Effect, ErrorReporter, Layer, Option } from "effect";
 import * as Arr from "effect/Array";
 import { Command, Flag } from "effect/unstable/cli";
+import pkg from "../package.json" with { type: "json" };
 import { formatErrorForStructuredLog } from "./domain/errors.js";
 import {
 	EmailConfig,
@@ -30,9 +30,6 @@ const domainErrorReporter = ErrorReporter.make(({ cause }) => {
 	const msg = firstFail ? formatErrorForStructuredLog(firstFail.error) : Cause.pretty(cause);
 	process.stderr.write(`${msg}\n`);
 });
-
-const require = createRequire(import.meta.url);
-const pkg = require("../package.json") as { version: string };
 
 const configFlag = Flag.string("config").pipe(
 	Flag.optional,

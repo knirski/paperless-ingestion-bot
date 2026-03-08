@@ -77,3 +77,7 @@ For failure tests, pass `configOverrides: { imapRetrySchedule: imapRetrySchedule
 2. Build layer: `buildTestLayer({ tmpDir, emailAccountsPath }, scenario, options)`.
 3. Run: `await runWebhook(layer, payload)`.
 4. Assert on `spy.sendMessageCalls`, `spy.fetchAttachmentCalls`, or files in `join(tmpDir, "consume", "user1")`.
+
+### fill-pr-body script
+
+Creates a temp git repo with conventional commits and runs `npx tsx scripts/fill-pr-body.ts main` via subprocess. Asserts output contains expected PR template sections. No mocks; uses real `git` binary.
