@@ -1,6 +1,10 @@
 # CI: check, dependency-review, nix build.
 # Uses GitHub reusable workflows, paths-filter for conditional jobs,
 # concurrency for cancel-in-progress, least-privilege permissions.
+#
+# Paths filter rationale:
+# - code: triggers check (test, lint, typecheck, SBOM, Codecov) and dependency-review
+# - nix: triggers Nix build and npmDepsHash update
 
 name: CI
 
@@ -37,17 +41,23 @@ jobs:
               - '**/*.ts'
               - '**/*.tsx'
               - '**/*.mjs'
+              - '**/*.sh'
               - '**/*.json'
               - '**/*.nix'
               - '.github/**'
+              - '.allstar/**'
               - '.husky/**'
               - '**/Dockerfile'
               - '**/.dockerignore'
               - '**/.nvmrc'
               - '**/.editorconfig'
+              - '**/*.md'
+              - 'CODEOWNERS'
+              - 'LICENSE'
             nix:
               - '**/*.nix'
               - 'package*.json'
+              - 'flake.lock'
 
   dependency-review:
     needs: changes
