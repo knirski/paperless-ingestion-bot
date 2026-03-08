@@ -31,7 +31,7 @@ jobs:
         with:
           results_file: results.sarif
           results_format: sarif
-          publish_results: true
+          publish_results: false
 
       - name: Upload artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
@@ -42,5 +42,6 @@ jobs:
 
       - name: Upload to code-scanning
         uses: github/codeql-action/upload-sarif@b20883b0cd1f46c72ae0ba6d1090936928f9fa30 # v4.32.0
+        continue-on-error: true  # Scorecard SARIF can have URI/duplicate issues with CodeQL v4
         with:
           sarif_file: results.sarif
