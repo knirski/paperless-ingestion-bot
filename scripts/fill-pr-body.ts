@@ -540,7 +540,7 @@ function computeTitle(
 		return generateTitleViaOllama(
 			commits,
 			options.ollamaUrl ?? "http://localhost:11434",
-			options.ollamaModel ?? "llama3.2:1b",
+			options.ollamaModel ?? "llama3.1:8b",
 		);
 	}
 	return Effect.succeed(getTitle(commits));
@@ -625,7 +625,7 @@ const ollamaUrlFlag = Flag.string("ollama-url").pipe(
 
 const ollamaModelFlag = Flag.string("ollama-model").pipe(
 	Flag.optional,
-	Flag.withDescription("Ollama model for title generation (default: llama3.2:1b)."),
+	Flag.withDescription("Ollama model for title generation (default: llama3.1:8b)."),
 );
 
 const fillCommand = Command.make(

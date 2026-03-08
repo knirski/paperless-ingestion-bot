@@ -40,7 +40,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ollama
-          key: ollama-${{ runner.os }}-llama3.2-1b
+          key: ollama-${{ runner.os }}-llama3.1-8b
 
       - name: Start Ollama
         run: |
@@ -51,7 +51,7 @@ jobs:
           fi
 
       - name: Pull Ollama model
-        run: ollama pull llama3.2:1b
+        run: ollama pull llama3.1:8b
 
       - name: Generate GitHub App token
         id: app-token

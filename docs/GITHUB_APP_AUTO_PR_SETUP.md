@@ -1,6 +1,6 @@
 # GitHub App Setup for Auto-PR Creation
 
-This guide walks you through setting up a GitHub App so that when an AI agent (or any tool) pushes a branch with the `ai/` prefix, a workflow automatically creates or updates a pull request **opened by the bot**. PR titles are generated from conventional commits; for multi-commit PRs, local [Ollama](https://ollama.ai/) (llama3.2:1b) summarizes commits into a conventional title. You can then approve the PR as the repo owner.
+This guide walks you through setting up a GitHub App so that when an AI agent (or any tool) pushes a branch with the `ai/` prefix, a workflow automatically creates or updates a pull request **opened by the bot**. PR titles are generated from conventional commits; for multi-commit PRs, local [Ollama](https://ollama.ai/) (llama3.1:8b) summarizes commits into a conventional title. You can then approve the PR as the repo owner.
 
 ## Overview
 

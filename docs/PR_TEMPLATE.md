@@ -35,7 +35,7 @@ Uses `effect/unstable/cli` (Command, Argument, Flag) like the main project CLI.
 - **`--ai-title`:** Generate PR title via Ollama when there are multiple commits. Skips Ollama for a single commit; falls back to first commit subject on failure.
 - **`--quiet`:** Suppress logs (for CI when capturing stdout).
 - **`--ollama-url URL`:** Ollama base URL (default: `http://localhost:11434`).
-- **`--ollama-model MODEL`:** Ollama model for title generation (default: `llama3.2:1b`).
+- **`--ollama-model MODEL`:** Ollama model for title generation (default: `llama3.1:8b`).
 
 ### Template path
 
