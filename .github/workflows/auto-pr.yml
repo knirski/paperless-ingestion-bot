@@ -1,4 +1,4 @@
-name: Create PR from AI branch
+name: Create or update PR from AI branch
 
 on:
   push:
@@ -75,18 +75,20 @@ jobs:
             exit 1
           fi
           echo "$OUTPUT" | tail -n +3 > /tmp/pr-body.md
-          for attempt in 1 2 3; do
-            if ! gh pr view --head "$BRANCH" 2>/dev/null; then
-              gh pr create --base "$DEFAULT" --title "$TITLE" --body-file /tmp/pr-body.md --draft
-            else
-              gh pr edit "$BRANCH" --title "$TITLE" --body-file /tmp/pr-body.md
-            fi
-            [ $? -eq 0 ] && break
-            if [ "$attempt" -lt 3 ]; then
-              echo "::warning::gh failed (attempt $attempt/3), retrying in 5s..."
-              sleep 5
-            else
-              echo "::error::gh failed after 3 attempts"
-              exit 1
-            fi
-          done
+          if gh pr view --head "$BRANCH" 2>/dev/null; then
+            echo "PR exists, updating..."
+            for attempt in 1 2 3; do
+              gh pr edit --title "$TITLE" --body-file /tmp/pr-body.md && exit 0
+              [ "$attempt" -lt 3 ] && { echo "::warning::gh pr edit failed (attempt $attempt/3), retrying in 5s..."; sleep 5; }
+            done
+            echo "::error::gh pr edit failed after 3 attempts"
+            exit 1
+          else
+            echo "Creating PR..."
+            for attempt in 1 2 3; do
+              gh pr create --base "$DEFAULT" --title "$TITLE" --body-file /tmp/pr-body.md --draft && exit 0
+              [ "$attempt" -lt 3 ] && { echo "::warning::gh pr create failed (attempt $attempt/3), retrying in 5s..."; sleep 5; }
+            done
+            echo "::error::gh pr create failed after 3 attempts"
+            exit 1
+          fi
