@@ -19,7 +19,7 @@ This guide walks you through setting up a GitHub App so that when an AI agent (o
    - **Homepage URL**: Your repo URL, e.g. `https://github.com/knirski/paperless-ingestion-bot`
    - **Webhook**: Uncheck **Active** (we don't need webhooks)
 3. Under **Repository permissions**:
-   - **Contents**: Read and write
+   - **Contents**: Read
    - **Pull requests**: Read and write
 4. Under **Where can this GitHub App be installed?**: Choose **Only on this account**
 5. Click **Create GitHub App**
@@ -60,103 +60,7 @@ This guide walks you through setting up a GitHub App so that when an AI agent (o
 
 ## Step 5: Add the Workflow File
 
-Create `.github/workflows/auto-pr.yml` with:
-
-```yaml
-name: Create PR from AI branch
-
-on:
-  push:
-    branches:
-      - 'ai/**'
-
-concurrency:
-  group: auto-pr-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  pull-requests: write
-
-jobs:
-  create-pr:
-    if: github.event.repository.fork != true
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref_name }}
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Fetch base branch
-        run: git fetch origin ${{ github.event.repository.default_branch }}
-
-      - name: Install Ollama
-        run: curl -fsSL https://ollama.com/install.sh | sh
-
-      - name: Cache Ollama model
-        uses: actions/cache@v4
-        with:
-          path: ~/.ollama
-          key: ollama-${{ runner.os }}-llama3.2-1b
-
-      - name: Pull Ollama model
-        run: ollama pull llama3.2:1b
-
-      - name: Start Ollama
-        run: |
-          ollama serve &
-          if timeout 30 bash -c 'until curl -sf http://localhost:11434/api/tags >/dev/null; do sleep 1; done'; then
-            echo "Ollama ready"
-          else
-            echo "::error::Ollama failed to start within 30s"
-            exit 1
-          fi
-
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-
-      - name: Create or update pull request
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          BRANCH="${{ github.ref_name }}"
-          DEFAULT="${{ github.event.repository.default_branch }}"
-          OUTPUT=$(npx tsx scripts/fill-pr-body.ts "origin/$DEFAULT" --format title-body --ai-title --quiet)
-          TITLE=$(echo "$OUTPUT" | head -1)
-          if [ -z "$TITLE" ]; then
-            echo "::error::PR title is empty. Add at least one non-merge commit with non-empty subject (e.g. feat: add X) before pushing."
-            exit 1
-          fi
-          echo "$OUTPUT" | tail -n +3 > /tmp/pr-body.md
-          for attempt in 1 2 3; do
-            if ! gh pr view --head "$BRANCH" 2>/dev/null; then
-              gh pr create --base "$DEFAULT" --title "$TITLE" --body-file /tmp/pr-body.md --draft
-            else
-              gh pr edit "$BRANCH" --title "$TITLE" --body-file /tmp/pr-body.md
-            fi
-            [ $? -eq 0 ] && break
-            if [ "$attempt" -lt 3 ]; then
-              echo "::warning::gh failed (attempt $attempt/3), retrying in 5s..."
-              sleep 5
-            else
-              echo "::error::gh failed after 3 attempts"
-              exit 1
-            fi
-          done
-```
+Copy from this repository: [.github/workflows/auto-pr.yml](../.github/workflows/auto-pr.yml), [scripts/create-or-update-pr.sh](../scripts/create-or-update-pr.sh), and [scripts/fill-pr-body.ts](../scripts/fill-pr-body.ts). The workflow uses the PR template at [.github/PULL_REQUEST_TEMPLATE.md](../.github/PULL_REQUEST_TEMPLATE.md) (see [PR template](PR_TEMPLATE.md) for details).
 
 ---
 
@@ -197,7 +101,7 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
 | **All merge commits** | Fails with empty title | Branch with only merge commits (e.g. after merging base) yields no semantic commits; add at least one regular commit. |
 | **gh auth / rate limit** | Unclear errors possible | Workflow retries `gh` up to 3 times with 5s delay. If token scope is wrong, retries won't help. |
 | **Token scope** | Requires `pull_requests: write` | App must have Pull requests: Read and write. |
-| **fill-pr-body** | Base branch must exist | If default branch was renamed, pass correct base via `--base` or fix `origin/HEAD`. |
+| **fill-pr-body** | Base branch must exist | The workflow passes the default branch to `create-or-update-pr.sh`. If renamed, update the workflow. |
 | **npmDepsHash** | CI cannot push to fork PRs | See [CONTRIBUTING](../CONTRIBUTING.md). Update locally: `nix run .#update-npm-deps-hash`. |
 
 ---
@@ -207,7 +111,7 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
 | Issue | Fix |
 |-------|-----|
 | Workflow doesn't run | Ensure branch name matches `ai/**`; workflow skips on forks |
-| "Resource not accessible" | Check app permissions (Contents, Pull requests: read & write) |
+| "Resource not accessible" | Check app permissions (Contents: Read, Pull requests: Read and write) |
 | "Secret not found" | Verify `APP_ID` and `APP_PRIVATE_KEY` in repo secrets |
 | PR already exists | Workflow updates the PR title and body from the latest commits |
 
@@ -219,7 +123,7 @@ The workflow uses `scripts/fill-pr-body.ts` to parse conventional commits and fi
 
 | Section | Source |
 |---------|--------|
-| **Title** | First commit subject (single commit) or Ollama-generated (multiple commits with `--ai-title`; falls back to first commit subject on failure) |
+| **Title** | First commit subject (single commit) or Ollama-generated (2+ non-merge commits with `--ai-title`; falls back to first commit subject on failure) |
 | **Description** | First commit body, or subject with conventional prefix stripped |
 | **Type of change** | Inferred from conventional commit (`feat`→New feature, `fix`→Bug fix, `docs`→Documentation update, `chore`→Chore, `feat!`/`BREAKING`→Breaking change); non-conventional commits fall back to Chore. |
 | **Changes made** | One bullet per non-merge commit (merge commits filtered; non-conventional included) |
@@ -238,4 +142,4 @@ The script is TypeScript (Effect, pure core + shell) for type safety, readabilit
 
 ## Optional: Add labels
 
-To tag auto-created PRs, add `--label "ai"` to the `gh pr create` command (requires an `ai` label in the repo).
+To tag auto-created PRs, add `--label "ai"` to the `gh pr create` command in [scripts/create-or-update-pr.sh](../scripts/create-or-update-pr.sh) (requires an `ai` label in the repo).
