@@ -59,6 +59,10 @@ jobs:
           path: ~/.ollama
           key: ollama-llama3.1-8b-${{ runner.os }}
 
+      - name: Ensure model loaded
+        if: steps.commits.outputs.count != '1'
+        run: ollama pull llama3.1:8b
+
       - name: Set PR title
         id: title
         run: |
@@ -76,6 +80,10 @@ jobs:
             BODY=$(jq -n --rawfile p prompt.txt '{model: "llama3.1:8b", prompt: $p, stream: false}')
             RAW=$(curl -s http://localhost:11434/api/generate -d "$BODY" | jq -r '.response')
             TITLE=$(echo "$RAW" | sed 's/^"//;s/"$//' | head -1 | cut -c1-72)
+            if [ -z "$TITLE" ] || [ "$TITLE" = "null" ]; then
+              echo "::error::Failed to generate PR title with Ollama. Using first commit subject as fallback."
+              TITLE=$(head -1 subjects.txt)
+            fi
           fi
           echo "title=$TITLE" >> $GITHUB_OUTPUT
 
