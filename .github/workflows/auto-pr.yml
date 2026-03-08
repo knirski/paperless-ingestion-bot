@@ -17,20 +17,21 @@ jobs:
   auto-pr:
     if: github.event.repository.fork != true
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
       - run: npm ci
 
       - name: Fetch base branch
-        run: git fetch origin ${{ github.event.repository.default_branch }}
+        run: git fetch origin "${{ github.event.repository.default_branch }}"
 
       - name: Get commit log and changed files
         id: commits
@@ -44,9 +45,11 @@ jobs:
             echo "::error::No commits to push. Add at least one commit before pushing to ai/ branch."
             exit 1
           fi
-          echo "commits=${{ github.workspace }}/commits.txt" >> $GITHUB_OUTPUT
-          echo "files=${{ github.workspace }}/files.txt" >> $GITHUB_OUTPUT
-          echo "count=$COUNT" >> $GITHUB_OUTPUT
+          {
+            echo "commits=${{ github.workspace }}/commits.txt"
+            echo "files=${{ github.workspace }}/files.txt"
+            echo "count=$COUNT"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Setup Ollama
         if: steps.commits.outputs.count != '1'
@@ -55,7 +58,7 @@ jobs:
       - name: Restore Ollama model cache
         if: steps.commits.outputs.count != '1'
         id: ollama-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /home/runner/.ollama
           key: ollama-llama3.1-8b-${{ runner.os }}
@@ -66,7 +69,7 @@ jobs:
 
       - name: Save Ollama model cache
         if: steps.commits.outputs.count != '1' && steps.ollama-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: /home/runner/.ollama
           key: ollama-llama3.1-8b-${{ runner.os }}
@@ -93,7 +96,7 @@ jobs:
               TITLE=$(head -1 subjects.txt)
             fi
           fi
-          echo "title=$TITLE" >> $GITHUB_OUTPUT
+          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
 
       - name: Generate GitHub App token
         id: app-token

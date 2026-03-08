@@ -20,6 +20,6 @@ Reusable actions for Nix-related CI workflows. Used by reusable workflows (check
 
 ## GitHub-provided features used
 
-- `actions/checkout@v4`, `actions/setup-node@v4` (built-in npm cache), `actions/upload-artifact@v4`
+- `actions/checkout`, `actions/setup-node` (built-in npm cache), `actions/upload-artifact` (all SHA-pinned)
 - `secrets: inherit` for reusable workflows
 - `workflow_call` for reusable workflows
