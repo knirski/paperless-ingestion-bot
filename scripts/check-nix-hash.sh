@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Warn when package-lock.json changed and npmDepsHash may be stale.
+# (Test comment for auto-pr workflow)
 # CI will update default.nix automatically when you push (same-repo PRs and main).
 # This script never modifies files or fails the check.
 
