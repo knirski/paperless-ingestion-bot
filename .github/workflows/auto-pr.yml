@@ -46,31 +46,36 @@ jobs:
           fi
           echo "commits=${{ github.workspace }}/commits.txt" >> $GITHUB_OUTPUT
           echo "files=${{ github.workspace }}/files.txt" >> $GITHUB_OUTPUT
-          echo "first-commit-title=$(head -1 subjects.txt)" >> $GITHUB_OUTPUT
           echo "count=$COUNT" >> $GITHUB_OUTPUT
-          echo "subjects<<COMMITLIST" >> $GITHUB_OUTPUT
-          sed 's/^/- /' subjects.txt >> $GITHUB_OUTPUT
-          echo "COMMITLIST" >> $GITHUB_OUTPUT
 
-      - name: Generate PR title via Ollama
-        id: ollama
+      - name: Setup Ollama
         if: steps.commits.outputs.count != '1'
-        uses: ai-action/ollama-action@be18a6c5c9977cc0510d1d705edd02d574269c93 # v2
-        with:
-          model: llama3.1:8b
-          prompt: |
-            Generate a single conventional commit title (max 72 chars) that summarizes this PR.
-            Format: type(scope): subject (e.g. feat: add X, fix(ci): resolve bug).
-            Use the most significant type from the commits. Reply with only the title, nothing else.
+        uses: ai-action/setup-ollama@71ea83e32be8721c648fa946c5da9853679a3803 # v2
 
-            Commits:
-            ${{ steps.commits.outputs.subjects}}
+      - name: Cache Ollama model
+        if: steps.commits.outputs.count != '1'
+        uses: actions/cache@v4
+        with:
+          path: ~/.ollama
+          key: ollama-llama3.1-8b-${{ runner.os }}
 
       - name: Set PR title
         id: title
         run: |
-          RAW="${{ steps.ollama.outputs.response || steps.commits.outputs.first-commit-title }}"
-          TITLE=$(echo "$RAW" | sed 's/^"//;s/"$//' | head -1 | cut -c1-72)
+          if [ "${{ steps.commits.outputs.count }}" = "1" ]; then
+            TITLE=$(head -1 subjects.txt)
+          else
+            {
+              echo "Generate a single conventional commit title (max 72 chars) that summarizes this PR."
+              echo "Format: type(scope): subject (e.g. feat: add X, fix(ci): resolve bug)."
+              echo "Use the most significant type from the commits. Reply with only the title, nothing else."
+              echo ""
+              echo "Commits:"
+              sed 's/^/- /' subjects.txt
+            } > prompt.txt
+            RAW=$(ollama run --quiet llama3.1:8b < prompt.txt)
+            TITLE=$(echo "$RAW" | sed 's/^"//;s/"$//' | head -1 | cut -c1-72)
+          fi
           echo "title=$TITLE" >> $GITHUB_OUTPUT
 
       - name: Generate GitHub App token
