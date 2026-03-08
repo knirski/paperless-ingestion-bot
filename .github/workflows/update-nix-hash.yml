@@ -1,5 +1,6 @@
 # Updates npmDepsHash in default.nix. Manual fix when main is stale.
 # CI nix job handles updates on push and PR automatically.
+# Reuses the nix workflow (same-repo, push allowed).
 
 name: Update Nix hash
 
@@ -8,35 +9,7 @@ on:
 
 jobs:
   update-hash:
-    runs-on: ubuntu-latest
     permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - uses: DeterminateSystems/nix-installer-action@d96bc962e61b3049ce8128d03d57a1144fa96539 # main
-
-      - name: Get npmDepsHash and update default.nix
-        id: hash
-        run: |
-          NEW_HASH=$(nix run nixpkgs#prefetch-npm-deps -- package-lock.json)
-          if [ -z "$NEW_HASH" ]; then
-            echo "prefetch-npm-deps failed or returned empty"
-            exit 1
-          fi
-          CURRENT_HASH=$(sed -n 's/.*npmDepsHash = "\([^"]*\)".*/\1/p' default.nix | head -1)
-          if [ "$NEW_HASH" = "$CURRENT_HASH" ]; then
-            echo "Hash already correct, nothing to update"
-            exit 0
-          fi
-          echo "hash=$NEW_HASH" >> "$GITHUB_OUTPUT"
-          sed -i "s|npmDepsHash = \"sha256-[^\"]*\"|npmDepsHash = \"$NEW_HASH\"|" default.nix
-
-      - name: Commit and push
-        if: steps.hash.outputs.hash != ''
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add default.nix
-          git commit -m "fix(nix): update npmDepsHash for package-lock.json"
-          git push
+      contents: read
+    uses: ./.github/workflows/nix.yml
+    secrets: inherit

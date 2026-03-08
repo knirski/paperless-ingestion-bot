@@ -1,0 +1,72 @@
+# Reusable workflow: run full check (test, lint, typecheck, SBOM, Codecov).
+# Called by ci.yml when code changes are detected.
+#
+# Uses GitHub-provided: setup-node (built-in npm cache), upload-artifact, GITHUB_TOKEN.
+
+name: Check
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Generate SBOM
+        run: npx @cyclonedx/cyclonedx-npm@4.2.0 --output-file sbom.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom
+          path: sbom.json
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+      - name: Lint workflow files
+        uses: eifinger/actionlint-action@7802e0cc3ab3f81cbffb36fb0bf1a3621d994b89 # v1
+
+      - name: Validate commit messages
+        if: github.actor != 'dependabot[bot]'
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npx commitlint --from=origin/main --to=HEAD
+          else
+            BEFORE="${{ github.event.before }}"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              echo "Skipping commitlint: initial push (no previous commit)"
+            else
+              npx commitlint --from="$BEFORE" --to=${{ github.sha }}
+            fi
+          fi
+
+      - run: npm run check
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+
+      - name: Upload test results to Codecov
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./test-report.junit.xml
+          report_type: test_results

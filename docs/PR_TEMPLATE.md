@@ -32,6 +32,7 @@ Uses `effect/unstable/cli` (Command, Argument, Flag) like the main project CLI.
 - **Base branch:** Optional positional arg. Omitted → inferred from `git rev-parse --abbrev-ref origin/HEAD` (falls back to `main` if no remote).
 - **`--template PATH`:** Override template file. Order-independent (e.g. `main --template x` or `--template x main`).
 - **`--format title-body`:** Output first line = PR title (first commit subject), blank line, then body. Used by [auto-PR workflow](../.github/workflows/auto-pr.yml).
+- **`--quiet`:** Suppress log output. Use when capturing stdout for piping (e.g. in CI).
 
 ### Template path
 

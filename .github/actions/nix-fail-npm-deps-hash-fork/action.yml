@@ -1,0 +1,23 @@
+# Fails with instructions when npmDepsHash is stale on a fork PR.
+# CI cannot push to forks; contributor must update locally.
+
+name: "Nix fail npmDepsHash (fork PR)"
+description: "Print error and exit 1 with update instructions"
+
+inputs:
+  hash:
+    description: "The expected hash (from nix-npm-deps-hash output)"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        echo "::error::npmDepsHash mismatch. CI cannot push to fork PRs."
+        echo ""
+        echo "Update locally and commit:"
+        echo "  nix run .#update-npm-deps-hash"
+        echo "  # or: npm run update-nix-hash -- ${{ inputs.hash }}"
+        echo "  git add default.nix && git commit -m 'fix(nix): update npmDepsHash for package-lock.json'"
+        exit 1

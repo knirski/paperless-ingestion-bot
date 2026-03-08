@@ -1,0 +1,47 @@
+# Reusable workflow: Nix build with npmDepsHash auto-update.
+# Called by ci.yml and update-nix-hash.yml.
+#
+# Uses GitHub-provided: GITHUB_TOKEN (for push), composite actions for modularity.
+
+name: Nix
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Checkout ref (PR head for ci, omit for default)"
+        required: false
+        type: string
+        default: ""
+      push_allowed:
+        description: "Whether to commit and push npmDepsHash updates (false for fork PRs)"
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  nix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: ./.github/actions/nix-setup
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: DeterminateSystems/flake-checker-action@3164002371bc90729c68af0e24d5aacf20d7c9f6 # v12
+        with:
+          check-outdated: false
+
+      - uses: ./.github/actions/nix-npm-deps-hash
+        id: hash
+
+      - uses: ./.github/actions/nix-commit-npm-deps-hash
+        if: steps.hash.outputs.hash != '' && inputs.push_allowed
+
+      - uses: ./.github/actions/nix-fail-npm-deps-hash-fork
+        if: steps.hash.outputs.hash != '' && !inputs.push_allowed
+        with:
+          hash: ${{ steps.hash.outputs.hash }}
+
+      - run: nix build .#default
