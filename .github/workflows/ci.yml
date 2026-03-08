@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.filter.outputs.code }}
+      nix: ${{ steps.filter.outputs.nix }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -25,29 +26,20 @@ jobs:
         with:
           filters: |
             code:
-              - 'src/**'
-              - 'test/**'
-              - '*.ts'
-              - 'package.json'
-              - 'package-lock.json'
-              - 'tsconfig*.json'
-              - 'vitest.config.ts'
-              - 'vitest.setup.ts'
-              - 'knip.json'
-              - 'biome.json'
-              - '.editorconfig'
-              - 'flake.nix'
-              - 'flake.lock'
-              - 'default.nix'
-              - 'shell.nix'
-              - 'config.example.json'
-              - 'scripts/**'
-              - '.github/workflows/**'
+              - '**/*.ts'
+              - '**/*.tsx'
+              - '**/*.mjs'
+              - '**/*.json'
+              - '**/*.nix'
+              - '.github/**'
               - '.husky/**'
-              - '.nvmrc'
-              - 'Dockerfile'
-              - '.dockerignore'
-              - 'release-please-config.json'
+              - '**/Dockerfile'
+              - '**/.dockerignore'
+              - '**/.nvmrc'
+              - '**/.editorconfig'
+            nix:
+              - '**/*.nix'
+              - 'package*.json'
 
   dependency-review:
     needs: changes
@@ -131,7 +123,7 @@ jobs:
 
   nix:
     needs: changes
-    if: github.event_name == 'push' && needs.changes.outputs.code == 'true'
+    if: (github.event_name == 'push' && needs.changes.outputs.code == 'true') || (github.event_name == 'pull_request' && needs.changes.outputs.nix == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
