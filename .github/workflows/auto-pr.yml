@@ -75,20 +75,22 @@ jobs:
             exit 1
           fi
           echo "$OUTPUT" | tail -n +3 > /tmp/pr-body.md
-          if gh pr view --head "$BRANCH" 2>/dev/null; then
-            echo "PR exists, updating..."
-            for attempt in 1 2 3; do
-              gh pr edit --title "$TITLE" --body-file /tmp/pr-body.md && exit 0
-              [ "$attempt" -lt 3 ] && { echo "::warning::gh pr edit failed (attempt $attempt/3), retrying in 5s..."; sleep 5; }
-            done
-            echo "::error::gh pr edit failed after 3 attempts"
-            exit 1
-          else
-            echo "Creating PR..."
-            for attempt in 1 2 3; do
-              gh pr create --base "$DEFAULT" --title "$TITLE" --body-file /tmp/pr-body.md --draft && exit 0
-              [ "$attempt" -lt 3 ] && { echo "::warning::gh pr create failed (attempt $attempt/3), retrying in 5s..."; sleep 5; }
-            done
-            echo "::error::gh pr create failed after 3 attempts"
-            exit 1
-          fi
+          for attempt in 1 2 3; do
+            if gh pr create --base "$DEFAULT" --title "$TITLE" --body-file /tmp/pr-body.md --draft 2>/tmp/gh-err; then
+              echo "PR created"
+              exit 0
+            fi
+            err=$(cat /tmp/gh-err)
+            if echo "$err" | grep -q "already exists"; then
+              echo "PR already exists, updating..."
+              if gh pr edit --title "$TITLE" --body-file /tmp/pr-body.md; then
+                exit 0
+              fi
+            else
+              echo "::error::gh pr create failed: $err"
+              exit 1
+            fi
+            [ "$attempt" -lt 3 ] && { echo "::warning::gh failed (attempt $attempt/3), retrying in 5s..."; sleep 5; }
+          done
+          echo "::error::gh failed after 3 attempts"
+          exit 1
