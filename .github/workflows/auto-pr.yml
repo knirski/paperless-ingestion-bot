@@ -55,7 +55,7 @@ jobs:
       - name: Generate PR title via Ollama
         id: ollama
         if: steps.commits.outputs.count != '1'
-        uses: ai-action/ollama-action@v2
+        uses: ai-action/ollama-action@be18a6c5c9977cc0510d1d705edd02d574269c93 # v2
         with:
           model: llama3.1:8b
           prompt: |
@@ -65,6 +65,13 @@ jobs:
 
             Commits:
             ${{ steps.commits.outputs.subjects}}
+
+      - name: Set PR title
+        id: title
+        run: |
+          RAW="${{ steps.ollama.outputs.response || steps.commits.outputs.first-commit-title }}"
+          TITLE=$(echo "$RAW" | sed 's/^"//;s/"$//' | head -1 | cut -c1-72)
+          echo "title=$TITLE" >> $GITHUB_OUTPUT
 
       - name: Generate GitHub App token
         id: app-token
@@ -80,5 +87,5 @@ jobs:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           COMMITS: ${{ steps.commits.outputs.commits }}
           FILES: ${{ steps.commits.outputs.files }}
-          PR_TITLE: ${{ steps.ollama.outputs.response || steps.commits.outputs.first-commit-title }}
+          PR_TITLE: ${{ steps.title.outputs.title }}
         run: bash scripts/create-or-update-pr.sh

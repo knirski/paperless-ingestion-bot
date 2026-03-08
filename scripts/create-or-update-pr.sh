@@ -11,7 +11,7 @@ done
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
-npx tsx scripts/fill-pr-body.ts --log-file "$COMMITS" --files-file "$FILES" --format body > /tmp/pr-body.md
+npx tsx scripts/fill-pr-body.ts --log-file "$COMMITS" --files-file "$FILES" --format body --quiet > /tmp/pr-body.md
 
 retry() {
 	for attempt in 1 2 3; do
