@@ -103,6 +103,65 @@ describe("fill-pr-body script integration", () => {
 		}
 	});
 
+	test("format title-body outputs first line as PR title (first commit subject)", async () => {
+		const tmp = await createTestTempDir("fill-pr-body-");
+		try {
+			runGit(tmp.path, "init", "-b", "main");
+			runGit(tmp.path, "config", "user.email", "test@example.com");
+			runGit(tmp.path, "config", "user.name", "Test User");
+
+			await writeTestFile(path.join(tmp.path, "README.md"), "# Test\n");
+			runGit(tmp.path, "add", "README.md");
+			runGit(tmp.path, "commit", "-m", "chore: initial");
+
+			setupTemplate(tmp.path);
+
+			runGit(tmp.path, "checkout", "-b", "ai/feature-x");
+			writeFile(path.join(tmp.path, "src/x.ts"), "x;\n");
+			runGit(tmp.path, "add", "src/x.ts");
+			runGit(tmp.path, "commit", "-m", "fix(ci): automate npmDepsHash updates via CI");
+
+			const output = await Effect.runPromise(
+				runFillBody("main", undefined, "title-body").pipe(Effect.provide(testLayer(tmp.path))),
+			);
+
+			const lines = output.split("\n");
+			expect(lines[0]).toBe("fix(ci): automate npmDepsHash updates via CI");
+			expect(lines[1]).toBe("");
+			expect(output).toContain("## Description");
+		} finally {
+			await tmp.remove();
+		}
+	});
+
+	test("format title-body fails when no commits (empty title)", async () => {
+		const tmp = await createTestTempDir("fill-pr-body-");
+		try {
+			runGit(tmp.path, "init", "-b", "main");
+			runGit(tmp.path, "config", "user.email", "test@example.com");
+			runGit(tmp.path, "config", "user.name", "Test User");
+
+			await writeTestFile(path.join(tmp.path, "README.md"), "# Test\n");
+			runGit(tmp.path, "add", "README.md");
+			runGit(tmp.path, "commit", "-m", "chore: initial");
+
+			setupTemplate(tmp.path);
+
+			runGit(tmp.path, "checkout", "-b", "ai/empty");
+			// No commits ahead of main → empty title
+
+			const program = runFillBody("main", undefined, "title-body").pipe(
+				Effect.provide(testLayer(tmp.path)),
+			);
+
+			await expect(Effect.runPromise(program)).rejects.toThrow(
+				"PR title is empty. Add at least one conventional commit",
+			);
+		} finally {
+			await tmp.remove();
+		}
+	});
+
 	test("extracts Closes #123 and sets howToTest N/A for docs-only", async () => {
 		const tmp = await createTestTempDir("fill-pr-body-");
 		try {

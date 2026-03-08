@@ -7,7 +7,7 @@ A single template at [`.github/PULL_REQUEST_TEMPLATE.md`](../.github/PULL_REQUES
 | Mode | How |
 |------|-----|
 | **Manual** | GitHub shows the template when creating a PR. Replace each `{{placeholder}}` with your content. |
-| **Automated** | `npx tsx scripts/fill-pr-body.ts [base]` reads the template, replaces placeholders, outputs to stdout. |
+| **Automated** | `npx tsx scripts/fill-pr-body.ts [base]` reads the template, replaces placeholders, outputs to stdout. Use `--format title-body` for first line = PR title. |
 
 ## Placeholders
 
@@ -31,6 +31,7 @@ Uses `effect/unstable/cli` (Command, Argument, Flag) like the main project CLI.
 
 - **Base branch:** Optional positional arg. Omitted → inferred from `git rev-parse --abbrev-ref origin/HEAD` (falls back to `main` if no remote).
 - **`--template PATH`:** Override template file. Order-independent (e.g. `main --template x` or `--template x main`).
+- **`--format title-body`:** Output first line = PR title (first commit subject), blank line, then body. Used by [auto-PR workflow](../.github/workflows/auto-pr.yml).
 
 ### Template path
 
@@ -41,11 +42,15 @@ Uses `effect/unstable/cli` (Command, Argument, Flag) like the main project CLI.
 
 If the base branch doesn't exist locally, the script tries `origin/<base>` (e.g. `origin/main`).
 
+### title-body format requirements
+
+With `--format title-body`, the script fails if there are no commits or the first commit has an empty subject. The auto-PR workflow requires at least one conventional commit (e.g. `feat: add X`) before pushing.
+
 ### Substitution
 
 - Plain string replacement: `{{placeholder}}` → value.
 - **Escaping:** Literal `{{` and `}}` in commit content are preserved.
-- **Empty values:** `{{relatedIssues}}` and `{{breakingChanges}}` when empty → single space so the section doesn't look blank.
+- **Empty values:** `{{relatedIssues}}` and `{{breakingChanges}}` when empty → empty string (no extra blank lines).
 - **Unreplaced warning:** If output still contains `{{` after substitution, a warning is logged to stderr (e.g. typos like `{{desciption}}`).
 
 ## Behavior

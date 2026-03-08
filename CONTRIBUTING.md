@@ -12,16 +12,11 @@ npm install && npm run build
 
 If you change `package-lock.json` (e.g. add a dependency), the Nix hash must be updated:
 
-**With Nix:**
-1. Run `npm run check` — it updates `default.nix` when package files changed.
-2. Commit `default.nix` with your changes: `git add default.nix && git commit -m "fix(nix): update npmDepsHash for package-lock.json"`
+**CI handles it:** Push your branch. CI will update `default.nix` automatically for same-repo PRs and main. No need to commit the hash change yourself.
 
-**Without Nix:**
-1. Push your branch; the nix CI job will fail with a clear error.
-2. In the failed job, expand the "Verify npmDepsHash" step and copy the hash from the line `Without Nix: npm run update-nix-hash -- <hash>`. Run that command.
-3. Commit `default.nix` with your changes.
+**Local warning:** `npm run check` warns when the hash is stale. You can ignore it — CI will fix it when you push.
 
-**Recommendation:** Install [Nix](https://nixos.org/download/) so `npm run check` can keep the hash in sync.
+**Fork PRs:** CI cannot push to forks. If the nix job fails, update locally: `nix run .#update-npm-deps-hash` (or `npm run update-nix-hash -- <hash>` using the hash from the failed job), then commit and push.
 
 See [README.md](README.md) for runtime requirements and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for project structure.
 
@@ -41,6 +36,8 @@ Examples:
 - `chore: bump dependency`
 
 ## Pull Requests
+
+For AI-assisted development: push to `ai/**` branches to auto-create PRs with title and body from conventional commits. See [docs/GITHUB_APP_AUTO_PR_SETUP.md](docs/GITHUB_APP_AUTO_PR_SETUP.md) for maintainer setup.
 
 1. Run `npm run check` before submitting.
 2. Ensure your commits follow Conventional Commits (the PR template includes a checklist).

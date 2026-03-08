@@ -1,12 +1,10 @@
-# Updates npmDepsHash in default.nix when package-lock.json changes on main.
-# Runs after merge. PR authors must update the hash before merge (CI enforces).
+# Updates npmDepsHash in default.nix. Manual fix when main is stale.
+# CI nix job handles updates on push and PR automatically.
 
 name: Update Nix hash
 
 on:
-  push:
-    branches: [main]
-    paths: [package-lock.json]
+  workflow_dispatch:
 
 jobs:
   update-hash:

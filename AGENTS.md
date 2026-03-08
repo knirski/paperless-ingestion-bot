@@ -28,7 +28,7 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 
 | Command                    | Purpose                                                                                                                            |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run check`            | Full verification (test, lint, knip, typecheck). Updates npmDepsHash when package-lock.json changed (requires Nix). Run before committing. |
+| `npm run check`            | Full verification (test, lint, knip, typecheck). Warns when npmDepsHash is stale (package-lock.json changed); CI auto-updates on push. Run before committing. |
 | `npm test`                 | Unit tests with coverage                                                                                                           |
 | `npm run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
 | `npm run lint`             | Lint (Biome)                                                                                                                       |
@@ -109,12 +109,20 @@ Create small, focused commits. If changes span many files or concerns, propose s
 - Issues: `issue_write`, `add_issue_comment`, `issue_read`
 - Fallback to `gh` only when MCP has no matching tool.
 
+## Branch names (auto-PR workflow)
+
+Use `ai/` prefix when pushing so the [auto-PR workflow](.github/workflows/auto-pr.yml) auto-creates a PR with title and body from conventional commits:
+
+- `ai/feature-name` or `ai/fix-bug-description`
+
+The workflow runs on push to `ai/**` branches and creates/updates the PR using `fill-pr-body.ts`.
+
 ## Pull Requests
 
 When creating a PR (e.g. with GitHub MCP or `gh pr create`):
 
 1. **Assess changes** — Inspect uncommitted and committed-but-not-pushed changes. Divide and group them logically (e.g. feature vs docs vs chore). Create separate branches and separate PRs for each logical group.
-2. Create branch, commit, push
+2. Create branch (use `ai/` prefix), commit, push — see [Branch names (auto-PR workflow)](#branch-names-auto-pr-workflow).
 3. Create PR — follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md). See [docs/PR_TEMPLATE.md](docs/PR_TEMPLATE.md).
 4. **Checkout main and pull** — `git checkout main && git pull`. Do not finish until this is done; the workspace must be left on `main`.
 

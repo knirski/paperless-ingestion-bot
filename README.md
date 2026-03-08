@@ -214,6 +214,7 @@ TypeScript implementation using [Effect](https://effect.website/) and functional
 
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md): Project structure and design
 - [CONTRIBUTING.md](CONTRIBUTING.md): How to contribute
+- [docs/GITHUB_APP_AUTO_PR_SETUP.md](docs/GITHUB_APP_AUTO_PR_SETUP.md): Auto-PR workflow setup (maintainers)
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): Community standards
 - [SECURITY.md](SECURITY.md): Vulnerability reporting
 - [SUPPORT.md](SUPPORT.md): Getting help
@@ -222,7 +223,7 @@ TypeScript implementation using [Effect](https://effect.website/) and functional
 
 **CII Best Practices:** See [docs/CII.md](docs/CII.md) for progress. Complete the [self-assessment](https://bestpractices.coreinfrastructure.org/en/projects/new?project_url=https%3A%2F%2Fgithub.com%2Fknirski%2Fpaperless-ingestion-bot) to earn the badge.
 
-This project was developed with assistance from [Cursor](https://cursor.com/).
+This project was developed with assistance from AI coding tools.
 
 ## License
 

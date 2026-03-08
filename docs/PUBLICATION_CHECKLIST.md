@@ -51,7 +51,7 @@ nix build .#default
 ./result/bin/paperless-ingestion-bot --help
 ```
 
-If `npmDepsHash` is wrong, Nix will suggest the correct hash. Update `default.nix` accordingly.
+If `npmDepsHash` is wrong, CI will auto-update on push. For fork PRs or manual fix: `nix run .#update-npm-deps-hash` or `npm run update-nix-hash -- <hash>` (hash from the failed CI step).
 
 ### 4. npm publish (optional)
 
@@ -67,7 +67,7 @@ If publishing to npm:
 In **Settings → Branches → Add rule** for `main`:
 
 - [ ] Require a pull request before merging
-- [ ] Require status checks to pass (e.g. `check`)
+- [ ] Require status checks to pass (e.g. `check`, `nix`, `dependency-review`)
 - [ ] Do not allow bypassing the above settings
 - [ ] Restrict who can push (optional)
 
@@ -114,7 +114,7 @@ New public repos often have these on by default.
 **Settings → Branches → Add rule** for `main`:
 
 - [ ] Require a pull request before merging
-- [ ] Require status checks to pass (`check`, `nix`, `dependency-review`)
+- [ ] Require status checks to pass (`check`, `nix`, `dependency-review`) — `nix` ensures npmDepsHash stays in sync
 - [ ] Do not allow bypassing the above settings
 
 ### 5. GitHub Discussions (optional)

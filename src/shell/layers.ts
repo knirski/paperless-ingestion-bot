@@ -17,7 +17,7 @@ import type { LogLevel as ConfigLogLevel } from "./config.js";
 import { EmailConfig, SignalConfig } from "./config.js";
 
 /** Respect NO_COLOR (https://no-color.org): disable colors when set, for CI/scripting. */
-export const LoggerLayer = Logger.layer([
+const LoggerLayer = Logger.layer([
 	Logger.consolePretty({ colors: process.env.NO_COLOR === undefined }),
 ]);
 

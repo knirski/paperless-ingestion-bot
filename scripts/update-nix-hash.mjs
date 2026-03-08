@@ -6,7 +6,7 @@
  * Or: npm run update-nix-hash -- sha256-...
  *
  * The hash can be obtained from the failed nix CI job: expand the
- * "Verify npmDepsHash" step and copy it from the "Without Nix: ..." line.
+ * "Update npmDepsHash if mismatch" step and copy it from the "Without Nix: ..." line.
  */
 
 import fs from "node:fs";
