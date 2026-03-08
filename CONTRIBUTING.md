@@ -37,6 +37,8 @@ Examples:
 
 ## Pull Requests
 
+For AI-assisted development: push to `ai/**` branches to auto-create PRs with title and body from conventional commits. See [docs/GITHUB_APP_AUTO_PR_SETUP.md](docs/GITHUB_APP_AUTO_PR_SETUP.md) for maintainer setup.
+
 1. Run `npm run check` before submitting.
 2. Ensure your commits follow Conventional Commits (the PR template includes a checklist).
 3. Update documentation if your changes affect user-facing behavior.

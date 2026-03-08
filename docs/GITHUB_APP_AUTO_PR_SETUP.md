@@ -1,4 +1,4 @@
-# GitHub App Setup for Auto-PR Creation (Option B)
+# GitHub App Setup for Auto-PR Creation
 
 This guide walks you through setting up a GitHub App so that when an AI agent (or any tool) pushes a branch with the `ai/` prefix, a workflow automatically creates or updates a pull request **opened by the bot**. You can then approve it as the repo owner.
 

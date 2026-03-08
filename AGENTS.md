@@ -122,7 +122,7 @@ The workflow runs on push to `ai/**` branches and creates/updates the PR using `
 When creating a PR (e.g. with GitHub MCP or `gh pr create`):
 
 1. **Assess changes** — Inspect uncommitted and committed-but-not-pushed changes. Divide and group them logically (e.g. feature vs docs vs chore). Create separate branches and separate PRs for each logical group.
-2. Create branch, commit, push
+2. Create branch (use `ai/` prefix), commit, push — see [Branch names (auto-PR workflow)](#branch-names-auto-pr-workflow).
 3. Create PR — follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md). See [docs/PR_TEMPLATE.md](docs/PR_TEMPLATE.md).
 4. **Checkout main and pull** — `git checkout main && git pull`. Do not finish until this is done; the workspace must be left on `main`.
 
