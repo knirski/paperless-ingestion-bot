@@ -51,6 +51,8 @@ jobs:
       - name: Setup Ollama
         if: steps.commits.outputs.count != '1'
         uses: ai-action/setup-ollama@71ea83e32be8721c648fa946c5da9853679a3803 # v2
+        with:
+          version: "0.17.7"
 
       - name: Cache Ollama model
         if: steps.commits.outputs.count != '1'
