@@ -57,7 +57,7 @@ jobs:
         id: ollama-cache
         uses: actions/cache/restore@v4
         with:
-          path: ~/.ollama
+          path: /home/runner/.ollama
           key: ollama-llama3.1-8b-${{ runner.os }}
 
       - name: Ensure model loaded
@@ -68,7 +68,7 @@ jobs:
         if: steps.commits.outputs.count != '1' && steps.ollama-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: ~/.ollama
+          path: /home/runner/.ollama
           key: ollama-llama3.1-8b-${{ runner.os }}
 
       - name: Set PR title
