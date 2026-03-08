@@ -146,11 +146,15 @@ jobs:
         id: hash
         run: |
           expected=$(nix run nixpkgs#prefetch-npm-deps -- package-lock.json)
-          if [ -z "$expected" ]; then
-            echo "::error::prefetch-npm-deps failed or returned empty"
+          if [ -z "$expected" ] || [[ ! "$expected" =~ ^sha256-[A-Za-z0-9+/=]+$ ]]; then
+            echo "::error::prefetch-npm-deps failed or returned invalid hash"
             exit 1
           fi
           current=$(sed -n 's/.*npmDepsHash = "\([^"]*\)".*/\1/p' default.nix | head -1)
+          if [ -z "$current" ] || [[ ! "$current" =~ ^sha256-[A-Za-z0-9+/=]+$ ]]; then
+            echo "::error::Could not parse npmDepsHash from default.nix (expected format: npmDepsHash = \"sha256-...\")"
+            exit 1
+          fi
           if [ "$expected" = "$current" ]; then
             echo "Hash correct, no update needed"
             exit 0

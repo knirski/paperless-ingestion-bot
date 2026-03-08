@@ -38,6 +38,10 @@ if [ -z "$expected" ]; then
 fi
 
 current=$(sed -n 's/.*npmDepsHash = "\([^"]*\)".*/\1/p' default.nix 2>/dev/null | head -1)
+if [ -z "$current" ] || [[ ! "$current" =~ ^sha256-[A-Za-z0-9+/=]+$ ]]; then
+	echo "warning: Could not parse npmDepsHash from default.nix (expected format: npmDepsHash = \"sha256-...\"). Skipping check." >&2
+	exit 0
+fi
 if [ "$expected" != "$current" ]; then
 	warn_mismatch
 fi
