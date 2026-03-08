@@ -88,6 +88,10 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         run: npm audit --audit-level=high
 
+      - name: Lint workflow files
+        if: needs.changes.outputs.code == 'true'
+        uses: eifinger/actionlint-action@7802e0cc3ab3f81cbffb36fb0bf1a3621d994b89 # v1.10.1
+
       - name: Validate commit messages
         if: needs.changes.outputs.code == 'true' && github.actor != 'dependabot[bot]'
         run: |
@@ -128,5 +132,22 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: DeterminateSystems/nix-installer-action@d96bc962e61b3049ce8128d03d57a1144fa96539 # main
+      - name: Verify npmDepsHash
+        run: |
+          expected=$(nix run nixpkgs#prefetch-npm-deps -- package-lock.json)
+          if [ -z "$expected" ]; then
+            echo "::error::prefetch-npm-deps failed or returned empty"
+            exit 1
+          fi
+          current=$(sed -n 's/.*npmDepsHash = "\([^"]*\)".*/\1/p' default.nix | head -1)
+          if [ "$expected" != "$current" ]; then
+            echo "::error::npmDepsHash mismatch. default.nix has stale hash."
+            echo ""
+            echo "With Nix locally: nix run .#update-npm-deps-hash"
+            echo "Without Nix: npm run update-nix-hash -- $expected"
+            echo ""
+            echo "Then commit default.nix with your package-lock.json changes."
+            exit 1
+          fi
       # Skip magic-nix-cache-action: requires FlakeHub registration; default cache.nixos.org works
       - run: nix build .#default
