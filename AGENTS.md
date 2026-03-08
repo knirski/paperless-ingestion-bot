@@ -28,7 +28,7 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 
 | Command                    | Purpose                                                                                                                            |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run check`            | Full verification (test, lint, knip, typecheck). Updates npmDepsHash when package-lock.json changed (requires Nix). Run before committing. |
+| `npm run check`            | Full verification (test, lint, knip, typecheck). Warns when npmDepsHash is stale (package-lock.json changed); CI auto-updates on push. Run before committing. |
 | `npm test`                 | Unit tests with coverage                                                                                                           |
 | `npm run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
 | `npm run lint`             | Lint (Biome)                                                                                                                       |
