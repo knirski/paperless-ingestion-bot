@@ -88,6 +88,12 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         run: npm audit --audit-level=high
 
+      - name: Lint workflow files
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/install.sh | sh -s -- -b /tmp
+          /tmp/actionlint -color
+
       - name: Validate commit messages
         if: needs.changes.outputs.code == 'true' && github.actor != 'dependabot[bot]'
         run: |
