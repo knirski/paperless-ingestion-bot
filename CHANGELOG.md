@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* **fill-pr-body:** Ollama-based PR title generation for multi-commit PRs. `--ai-title` uses llama3.2:1b to generate conventional commit titles; falls back to first commit subject on failure. `--quiet`, `--ollama-url`, `--ollama-model` flags. Auto-PR workflow updated with Ollama install, model cache, and readiness check.
+* **fill-pr-body:** Filter merge commits from body and title input; include non-conventional commits (type falls back to Chore). Auto-PR workflow: create PRs as draft, retry `gh` up to 3 times with 5s delay.
 * **PII redaction:** Effect `Redacted` for paths, emails, phones, URLs in domain errors. `redactedForLog`, `redactPath`, `redactEmail`, `redactPhone`, `redactUrl` in domain/utils. Raw values never appear in structured logs.
 
 ### Breaking Changes

@@ -7,7 +7,7 @@ A single template at [`.github/PULL_REQUEST_TEMPLATE.md`](../.github/PULL_REQUES
 | Mode | How |
 |------|-----|
 | **Manual** | GitHub shows the template when creating a PR. Replace each `{{placeholder}}` with your content. |
-| **Automated** | `npx tsx scripts/fill-pr-body.ts [base]` reads the template, replaces placeholders, outputs to stdout. Use `--format title-body` for first line = PR title. |
+| **Automated** | `npx tsx scripts/fill-pr-body.ts [base]` reads the template, replaces placeholders, outputs to stdout. Use `--format title-body` for first line = PR title. With `--ai-title` and multiple commits, the title is generated via Ollama. |
 
 ## Placeholders
 
@@ -31,7 +31,11 @@ Uses `effect/unstable/cli` (Command, Argument, Flag) like the main project CLI.
 
 - **Base branch:** Optional positional arg. Omitted → inferred from `git rev-parse --abbrev-ref origin/HEAD` (falls back to `main` if no remote).
 - **`--template PATH`:** Override template file. Order-independent (e.g. `main --template x` or `--template x main`).
-- **`--format title-body`:** Output first line = PR title (first commit subject), blank line, then body. Used by [auto-PR workflow](../.github/workflows/auto-pr.yml).
+- **`--format title-body`:** Output first line = PR title, blank line, then body. Title = first commit subject (single commit) or Ollama-generated (multiple commits with `--ai-title`). Used by [auto-PR workflow](../.github/workflows/auto-pr.yml).
+- **`--ai-title`:** Generate PR title via Ollama when there are multiple commits. Skips Ollama for a single commit; falls back to first commit subject on failure.
+- **`--quiet`:** Suppress logs (for CI when capturing stdout).
+- **`--ollama-url URL`:** Ollama base URL (default: `http://localhost:11434`).
+- **`--ollama-model MODEL`:** Ollama model for title generation (default: `llama3.2:1b`).
 
 ### Template path
 
@@ -44,7 +48,7 @@ If the base branch doesn't exist locally, the script tries `origin/<base>` (e.g.
 
 ### title-body format requirements
 
-With `--format title-body`, the script fails if there are no commits or the first commit has an empty subject. The auto-PR workflow requires at least one conventional commit (e.g. `feat: add X`) before pushing.
+With `--format title-body`, the script fails if there are no commits or the first commit has an empty subject. The auto-PR workflow requires at least one non-merge commit with non-empty subject (e.g. `feat: add X`) before pushing.
 
 ### Substitution
 
@@ -55,7 +59,9 @@ With `--format title-body`, the script fails if there are no commits or the firs
 
 ## Behavior
 
-- **Docs-only:** `isDocsOnly(files)` when `files.length === 0`. PR with commits but no file changes (e.g. merge commit) gets `howToTest: "N/A"`.
+- **Merge commits:** Filtered from body and title input (subjects like `Merge branch 'x' into y` add no semantic value).
+- **Non-conventional commits:** Included in body and as Ollama input; type falls back to "Chore".
+- **Docs-only:** `isDocsOnly(files)` when `files.length === 0`. PR with commits but no file changes gets `howToTest: "N/A"`.
 - **Checklist:** The "I have run `npm run check`" box has no placeholder — always unchecked. By design.
 - **Cross-repo refs:** `owner/repo#123` format supported; deduplicated and sorted.
 

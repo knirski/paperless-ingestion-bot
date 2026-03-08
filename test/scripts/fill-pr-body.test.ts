@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
 	fetchCommitsAndFiles,
 	fillTemplate,
+	filterMergeCommits,
 	getBreakingChanges,
 	getChanges,
 	getDescription,
@@ -12,8 +13,12 @@ import {
 	inferTypeOfChange,
 	isConventional,
 	isDocsOnly,
+	isMergeCommit,
+	isValidConventionalTitle,
 	ParseError,
 	parseCommits,
+	parseOllamaJson,
+	renderBody,
 	renderFromTemplate,
 } from "../../scripts/fill-pr-body.js";
 import type { GitClientService } from "../../scripts/git-client.js";
@@ -248,10 +253,55 @@ describe("getDescription", () => {
 	});
 });
 
+describe("isMergeCommit", () => {
+	test("Merge branch 'x' into y → true", () => {
+		expect(isMergeCommit(commit("Merge branch 'x' into y", ""))).toBe(true);
+	});
+
+	test("Merge pull request #1 from org/repo → true", () => {
+		expect(isMergeCommit(commit("Merge pull request #1 from org/repo", ""))).toBe(true);
+	});
+
+	test("feat: add x → false", () => {
+		expect(isMergeCommit(commit("feat: add x", ""))).toBe(false);
+	});
+
+	test("merge commit with leading space → true", () => {
+		expect(isMergeCommit(commit("  Merge branch 'x'", ""))).toBe(true);
+	});
+});
+
+describe("filterMergeCommits", () => {
+	test("excludes merge commits, keeps semantic", () => {
+		const commits = [
+			commit("feat: add foo", ""),
+			commit("Merge branch 'main' into ai/foo", ""),
+			commit("fix: typo", ""),
+		];
+		const filtered = filterMergeCommits(commits);
+		expect(filtered).toHaveLength(2);
+		expect(filtered[0]?.subject).toBe("feat: add foo");
+		expect(filtered[1]?.subject).toBe("fix: typo");
+	});
+
+	test("all merge commits → empty", () => {
+		const commits = [commit("Merge branch 'x'", ""), commit("Merge pull request #1", "")];
+		expect(filterMergeCommits(commits)).toEqual([]);
+	});
+});
+
 describe("getChanges", () => {
 	test("one bullet per commit", () => {
 		const commits = [commit("feat: a", ""), commit("fix: b", "")];
 		expect(getChanges(commits)).toEqual(["- feat: a", "- fix: b"]);
+	});
+
+	test("includes non-conventional commits", () => {
+		const commits = [
+			commit("feat: conventional", "", { type: "feat" }),
+			commit("wip: messy commit message", ""), // no type → non-conventional
+		];
+		expect(getChanges(commits)).toEqual(["- feat: conventional", "- wip: messy commit message"]);
 	});
 
 	test("empty commits returns empty", () => {
@@ -402,6 +452,93 @@ describe("fillTemplate", () => {
 		];
 		const data = fillTemplate(commits, []);
 		expect(data.commitsConventional).toBe(true);
+	});
+});
+
+describe("renderBody", () => {
+	test("returns rendered body when all placeholders replaced", async () => {
+		const commits = [commit("feat: add x", "Description here", { type: "feat" })];
+		const files = ["src/foo.ts"];
+		const body = await Effect.runPromise(
+			renderBody(commits, files, TEST_TEMPLATE).pipe(Effect.provide(SilentLoggerLayer)),
+		);
+		expect(body).toContain("## Description");
+		expect(body).toContain("Description here");
+		expect(body).not.toContain("{{description}}");
+	});
+
+	test("returns body and logs warning when output contains {{", async () => {
+		const commits = [commit("feat: add x", "Use {{ and }} in your code", { type: "feat" })];
+		const files = ["src/foo.ts"];
+		const body = await Effect.runPromise(
+			renderBody(commits, files, TEST_TEMPLATE).pipe(Effect.provide(SilentLoggerLayer)),
+		);
+		expect(body).toContain("Use {{ and }} in your code");
+		expect(body).toContain("{{");
+	});
+});
+
+describe("parseOllamaJson", () => {
+	test("returns first line from response", async () => {
+		const res = new Response(JSON.stringify({ response: "feat: add X" }));
+		const out = await Effect.runPromise(parseOllamaJson(res));
+		expect(out).toBe("feat: add X");
+	});
+
+	test("returns first line only when multi-line", async () => {
+		const res = new Response(JSON.stringify({ response: "feat: add X\n\nMore text" }));
+		const out = await Effect.runPromise(parseOllamaJson(res));
+		expect(out).toBe("feat: add X");
+	});
+
+	test("truncates to 72 chars", async () => {
+		const long = "a".repeat(80);
+		const res = new Response(JSON.stringify({ response: long }));
+		const out = await Effect.runPromise(parseOllamaJson(res));
+		expect(out).toBe("a".repeat(72));
+	});
+
+	test("returns undefined for empty response", async () => {
+		const res = new Response(JSON.stringify({ response: "" }));
+		const out = await Effect.runPromise(parseOllamaJson(res));
+		expect(out).toBeUndefined();
+	});
+
+	test("returns undefined for missing response field", async () => {
+		const res = new Response(JSON.stringify({}));
+		const out = await Effect.runPromise(parseOllamaJson(res));
+		expect(out).toBeUndefined();
+	});
+
+	test("returns undefined for invalid JSON", async () => {
+		const res = new Response("not json");
+		const out = await Effect.runPromise(parseOllamaJson(res));
+		expect(out).toBeUndefined();
+	});
+
+	test("trims whitespace", async () => {
+		const res = new Response(JSON.stringify({ response: "  feat: add X  " }));
+		const out = await Effect.runPromise(parseOllamaJson(res));
+		expect(out).toBe("feat: add X");
+	});
+});
+
+describe("isValidConventionalTitle", () => {
+	test("accepts valid conventional titles", () => {
+		expect(isValidConventionalTitle("feat: add X")).toBe(true);
+		expect(isValidConventionalTitle("fix(ci): resolve bug")).toBe(true);
+		expect(isValidConventionalTitle("docs: update README")).toBe(true);
+		expect(isValidConventionalTitle("feat!: breaking change")).toBe(true);
+		expect(isValidConventionalTitle("feat(scope)!: breaking")).toBe(true);
+	});
+
+	test("rejects invalid titles", () => {
+		expect(isValidConventionalTitle("")).toBe(false);
+		expect(isValidConventionalTitle("Add feature X")).toBe(false);
+		expect(isValidConventionalTitle("Here's the title: feat: add X")).toBe(false);
+		expect(isValidConventionalTitle("  ")).toBe(false);
+		expect(isValidConventionalTitle(`feat: ${"a".repeat(67)}`)).toBe(false); // 73 chars
+		expect(isValidConventionalTitle(" : missing type")).toBe(false);
 	});
 });
 

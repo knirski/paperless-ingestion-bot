@@ -1,11 +1,11 @@
 # GitHub App Setup for Auto-PR Creation
 
-This guide walks you through setting up a GitHub App so that when an AI agent (or any tool) pushes a branch with the `ai/` prefix, a workflow automatically creates or updates a pull request **opened by the bot**. You can then approve it as the repo owner.
+This guide walks you through setting up a GitHub App so that when an AI agent (or any tool) pushes a branch with the `ai/` prefix, a workflow automatically creates or updates a pull request **opened by the bot**. PR titles are generated from conventional commits; for multi-commit PRs, local [Ollama](https://ollama.ai/) (llama3.2:1b) summarizes commits into a conventional title. You can then approve the PR as the repo owner.
 
 ## Overview
 
 1. **AI agent** (or terminal) pushes a branch (e.g. `ai/feature-x` or `ai/fix-y`)
-2. **Workflow** runs on push to `ai/**` branches
+2. **Workflow** runs on push to `ai/**` branches (installs Ollama, pulls model, generates title)
 3. **GitHub App** creates or updates the PR using its token
 4. **PR** is opened by `your-app-name[bot]` → you can approve it
 
@@ -88,6 +88,39 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.event.repository.default_branch }}
+
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: Cache Ollama model
+        uses: actions/cache@v4
+        with:
+          path: ~/.ollama
+          key: ollama-${{ runner.os }}-llama3.2-1b
+
+      - name: Pull Ollama model
+        run: ollama pull llama3.2:1b
+
+      - name: Start Ollama
+        run: |
+          ollama serve &
+          if timeout 30 bash -c 'until curl -sf http://localhost:11434/api/tags >/dev/null; do sleep 1; done'; then
+            echo "Ollama ready"
+          else
+            echo "::error::Ollama failed to start within 30s"
+            exit 1
+          fi
+
       - name: Generate GitHub App token
         id: app-token
         uses: actions/create-github-app-token@v2
@@ -101,18 +134,28 @@ jobs:
         run: |
           BRANCH="${{ github.ref_name }}"
           DEFAULT="${{ github.event.repository.default_branch }}"
-          OUTPUT=$(npx tsx scripts/fill-pr-body.ts "$DEFAULT" --format title-body)
+          OUTPUT=$(npx tsx scripts/fill-pr-body.ts "origin/$DEFAULT" --format title-body --ai-title --quiet)
           TITLE=$(echo "$OUTPUT" | head -1)
           if [ -z "$TITLE" ]; then
-            echo "::error::PR title is empty. Add at least one conventional commit (e.g. feat: add X) before pushing."
+            echo "::error::PR title is empty. Add at least one non-merge commit with non-empty subject (e.g. feat: add X) before pushing."
             exit 1
           fi
           echo "$OUTPUT" | tail -n +3 > /tmp/pr-body.md
-          if ! gh pr view --head "$BRANCH" 2>/dev/null; then
-            gh pr create --base "$DEFAULT" --title "$TITLE" --body-file /tmp/pr-body.md
-          else
-            gh pr edit "$BRANCH" --title "$TITLE" --body-file /tmp/pr-body.md
-          fi
+          for attempt in 1 2 3; do
+            if ! gh pr view --head "$BRANCH" 2>/dev/null; then
+              gh pr create --base "$DEFAULT" --title "$TITLE" --body-file /tmp/pr-body.md --draft
+            else
+              gh pr edit "$BRANCH" --title "$TITLE" --body-file /tmp/pr-body.md
+            fi
+            [ $? -eq 0 ] && break
+            if [ "$attempt" -lt 3 ]; then
+              echo "::warning::gh failed (attempt $attempt/3), retrying in 5s..."
+              sleep 5
+            else
+              echo "::error::gh failed after 3 attempts"
+              exit 1
+            fi
+          done
 ```
 
 ---
@@ -139,7 +182,7 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
    git push origin ai/test-setup
    ```
 2. Check **Actions** in your repo — the workflow should run
-3. A new PR should appear, opened by `your-app-name[bot]`
+3. A new **draft** PR should appear, opened by `your-app-name[bot]`
 4. You can approve it as the repo owner
 
 ---
@@ -150,8 +193,9 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
 |------|------------|-------|
 | **Forks** | Workflow does not run on forks | `if: github.event.repository.fork != true` skips the job. Pushing to `ai/**` on a fork creates no PR; create the PR to upstream manually. |
 | **PR title length** | No enforced limit | Very long titles (>72 chars) may truncate in some UIs. Conventional commits typically stay short. |
-| **Empty title** | Fails with clear error | Requires at least one conventional commit with non-empty subject. |
-| **gh auth / rate limit** | Unclear errors possible | If token scope is wrong or rate limited, `gh` fails. Retry later or check app permissions. |
+| **Empty title** | Fails with clear error | Requires at least one non-merge commit with non-empty subject. |
+| **All merge commits** | Fails with empty title | Branch with only merge commits (e.g. after merging base) yields no semantic commits; add at least one regular commit. |
+| **gh auth / rate limit** | Unclear errors possible | Workflow retries `gh` up to 3 times with 5s delay. If token scope is wrong, retries won't help. |
 | **Token scope** | Requires `pull_requests: write` | App must have Pull requests: Read and write. |
 | **fill-pr-body** | Base branch must exist | If default branch was renamed, pass correct base via `--base` or fix `origin/HEAD`. |
 | **npmDepsHash** | CI cannot push to fork PRs | See [CONTRIBUTING](../CONTRIBUTING.md). Update locally: `nix run .#update-npm-deps-hash`. |
@@ -175,10 +219,10 @@ The workflow uses `scripts/fill-pr-body.ts` to parse conventional commits and fi
 
 | Section | Source |
 |---------|--------|
-| **Title** | First commit subject |
+| **Title** | First commit subject (single commit) or Ollama-generated (multiple commits with `--ai-title`; falls back to first commit subject on failure) |
 | **Description** | First commit body, or subject with conventional prefix stripped |
-| **Type of change** | Inferred from conventional commit (`feat`→New feature, `fix`→Bug fix, `docs`→Documentation update, `chore`→Chore, `feat!`/`BREAKING`→Breaking change) |
-| **Changes made** | One bullet per commit (commit subjects) |
+| **Type of change** | Inferred from conventional commit (`feat`→New feature, `fix`→Bug fix, `docs`→Documentation update, `chore`→Chore, `feat!`/`BREAKING`→Breaking change); non-conventional commits fall back to Chore. |
+| **Changes made** | One bullet per non-merge commit (merge commits filtered; non-conventional included) |
 | **How to test** | `N/A` for docs-only changes; otherwise `1. Run \`npm run check\`` + placeholder |
 | **Checklist** | Auto-checks: conventional commits format, docs updated (if `*.md` changed), tests added (if test files changed) |
 | **Related issues** | Extracted `Closes #123`, `Fixes #456` from commit messages |

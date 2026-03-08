@@ -103,6 +103,186 @@ describe("fill-pr-body script integration", () => {
 		}
 	});
 
+	test("multi-commit new PR: body includes all commits, title from Ollama or fallback", async () => {
+		const tmp = await createTestTempDir("fill-pr-body-");
+		try {
+			runGit(tmp.path, "init", "-b", "main");
+			runGit(tmp.path, "config", "user.email", "test@example.com");
+			runGit(tmp.path, "config", "user.name", "Test User");
+
+			await writeTestFile(path.join(tmp.path, "README.md"), "# Test\n");
+			runGit(tmp.path, "add", "README.md");
+			runGit(tmp.path, "commit", "-m", "chore: initial");
+
+			setupTemplate(tmp.path);
+
+			runGit(tmp.path, "checkout", "-b", "ai/multi-commit");
+			writeFile(path.join(tmp.path, "src/a.ts"), "a;\n");
+			runGit(tmp.path, "add", "src/a.ts");
+			runGit(tmp.path, "commit", "-m", "feat: add module A");
+			writeFile(path.join(tmp.path, "src/b.ts"), "b;\n");
+			runGit(tmp.path, "add", "src/b.ts");
+			runGit(tmp.path, "commit", "-m", "feat: add module B");
+
+			// Simulates: ai/* pushed with 2+ commits, no PR yet → create PR with all commits
+			const output = await Effect.runPromise(
+				runFillBody("main", undefined, "title-body", {
+					aiTitle: true,
+					ollamaUrl: "http://127.0.0.1:19999", // Ollama unavailable → fallback to getTitle
+				}).pipe(Effect.provide(testLayer(tmp.path))),
+			);
+
+			const lines = output.split("\n");
+			expect(lines[0]).toBe("feat: add module B"); // getTitle = newest commit (git log order)
+			expect(output).toContain("feat: add module A");
+			expect(output).toContain("feat: add module B");
+			expect(output).toContain("## Changes made");
+		} finally {
+			await tmp.remove();
+		}
+	});
+
+	test("non-conventional commits are included in body and title input", async () => {
+		const tmp = await createTestTempDir("fill-pr-body-");
+		try {
+			runGit(tmp.path, "init", "-b", "main");
+			runGit(tmp.path, "config", "user.email", "test@example.com");
+			runGit(tmp.path, "config", "user.name", "Test User");
+
+			await writeTestFile(path.join(tmp.path, "README.md"), "# Test\n");
+			runGit(tmp.path, "add", "README.md");
+			runGit(tmp.path, "commit", "-m", "chore: initial");
+
+			setupTemplate(tmp.path);
+
+			runGit(tmp.path, "checkout", "-b", "ai/non-conventional");
+			writeFile(path.join(tmp.path, "src/x.ts"), "x;\n");
+			runGit(tmp.path, "add", "src/x.ts");
+			runGit(tmp.path, "commit", "-m", "wip: messy commit");
+			writeFile(path.join(tmp.path, "src/y.ts"), "y;\n");
+			runGit(tmp.path, "add", "src/y.ts");
+			runGit(tmp.path, "commit", "-m", "feat: add y");
+
+			const output = await Effect.runPromise(
+				runFillBody("main", undefined, "title-body").pipe(Effect.provide(testLayer(tmp.path))),
+			);
+			expect(output).toContain("wip: messy commit");
+			expect(output).toContain("feat: add y");
+		} finally {
+			await tmp.remove();
+		}
+	});
+
+	test("merge commits are filtered from body and title", async () => {
+		const tmp = await createTestTempDir("fill-pr-body-");
+		try {
+			runGit(tmp.path, "init", "-b", "main");
+			runGit(tmp.path, "config", "user.email", "test@example.com");
+			runGit(tmp.path, "config", "user.name", "Test User");
+
+			await writeTestFile(path.join(tmp.path, "README.md"), "# Test\n");
+			runGit(tmp.path, "add", "README.md");
+			runGit(tmp.path, "commit", "-m", "chore: initial");
+
+			setupTemplate(tmp.path);
+
+			runGit(tmp.path, "checkout", "-b", "ai/merge-test");
+			writeFile(path.join(tmp.path, "src/foo.ts"), "foo;\n");
+			runGit(tmp.path, "add", "src/foo.ts");
+			runGit(tmp.path, "commit", "-m", "feat: add foo");
+			runGit(tmp.path, "checkout", "main");
+			writeFile(path.join(tmp.path, "README.md"), "# Test\n\nUpdated.\n");
+			runGit(tmp.path, "add", "README.md");
+			runGit(tmp.path, "commit", "-m", "chore: update readme");
+			runGit(tmp.path, "checkout", "ai/merge-test");
+			runGit(tmp.path, "merge", "main", "-m", "Merge branch 'main' into ai/merge-test");
+
+			const output = await Effect.runPromise(
+				runFillBody("main", undefined, "title-body").pipe(Effect.provide(testLayer(tmp.path))),
+			);
+			expect(output).toContain("feat: add foo");
+			expect(output).not.toContain("Merge branch");
+		} finally {
+			await tmp.remove();
+		}
+	});
+
+	test("update PR: new commits pushed → body and title include ALL commits", async () => {
+		const tmp = await createTestTempDir("fill-pr-body-");
+		try {
+			runGit(tmp.path, "init", "-b", "main");
+			runGit(tmp.path, "config", "user.email", "test@example.com");
+			runGit(tmp.path, "config", "user.name", "Test User");
+
+			await writeTestFile(path.join(tmp.path, "README.md"), "# Test\n");
+			runGit(tmp.path, "add", "README.md");
+			runGit(tmp.path, "commit", "-m", "chore: initial");
+
+			setupTemplate(tmp.path);
+
+			runGit(tmp.path, "checkout", "-b", "ai/update-pr");
+			writeFile(path.join(tmp.path, "src/first.ts"), "1;\n");
+			runGit(tmp.path, "add", "src/first.ts");
+			runGit(tmp.path, "commit", "-m", "feat: first commit");
+
+			// First run (simulates initial PR create)
+			const output1 = await Effect.runPromise(
+				runFillBody("main", undefined, "title-body").pipe(Effect.provide(testLayer(tmp.path))),
+			);
+			expect(output1).toContain("feat: first commit");
+			expect(output1).not.toContain("feat: second commit");
+
+			// Push new commit (simulates: PR exists, new commit pushed)
+			writeFile(path.join(tmp.path, "src/second.ts"), "2;\n");
+			runGit(tmp.path, "add", "src/second.ts");
+			runGit(tmp.path, "commit", "-m", "feat: second commit");
+
+			// Second run (simulates: workflow runs again, updates PR)
+			const output2 = await Effect.runPromise(
+				runFillBody("main", undefined, "title-body").pipe(Effect.provide(testLayer(tmp.path))),
+			);
+			expect(output2).toContain("feat: first commit");
+			expect(output2).toContain("feat: second commit");
+		} finally {
+			await tmp.remove();
+		}
+	});
+
+	test("aiTitle falls back to getTitle when Ollama unavailable", async () => {
+		const tmp = await createTestTempDir("fill-pr-body-");
+		try {
+			runGit(tmp.path, "init", "-b", "main");
+			runGit(tmp.path, "config", "user.email", "test@example.com");
+			runGit(tmp.path, "config", "user.name", "Test User");
+
+			await writeTestFile(path.join(tmp.path, "README.md"), "# Test\n");
+			runGit(tmp.path, "add", "README.md");
+			runGit(tmp.path, "commit", "-m", "chore: initial");
+
+			setupTemplate(tmp.path);
+
+			runGit(tmp.path, "checkout", "-b", "ai/feature-ollama");
+			writeFile(path.join(tmp.path, "src/ollama.ts"), "x;\n");
+			runGit(tmp.path, "add", "src/ollama.ts");
+			runGit(tmp.path, "commit", "-m", "feat(ci): add Ollama PR title generation");
+
+			// Ollama not running → generateTitleViaOllama fails → fallback to getTitle
+			const output = await Effect.runPromise(
+				runFillBody("main", undefined, "title-body", {
+					aiTitle: true,
+					ollamaUrl: "http://127.0.0.1:19999", // non-existent port
+				}).pipe(Effect.provide(testLayer(tmp.path))),
+			);
+
+			const lines = output.split("\n");
+			expect(lines[0]).toBe("feat(ci): add Ollama PR title generation");
+			expect(lines[1]).toBe("");
+			expect(output).toContain("## Description");
+		} finally {
+			await tmp.remove();
+		}
+	});
+
 	test("format title-body outputs first line as PR title (first commit subject)", async () => {
 		const tmp = await createTestTempDir("fill-pr-body-");
 		try {
@@ -155,7 +335,7 @@ describe("fill-pr-body script integration", () => {
 			);
 
 			await expect(Effect.runPromise(program)).rejects.toThrow(
-				"PR title is empty. Add at least one conventional commit",
+				"PR title is empty. Add at least one non-merge commit",
 			);
 		} finally {
 			await tmp.remove();
