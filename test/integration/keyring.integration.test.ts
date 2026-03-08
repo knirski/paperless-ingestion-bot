@@ -15,7 +15,8 @@ import { Effect, Exit, Layer, Option, pipe, Redacted } from "effect";
 import { describe, expect, it } from "vitest";
 import type { AccountEmail } from "../../src/domain/types.js";
 import { CredentialsStore } from "../../src/live/credentials-store.js";
-import { LoggerLayer, PlatformServicesLayer } from "../../src/shell/layers.js";
+import { PlatformServicesLayer } from "../../src/shell/layers.js";
+import { SilentLoggerLayer } from "../test-utils.js";
 
 const runKeyringTest = process.env.KEYRING_TEST === "1";
 
@@ -48,7 +49,7 @@ const runKeyringRoundTrip = Effect.gen(function* () {
 }).pipe(
 	Effect.tap(() => Effect.log("keyring: available and working")),
 	Effect.provide(CredentialsStore.live),
-	Effect.provide(LoggerLayer),
+	Effect.provide(SilentLoggerLayer),
 	Effect.provide(PlatformServicesLayer),
 );
 
@@ -59,7 +60,7 @@ describe("keyring integration", () => {
 				Effect.log(
 					"keyring: skipped. Set KEYRING_TEST=1 to run system keychain availability test.",
 				),
-				Effect.provide(LoggerLayer),
+				Effect.provide(SilentLoggerLayer),
 			),
 		);
 	});
@@ -67,7 +68,9 @@ describe("keyring integration", () => {
 	it.skipIf(!runKeyringTest || keyringCheck.available)(
 		"keyring not available on this system",
 		async () => {
-			await Effect.runPromise(pipe(Effect.log(NOT_AVAILABLE_MSG), Effect.provide(LoggerLayer)));
+			await Effect.runPromise(
+				pipe(Effect.log(NOT_AVAILABLE_MSG), Effect.provide(SilentLoggerLayer)),
+			);
 			expect(keyringCheck.available, NOT_AVAILABLE_MSG).toBe(true);
 		},
 	);

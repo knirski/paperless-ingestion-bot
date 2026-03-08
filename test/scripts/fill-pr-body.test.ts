@@ -17,6 +17,7 @@ import {
 	renderFromTemplate,
 } from "../../scripts/fill-pr-body.js";
 import type { GitClientService } from "../../scripts/git-client.js";
+import { SilentLoggerLayer } from "../test-utils.js";
 
 const TEST_TEMPLATE = `## Description
 {{description}}
@@ -73,7 +74,9 @@ describe("fetchCommitsAndFiles", () => {
 			log: () => Effect.succeed("---COMMIT---\nfeat: x"),
 			diffNames: () => Effect.succeed(["a.ts"]),
 		});
-		const [logOut, files] = await Effect.runPromise(fetchCommitsAndFiles(mock, "main"));
+		const [logOut, files] = await Effect.runPromise(
+			fetchCommitsAndFiles(mock, "main").pipe(Effect.provide(SilentLoggerLayer)),
+		);
 		expect(logOut).toBe("---COMMIT---\nfeat: x");
 		expect(files).toEqual(["a.ts"]);
 	});
@@ -86,7 +89,9 @@ describe("fetchCommitsAndFiles", () => {
 					: Effect.fail(new Error("ref not found")),
 			diffNames: (base) => (base === "origin/main" ? Effect.succeed(["b.ts"]) : Effect.succeed([])),
 		});
-		const [logOut, files] = await Effect.runPromise(fetchCommitsAndFiles(mock, "main"));
+		const [logOut, files] = await Effect.runPromise(
+			fetchCommitsAndFiles(mock, "main").pipe(Effect.provide(SilentLoggerLayer)),
+		);
 		expect(logOut).toBe("---COMMIT---\nfeat: y");
 		expect(files).toEqual(["b.ts"]);
 	});
@@ -100,7 +105,9 @@ describe("fetchCommitsAndFiles", () => {
 			diffNames: (base) =>
 				base === "origin/feature/foo" ? Effect.succeed(["qux.ts"]) : Effect.succeed([]),
 		});
-		const [logOut, files] = await Effect.runPromise(fetchCommitsAndFiles(mock, "feature/foo"));
+		const [logOut, files] = await Effect.runPromise(
+			fetchCommitsAndFiles(mock, "feature/foo").pipe(Effect.provide(SilentLoggerLayer)),
+		);
 		expect(logOut).toBe("---COMMIT---\nfeat: qux");
 		expect(files).toEqual(["qux.ts"]);
 	});
@@ -110,12 +117,12 @@ describe("fetchCommitsAndFiles", () => {
 			log: () => Effect.fail(new Error("ref not found")),
 			diffNames: () => Effect.succeed([]),
 		});
-		await expect(Effect.runPromise(fetchCommitsAndFiles(mock, "main"))).rejects.toThrow(
-			"Tried origin/main",
-		);
-		await expect(Effect.runPromise(fetchCommitsAndFiles(mock, "main"))).rejects.toThrow(
-			'Base branch "main" not found',
-		);
+		await expect(
+			Effect.runPromise(fetchCommitsAndFiles(mock, "main").pipe(Effect.provide(SilentLoggerLayer))),
+		).rejects.toThrow("Tried origin/main");
+		await expect(
+			Effect.runPromise(fetchCommitsAndFiles(mock, "main").pipe(Effect.provide(SilentLoggerLayer))),
+		).rejects.toThrow('Base branch "main" not found');
 	});
 
 	test("fails without retry when base is already origin/qualified", async () => {
@@ -124,7 +131,10 @@ describe("fetchCommitsAndFiles", () => {
 			diffNames: () => Effect.succeed([]),
 		});
 		const err = await Effect.runPromise(
-			fetchCommitsAndFiles(mock, "origin/main").pipe(Effect.flip),
+			fetchCommitsAndFiles(mock, "origin/main").pipe(
+				Effect.provide(SilentLoggerLayer),
+				Effect.flip,
+			),
 		);
 		expect(err).toBeInstanceOf(Error);
 		expect((err as Error).message).toContain("ref not found");

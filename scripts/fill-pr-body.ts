@@ -244,8 +244,8 @@ function buildSubstitutionMap(data: TemplateData): Record<string, string> {
 		checklistConventional: conv,
 		checklistDocs: docs,
 		checklistTests: tests,
-		relatedIssues: data.relatedIssues.length ? data.relatedIssues.join("\n") : " ",
-		breakingChanges: data.breakingChanges || " ",
+		relatedIssues: data.relatedIssues.length ? data.relatedIssues.join("\n") : "",
+		breakingChanges: data.breakingChanges || "",
 	};
 }
 

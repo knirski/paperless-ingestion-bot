@@ -50,7 +50,7 @@ With `--format title-body`, the script fails if there are no commits or the firs
 
 - Plain string replacement: `{{placeholder}}` → value.
 - **Escaping:** Literal `{{` and `}}` in commit content are preserved.
-- **Empty values:** `{{relatedIssues}}` and `{{breakingChanges}}` when empty → single space so the section doesn't look blank.
+- **Empty values:** `{{relatedIssues}}` and `{{breakingChanges}}` when empty → empty string (no extra blank lines).
 - **Unreplaced warning:** If output still contains `{{` after substitution, a warning is logged to stderr (e.g. typos like `{{desciption}}`).
 
 ## Behavior
