@@ -1,6 +1,6 @@
 <!--
   Creating manually? Replace each {{placeholder}} below with your content.
-  Using fill-pr-body? Run: npx tsx scripts/fill-pr-body.ts
+  Using fill-pr-body? Run via create-or-update-pr.sh or: npx tsx scripts/fill-pr-body.ts --log-file <path> --files-file <path>
   See docs/PR_TEMPLATE.md
 -->
 

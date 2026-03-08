@@ -27,31 +27,44 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
-
       - run: npm ci
 
       - name: Fetch base branch
         run: git fetch origin ${{ github.event.repository.default_branch }}
 
-      - name: Install Ollama
-        run: curl -fsSL https://ollama.com/install.sh | sh
-
-      - name: Cache Ollama model
-        uses: actions/cache@v4
-        with:
-          path: ~/.ollama
-          key: ollama-${{ runner.os }}-llama3.1-8b
-
-      - name: Start Ollama
+      - name: Get commit log and changed files
+        id: commits
         run: |
-          nohup ollama serve &
-          if ! timeout 30 bash -c 'until curl -sf http://localhost:11434/api/tags >/dev/null; do sleep 1; done'; then
-            echo "::error::Ollama failed to start within 30s"
+          BASE_REF="origin/${{ github.event.repository.default_branch }}"
+          git log --format="---COMMIT---%n%s%n%n%b" "$BASE_REF..HEAD" > commits.txt
+          git log --format="%s" "$BASE_REF..HEAD" > subjects.txt
+          git diff --name-only "$BASE_REF..HEAD" > files.txt
+          COUNT=$(wc -l < subjects.txt | tr -d ' ')
+          if [ "$COUNT" -eq 0 ]; then
+            echo "::error::No commits to push. Add at least one commit before pushing to ai/ branch."
             exit 1
           fi
+          echo "commits=${{ github.workspace }}/commits.txt" >> $GITHUB_OUTPUT
+          echo "files=${{ github.workspace }}/files.txt" >> $GITHUB_OUTPUT
+          echo "first-commit-title=$(head -1 subjects.txt)" >> $GITHUB_OUTPUT
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+          echo "subjects<<COMMITLIST" >> $GITHUB_OUTPUT
+          sed 's/^/- /' subjects.txt >> $GITHUB_OUTPUT
+          echo "COMMITLIST" >> $GITHUB_OUTPUT
 
-      - name: Pull Ollama model
-        run: ollama pull llama3.1:8b
+      - name: Generate PR title via Ollama
+        id: ollama
+        if: steps.commits.outputs.count != '1'
+        uses: ai-action/ollama-action@v2
+        with:
+          model: llama3.1:8b
+          prompt: |
+            Generate a single conventional commit title (max 72 chars) that summarizes this PR.
+            Format: type(scope): subject (e.g. feat: add X, fix(ci): resolve bug).
+            Use the most significant type from the commits. Reply with only the title, nothing else.
+
+            Commits:
+            ${{ steps.commits.outputs.subjects}}
 
       - name: Generate GitHub App token
         id: app-token
@@ -60,21 +73,12 @@ jobs:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Debug gh pr view
+      - name: Create or update PR
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          BRANCH="${{ github.ref_name }}"
-          echo "::group::gh pr view $BRANCH"
-          set +e
-          out=$(gh pr view "$BRANCH" 2>&1)
-          code=$?
-          set -e
-          echo "exit code: $code"
-          echo "$out"
-          echo "::endgroup::"
-
-      - name: Create or update pull request
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: bash scripts/create-or-update-pr.sh "${{ github.ref_name }}" "${{ github.event.repository.default_branch }}"
+          BRANCH: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          COMMITS: ${{ steps.commits.outputs.commits }}
+          FILES: ${{ steps.commits.outputs.files }}
+          PR_TITLE: ${{ steps.ollama.outputs.response || steps.commits.outputs.first-commit-title }}
+        run: bash scripts/create-or-update-pr.sh

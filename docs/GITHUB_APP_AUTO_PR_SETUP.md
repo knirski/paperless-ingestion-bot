@@ -123,7 +123,7 @@ The workflow uses `scripts/fill-pr-body.ts` to parse conventional commits and fi
 
 | Section | Source |
 |---------|--------|
-| **Title** | First commit subject (single commit) or Ollama-generated (2+ non-merge commits with `--ai-title`; falls back to first commit subject on failure) |
+| **Title** | First commit subject (1 commit) or Ollama-generated (2+ commits); falls back to first commit if Ollama fails or is skipped |
 | **Description** | First commit body, or subject with conventional prefix stripped |
 | **Type of change** | Inferred from conventional commit (`feat`→New feature, `fix`→Bug fix, `docs`→Documentation update, `chore`→Chore, `feat!`/`BREAKING`→Breaking change); non-conventional commits fall back to Chore. |
 | **Changes made** | One bullet per non-merge commit (merge commits filtered; non-conventional included) |
@@ -136,8 +136,7 @@ The script is TypeScript (Effect, pure core + shell) for type safety, readabilit
 
 ## Testing
 
-- **Script (pure logic):** Unit tests in `test/scripts/fill-pr-body.test.ts`
-- **Script (git + output):** Integration test in `test/integration/fill-pr-body.integration.test.ts` (temp git repo)
+- **Script:** Unit tests in `test/scripts/fill-pr-body.test.ts` (pure logic + runFillBody file-based pipeline)
 - **Workflow:** No GitHub API mock exists. Validate by pushing to `ai/**` and checking Actions/PR
 
 ## Optional: Add labels

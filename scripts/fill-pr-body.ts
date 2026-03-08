@@ -1,23 +1,26 @@
 /**
  * Fill PR template from conventional commit messages.
- * Pure core + Effect shell. Run: npx tsx scripts/fill-pr-body.ts [base]
+ * Pure core + Effect shell. Run: npx tsx scripts/fill-pr-body.ts --log-file <path> --files-file <path>
  *
  * Reads .github/PULL_REQUEST_TEMPLATE.md (or --template path), replaces
  * {{placeholder}} values, outputs to stdout. See docs/PR_TEMPLATE.md for
  * how this template works for both manual and automated PRs.
+ *
+ * Requires --log-file and --files-file (commit log and changed files). The workflow
+ * or create-or-update-pr.sh generates these via git before invoking this script.
  */
 
+import * as path from "node:path";
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { CommitParser } from "conventional-commits-parser";
-import { Console, Effect, FileSystem, Layer, Logger, Option, Path, pipe, Result } from "effect";
-import { Argument, Command, Flag } from "effect/unstable/cli";
+import { Console, Effect, FileSystem, Layer, Logger, Option, pipe, Result } from "effect";
+import { Command, Flag } from "effect/unstable/cli";
 import pkg from "../package.json" with { type: "json" };
-import { GitClient, type GitClientService } from "./git-client.js";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-export interface CommitInfo {
+interface CommitInfo {
 	readonly subject: string;
 	readonly body: string;
 	readonly fullMessage: string;
@@ -301,116 +304,6 @@ export function renderFromTemplate(template: string, data: TemplateData): string
 
 // ─── Shell (Effect) ────────────────────────────────────────────────────────
 
-const OLLAMA_TITLE_PROMPT = `Generate a single conventional commit title (max 72 chars) that summarizes this PR. Format: type(scope): subject (e.g. feat: add X, fix(ci): resolve bug). Use the most significant type from the commits. Reply with only the title, nothing else.
-
-Commits:
-`;
-
-const OLLAMA_MAX_ATTEMPTS = 3;
-
-function fetchOllamaGenerate(
-	ollamaBaseUrl: string,
-	body: { model: string; prompt: string; stream: boolean },
-	signal: AbortSignal,
-): Effect.Effect<Response, undefined, never> {
-	const url = `${ollamaBaseUrl.replace(/\/$/, "")}/api/generate`;
-	return Effect.tryPromise({
-		try: () =>
-			fetch(url, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(body),
-				signal,
-			}),
-		catch: () => undefined,
-	});
-}
-
-export function parseOllamaJson(res: Response): Effect.Effect<string | undefined, never, never> {
-	return Effect.tryPromise({
-		try: () => res.json() as Promise<{ response?: string }>,
-		catch: () => undefined,
-	}).pipe(
-		Effect.catch(() => Effect.succeed(undefined)),
-		Effect.map((body) => {
-			const text = body?.response?.trim() ?? "";
-			const firstLine = text.split("\n")[0] ?? "";
-			return firstLine.slice(0, 72).trim() || undefined;
-		}),
-	);
-}
-
-/** Single Ollama call. Returns first line of response or "" on fetch/parse failure. */
-function generateTitleViaOllamaOnce(
-	commits: readonly CommitInfo[],
-	baseUrl: string,
-	model: string,
-): Effect.Effect<string, never> {
-	const commitLines = commits.map((c) => `- ${c.subject}`).join("\n");
-	const prompt = `${OLLAMA_TITLE_PROMPT}${commitLines}`;
-	const controller = new AbortController();
-	const timeout = setTimeout(() => controller.abort(), 30_000);
-	return fetchOllamaGenerate(baseUrl, { model, prompt, stream: false }, controller.signal).pipe(
-		Effect.flatMap((res) => (res?.ok ? parseOllamaJson(res) : Effect.succeed(undefined))),
-		Effect.map((s) => s ?? ""),
-		Effect.tap((output) =>
-			Effect.log({
-				event: "ollama_title_raw",
-				output: output || "(empty or fetch failed)",
-				model,
-			}),
-		),
-		Effect.catch(() => Effect.succeed("")),
-		Effect.ensuring(Effect.sync(() => clearTimeout(timeout))),
-	);
-}
-
-/** Call Ollama up to 3 times; validate response. Fallback to getTitle if all fail or are invalid. */
-function generateTitleViaOllama(
-	commits: readonly CommitInfo[],
-	baseUrl: string,
-	model: string,
-): Effect.Effect<string, never> {
-	const fallback = getTitle(commits);
-	function attempt(n: number): Effect.Effect<string, never> {
-		if (n >= OLLAMA_MAX_ATTEMPTS) {
-			return Effect.gen(function* () {
-				yield* Effect.log({
-					event: "ollama_title_fallback",
-					reason: "max attempts reached or invalid",
-					fallback,
-				});
-				return fallback;
-			});
-		}
-		return generateTitleViaOllamaOnce(commits, baseUrl, model).pipe(
-			Effect.flatMap((result) => {
-				const valid = isValidConventionalTitle(result);
-				if (valid) {
-					return Effect.gen(function* () {
-						yield* Effect.log({
-							event: "ollama_title_accepted",
-							attempt: n + 1,
-							title: result,
-						});
-						return result;
-					});
-				}
-				return Effect.gen(function* () {
-					yield* Effect.log({
-						event: "ollama_title_rejected",
-						attempt: n + 1,
-						output: result || "(empty)",
-						reason: "not a valid conventional commit title",
-					});
-					return yield* attempt(n + 1);
-				});
-			}),
-		);
-	}
-	return attempt(0);
-}
-
 function readTemplate(filePath: string): Effect.Effect<string, Error, FileSystem.FileSystem> {
 	return pipe(
 		FileSystem.FileSystem.asEffect(),
@@ -428,90 +321,45 @@ function formatError(e: unknown): string {
 	return e instanceof Error ? e.message : String(e);
 }
 
-function fetchLogAndDiff(
-	git: GitClientService,
-	ref: string,
-): Effect.Effect<readonly [string, readonly string[]], Error> {
-	return Effect.all([git.log(ref), git.diffNames(ref)]);
+type OutputFormat = "body" | "title-body";
+
+function resolveTemplatePath(templatePath: string | undefined): string {
+	const cwd = process.cwd();
+	return templatePath
+		? path.isAbsolute(templatePath)
+			? templatePath
+			: path.resolve(cwd, templatePath)
+		: path.resolve(cwd, ".github/PULL_REQUEST_TEMPLATE.md");
 }
 
-function tryOriginFallback(
-	git: GitClientService,
-	base: string,
-	originBase: string,
-	e1: unknown,
-): Effect.Effect<readonly [string, readonly string[]], Error> {
+function readLogAndFiles(
+	logFilePath: string,
+	filesFilePath: string,
+): Effect.Effect<readonly [string, readonly string[]], Error, FileSystem.FileSystem> {
 	return Effect.gen(function* () {
-		yield* Effect.log({
-			event: "fetch_commits_fallback",
-			base,
-			originBase,
-			reason: formatError(e1),
-		});
-		return yield* fetchLogAndDiff(git, originBase).pipe(
-			Effect.mapError(
-				(e2) =>
-					new Error(`Base branch "${base}" not found. Tried ${originBase}: ${formatError(e2)}`),
-			),
-		);
+		const fs = yield* FileSystem.FileSystem.asEffect();
+		const [logContent, filesContent] = yield* Effect.all([
+			fs
+				.readFileString(logFilePath)
+				.pipe(
+					Effect.mapError(
+						(e) => new Error(`Log file not found: ${logFilePath}. ${formatError(e)}`),
+					),
+				),
+			fs
+				.readFileString(filesFilePath)
+				.pipe(
+					Effect.mapError(
+						(e) => new Error(`Files file not found: ${filesFilePath}. ${formatError(e)}`),
+					),
+				),
+		]);
+		const files = filesContent
+			.split("\n")
+			.map((f) => f.trim())
+			.filter(Boolean);
+		return [logContent, files] as const;
 	});
-}
-
-/** Fetch log and diff; fallback to origin/base when base fails (e.g. local branch missing in shallow clone). */
-export function fetchCommitsAndFiles(
-	git: GitClientService,
-	base: string,
-): Effect.Effect<readonly [string, readonly string[]], Error> {
-	const originBase = base.startsWith("origin/") ? base : `origin/${base}`;
-	return fetchLogAndDiff(git, base).pipe(
-		Effect.catch((e1) =>
-			originBase === base
-				? Effect.fail(new Error(`Base branch "${base}" not found: ${formatError(e1)}`))
-				: tryOriginFallback(git, base, originBase, e1),
-		),
-	);
-}
-
-export type OutputFormat = "body" | "title-body";
-
-export interface RunFillBodyOptions {
-	readonly aiTitle?: boolean;
-	readonly ollamaUrl?: string;
-	readonly ollamaModel?: string;
-}
-
-function resolveBaseAndTemplate(
-	baseArg: string | undefined,
-	templatePath: string | undefined,
-): Effect.Effect<
-	readonly [base: string, resolvedTemplatePath: string],
-	Error,
-	GitClient | Path.Path
-> {
-	return Effect.gen(function* () {
-		const path = yield* Path.Path.asEffect();
-		const git = yield* GitClient;
-		const base = baseArg ?? (yield* git.defaultBranch());
-		const repoRoot = yield* git.repoRoot();
-		const resolvedTemplatePath = templatePath
-			? path.isAbsolute(templatePath)
-				? templatePath
-				: path.resolve(repoRoot, templatePath)
-			: path.resolve(repoRoot, ".github/PULL_REQUEST_TEMPLATE.md");
-		return [base, resolvedTemplatePath] as const;
-	});
-}
-
-function fetchAndParseCommits(
-	git: GitClientService,
-	base: string,
-): Effect.Effect<readonly [readonly CommitInfo[], readonly string[]], Error | ParseError> {
-	return fetchCommitsAndFiles(git, base).pipe(
-		Effect.flatMap(([logOut, files]) => {
-			const parseResult = parseCommits(logOut);
-			return Effect.fromResult(parseResult).pipe(Effect.map((commits) => [commits, files]));
-		}),
-	);
 }
 
 export function renderBody(
@@ -532,43 +380,31 @@ export function renderBody(
 		: Effect.succeed(body);
 }
 
-function computeTitle(
-	commits: readonly CommitInfo[],
-	options: RunFillBodyOptions,
-): Effect.Effect<string, never> {
-	if (options.aiTitle && commits.length > 1) {
-		return generateTitleViaOllama(
-			commits,
-			options.ollamaUrl ?? "http://localhost:11434",
-			options.ollamaModel ?? "llama3.1:8b",
-		);
-	}
-	return Effect.succeed(getTitle(commits));
-}
-
 export function runFillBody(
-	baseArg: string | undefined,
+	logFilePath: string,
+	filesFilePath: string,
 	templatePath: string | undefined,
 	format: OutputFormat = "body",
-	options: RunFillBodyOptions = {},
-): Effect.Effect<string, Error | ParseError, FileSystem.FileSystem | GitClient | Path.Path> {
+): Effect.Effect<string, Error | ParseError, FileSystem.FileSystem> {
 	return Effect.gen(function* () {
-		const [base, resolvedTemplatePath] = yield* resolveBaseAndTemplate(baseArg, templatePath);
+		const resolvedTemplatePath = resolveTemplatePath(templatePath);
 
 		yield* Effect.log({
 			event: "fill_pr_body",
 			status: "started",
-			base,
+			logFile: logFilePath,
+			filesFile: filesFilePath,
 			templatePath: resolvedTemplatePath,
 			format,
 		});
 
-		const git = yield* GitClient;
 		const template = yield* readTemplate(resolvedTemplatePath);
-		const [rawCommits, files] = yield* fetchAndParseCommits(git, base);
+		const [logContent, files] = yield* readLogAndFiles(logFilePath, filesFilePath);
+		const parseResult = parseCommits(logContent);
+		const rawCommits = yield* Effect.fromResult(parseResult);
 		const commits = filterMergeCommits(rawCommits);
 		const body = yield* renderBody(commits, files, template);
-		const title = yield* computeTitle(commits, options);
+		const title = getTitle(commits);
 
 		if (format === "title-body" && !title.trim()) {
 			return yield* Effect.fail(
@@ -583,7 +419,6 @@ export function runFillBody(
 		yield* Effect.log({
 			event: "fill_pr_body",
 			status: "succeeded",
-			base,
 			commitsCount: commits.length,
 			filesCount: files.length,
 		});
@@ -591,9 +426,14 @@ export function runFillBody(
 	});
 }
 
-const baseArg = Argument.string("base").pipe(
-	Argument.optional,
-	Argument.withDescription("Base branch to compare against (default: inferred from origin/HEAD)"),
+const logFileFlag = Flag.string("log-file").pipe(
+	Flag.optional,
+	Flag.withDescription("Path to file containing commit log (---COMMIT--- separated blocks)."),
+);
+
+const filesFileFlag = Flag.string("files-file").pipe(
+	Flag.optional,
+	Flag.withDescription("Path to file containing newline-separated changed file names."),
 );
 
 const templateFlag = Flag.string("template").pipe(
@@ -611,61 +451,36 @@ const quietFlag = Flag.boolean("quiet").pipe(
 	Flag.withDescription("Suppress logs (for CI when capturing stdout)."),
 );
 
-const aiTitleFlag = Flag.boolean("ai-title").pipe(
-	Flag.withDefault(false),
-	Flag.withDescription(
-		"Generate PR title via Ollama (falls back to first commit subject on failure).",
-	),
-);
-
-const ollamaUrlFlag = Flag.string("ollama-url").pipe(
-	Flag.optional,
-	Flag.withDescription("Ollama base URL (default: http://localhost:11434)."),
-);
-
-const ollamaModelFlag = Flag.string("ollama-model").pipe(
-	Flag.optional,
-	Flag.withDescription("Ollama model for title generation (default: llama3.1:8b)."),
-);
-
 const fillCommand = Command.make(
 	"fill-pr-body",
 	{
-		base: baseArg,
+		logFile: logFileFlag,
+		filesFile: filesFileFlag,
 		template: templateFlag,
 		format: formatFlag,
 		quiet: quietFlag,
-		aiTitle: aiTitleFlag,
-		ollamaUrl: ollamaUrlFlag,
-		ollamaModel: ollamaModelFlag,
 	},
-	({ base, template, format, quiet, aiTitle, ollamaUrl, ollamaModel }) => {
+	({ logFile, filesFile, template, format, quiet }) => {
+		const logFilePath = Option.getOrUndefined(logFile);
+		const filesFilePath = Option.getOrUndefined(filesFile);
+		if (!logFilePath || !filesFilePath) {
+			return Effect.fail(
+				new Error(
+					"--log-file and --files-file are required. Generate them via git before invoking.",
+				),
+			);
+		}
 		const formatVal = Option.getOrUndefined(format) === "title-body" ? "title-body" : "body";
-		const url = Option.getOrUndefined(ollamaUrl);
-		const model = Option.getOrUndefined(ollamaModel);
-		const options: RunFillBodyOptions = {
-			...(aiTitle && {
-				aiTitle: true,
-				...(url != null && url !== "" && { ollamaUrl: url }),
-				...(model != null && model !== "" && { ollamaModel: model }),
-			}),
-		};
 		const loggerLayer = quiet
 			? Logger.layer([])
 			: Logger.layer([Logger.consolePretty({ colors: process.env.NO_COLOR === undefined })]).pipe(
 					Layer.provide(Layer.succeed(Logger.LogToStderr)(true)),
 				);
-		// Provide our own layer so --quiet controls logging (vs. CliLayer used by top-level).
-		const layer = NodeServices.layer.pipe(
-			Layer.provideMerge(GitClient.Live),
-			Layer.provideMerge(loggerLayer),
+		const layer = NodeServices.layer.pipe(Layer.provideMerge(loggerLayer));
+		return runFillBody(logFilePath, filesFilePath, Option.getOrUndefined(template), formatVal).pipe(
+			Effect.provide(layer),
+			Effect.flatMap(Console.log),
 		);
-		return runFillBody(
-			Option.getOrUndefined(base),
-			Option.getOrUndefined(template),
-			formatVal,
-			options,
-		).pipe(Effect.provide(layer), Effect.flatMap(Console.log));
 	},
 );
 
@@ -676,11 +491,8 @@ const LoggerLayer = Logger.layer([
 	Logger.consolePretty({ colors: process.env.NO_COLOR === undefined }),
 ]).pipe(Layer.provide(Layer.succeed(Logger.LogToStderr)(true)));
 
-/** CLI services: NodeServices + GitClient + Logger. */
-const CliLayer = NodeServices.layer.pipe(
-	Layer.provideMerge(GitClient.Live),
-	Layer.provideMerge(LoggerLayer),
-);
+/** CLI services: NodeServices + Logger. */
+const CliLayer = NodeServices.layer.pipe(Layer.provideMerge(LoggerLayer));
 
 // ─── Entry ─────────────────────────────────────────────────────────────────
 

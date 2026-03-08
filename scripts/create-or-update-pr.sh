@@ -1,43 +1,31 @@
 #!/usr/bin/env bash
 # Create or update a PR from fill-pr-body output.
-# Used by auto-pr workflow. Requires GH_TOKEN in env.
-#
-# Usage: create-or-update-pr.sh <branch> <default-branch>
-# Example: create-or-update-pr.sh ai/feature-x main
+# Requires env: GH_TOKEN, BRANCH, DEFAULT_BRANCH, COMMITS, FILES, PR_TITLE
 
 set -euo pipefail
 
-BRANCH="${1:?branch required}"
-DEFAULT="${2:?default branch required}"
+for v in GH_TOKEN BRANCH DEFAULT_BRANCH COMMITS FILES PR_TITLE; do
+	: "${!v:?$v required}"
+done
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
-npx tsx scripts/fill-pr-body.ts "origin/$DEFAULT" --format title-body --ai-title > /tmp/pr-output.txt
-OUTPUT=$(cat /tmp/pr-output.txt)
-TITLE=$(echo "$OUTPUT" | head -1)
+npx tsx scripts/fill-pr-body.ts --log-file "$COMMITS" --files-file "$FILES" --format body > /tmp/pr-body.md
 
-if [ -z "$TITLE" ]; then
-	echo "::error::PR title is empty. Add at least one non-merge commit with non-empty subject (e.g. feat: add X) before pushing."
+retry() {
+	for attempt in 1 2 3; do
+		"$@" && return 0
+		[ "$attempt" -lt 3 ] && { echo "::warning::gh failed (attempt $attempt/3), retrying in 5s..."; sleep 5; }
+	done
+	echo "::error::gh failed after 3 attempts"
 	exit 1
-fi
-
-echo "$OUTPUT" | tail -n +3 > /tmp/pr-body.md
+}
 
 if gh pr view "$BRANCH" 2>/dev/null; then
 	echo "PR exists, updating..."
-	for attempt in 1 2 3; do
-		gh pr edit "$BRANCH" --title "$TITLE" --body-file /tmp/pr-body.md && exit 0
-		[ "$attempt" -lt 3 ] && { echo "::warning::gh pr edit failed (attempt $attempt/3), retrying in 5s..."; sleep 5; }
-	done
-	echo "::error::gh pr edit failed after 3 attempts"
-	exit 1
+	retry gh pr edit "$BRANCH" --title "$PR_TITLE" --body-file /tmp/pr-body.md
 else
 	echo "Creating PR..."
-	for attempt in 1 2 3; do
-		gh pr create --base "$DEFAULT" --title "$TITLE" --body-file /tmp/pr-body.md --draft && exit 0
-		[ "$attempt" -lt 3 ] && { echo "::warning::gh pr create failed (attempt $attempt/3), retrying in 5s..."; sleep 5; }
-	done
-	echo "::error::gh pr create failed after 3 attempts"
-	exit 1
+	retry gh pr create --base "$DEFAULT_BRANCH" --title "$PR_TITLE" --body-file /tmp/pr-body.md --draft
 fi
