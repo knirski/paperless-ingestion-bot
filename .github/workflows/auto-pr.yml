@@ -1,4 +1,4 @@
-name: Create or update PR from AI branch
+name: Auto-PR
 
 on:
   push:
@@ -14,7 +14,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  create-pr:
+  auto-pr:
     if: github.event.repository.fork != true
     runs-on: ubuntu-latest
     steps:
@@ -74,30 +74,4 @@ jobs:
       - name: Create or update pull request
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          BRANCH="${{ github.ref_name }}"
-          DEFAULT="${{ github.event.repository.default_branch }}"
-          OUTPUT=$(npx tsx scripts/fill-pr-body.ts "origin/$DEFAULT" --format title-body --ai-title --quiet)
-          TITLE=$(echo "$OUTPUT" | head -1)
-          if [ -z "$TITLE" ]; then
-            echo "::error::PR title is empty. Add at least one non-merge commit with non-empty subject (e.g. feat: add X) before pushing."
-            exit 1
-          fi
-          echo "$OUTPUT" | tail -n +3 > /tmp/pr-body.md
-          if gh pr view "$BRANCH" 2>/dev/null; then
-            echo "PR exists, updating..."
-            for attempt in 1 2 3; do
-              gh pr edit "$BRANCH" --title "$TITLE" --body-file /tmp/pr-body.md && exit 0
-              [ "$attempt" -lt 3 ] && { echo "::warning::gh pr edit failed (attempt $attempt/3), retrying in 5s..."; sleep 5; }
-            done
-            echo "::error::gh pr edit failed after 3 attempts"
-            exit 1
-          else
-            echo "Creating PR..."
-            for attempt in 1 2 3; do
-              gh pr create --base "$DEFAULT" --title "$TITLE" --body-file /tmp/pr-body.md --draft && exit 0
-              [ "$attempt" -lt 3 ] && { echo "::warning::gh pr create failed (attempt $attempt/3), retrying in 5s..."; sleep 5; }
-            done
-            echo "::error::gh pr create failed after 3 attempts"
-            exit 1
-          fi
+        run: bash scripts/create-or-update-pr.sh "${{ github.ref_name }}" "${{ github.event.repository.default_branch }}"
