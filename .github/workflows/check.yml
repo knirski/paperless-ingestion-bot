@@ -14,6 +14,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -41,17 +42,20 @@ jobs:
       - name: Lint workflow files
         uses: eifinger/actionlint-action@7802e0cc3ab3f81cbffb36fb0bf1a3621d994b89 # v1
 
+      - name: Shellcheck script files
+        run: find scripts -name '*.sh' -exec shellcheck {} +
+
       - name: Validate commit messages
         if: github.actor != 'dependabot[bot]'
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npx commitlint --from=origin/main --to=HEAD
+            npx commitlint --from=origin/${{ github.event.repository.default_branch }} --to=HEAD
           else
             BEFORE="${{ github.event.before }}"
             if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
               echo "Skipping commitlint: initial push (no previous commit)"
             else
-              npx commitlint --from="$BEFORE" --to=${{ github.sha }}
+              npx commitlint --from="$BEFORE" --to="${{ github.sha }}"
             fi
           fi
 

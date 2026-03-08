@@ -10,6 +10,6 @@ on:
 jobs:
   update-hash:
     permissions:
-      contents: read
+      contents: write
     uses: ./.github/workflows/nix.yml
     secrets: inherit
