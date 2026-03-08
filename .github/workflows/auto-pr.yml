@@ -62,6 +62,20 @@ jobs:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
+      - name: Debug gh pr view
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          echo "::group::gh pr view --head $BRANCH"
+          set +e
+          out=$(gh pr view --head "$BRANCH" 2>&1)
+          code=$?
+          set -e
+          echo "exit code: $code"
+          echo "$out"
+          echo "::endgroup::"
+
       - name: Create or update pull request
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
