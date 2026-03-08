@@ -353,6 +353,13 @@ function generateTitleViaOllamaOnce(
 	return fetchOllamaGenerate(baseUrl, { model, prompt, stream: false }, controller.signal).pipe(
 		Effect.flatMap((res) => (res?.ok ? parseOllamaJson(res) : Effect.succeed(undefined))),
 		Effect.map((s) => s ?? ""),
+		Effect.tap((output) =>
+			Effect.log({
+				event: "ollama_title_raw",
+				output: output || "(empty or fetch failed)",
+				model,
+			}),
+		),
 		Effect.catch(() => Effect.succeed("")),
 		Effect.ensuring(Effect.sync(() => clearTimeout(timeout))),
 	);
@@ -366,11 +373,39 @@ function generateTitleViaOllama(
 ): Effect.Effect<string, never> {
 	const fallback = getTitle(commits);
 	function attempt(n: number): Effect.Effect<string, never> {
-		if (n >= OLLAMA_MAX_ATTEMPTS) return Effect.succeed(fallback);
+		if (n >= OLLAMA_MAX_ATTEMPTS) {
+			return Effect.gen(function* () {
+				yield* Effect.log({
+					event: "ollama_title_fallback",
+					reason: "max attempts reached or invalid",
+					fallback,
+				});
+				return fallback;
+			});
+		}
 		return generateTitleViaOllamaOnce(commits, baseUrl, model).pipe(
-			Effect.flatMap((result) =>
-				isValidConventionalTitle(result) ? Effect.succeed(result) : attempt(n + 1),
-			),
+			Effect.flatMap((result) => {
+				const valid = isValidConventionalTitle(result);
+				if (valid) {
+					return Effect.gen(function* () {
+						yield* Effect.log({
+							event: "ollama_title_accepted",
+							attempt: n + 1,
+							title: result,
+						});
+						return result;
+					});
+				}
+				return Effect.gen(function* () {
+					yield* Effect.log({
+						event: "ollama_title_rejected",
+						attempt: n + 1,
+						output: result || "(empty)",
+						reason: "not a valid conventional commit title",
+					});
+					return yield* attempt(n + 1);
+				});
+			}),
 		);
 	}
 	return attempt(0);
