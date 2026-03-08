@@ -230,6 +230,7 @@ const PLACEHOLDERS = [
 	"checklistTests",
 	"relatedIssues",
 	"breakingChanges",
+	"placeholder", // Template comment "Replace each {{placeholder}} below"
 ] as const;
 
 function buildSubstitutionMap(data: TemplateData): Record<string, string> {
@@ -246,6 +247,7 @@ function buildSubstitutionMap(data: TemplateData): Record<string, string> {
 		checklistTests: tests,
 		relatedIssues: data.relatedIssues.length ? data.relatedIssues.join("\n") : "",
 		breakingChanges: data.breakingChanges || "",
+		placeholder: "placeholder",
 	};
 }
 
@@ -407,16 +409,25 @@ const formatFlag = Flag.string("format").pipe(
 	Flag.withDescription("Output format: 'body' (default) or 'title-body' (first line = PR title)."),
 );
 
+const quietFlag = Flag.boolean("quiet").pipe(
+	Flag.withDefault(false),
+	Flag.withDescription("Suppress log output (use when capturing stdout for piping)."),
+);
+
 const fillCommand = Command.make(
 	"fill-pr-body",
-	{ base: baseArg, template: templateFlag, format: formatFlag },
-	({ base, template, format }) => {
+	{ base: baseArg, template: templateFlag, format: formatFlag, quiet: quietFlag },
+	({ base, template, format, quiet }) => {
 		const formatVal = Option.getOrUndefined(format) === "title-body" ? "title-body" : "body";
+		const QuietLayer = NodeServices.layer.pipe(
+			Layer.provideMerge(GitClient.Live),
+			Layer.provideMerge(Logger.layer([])),
+		);
 		return runFillBody(
 			Option.getOrUndefined(base),
 			Option.getOrUndefined(template),
 			formatVal,
-		).pipe(Effect.flatMap(Console.log));
+		).pipe(Effect.flatMap(Console.log), Effect.provide(quiet ? QuietLayer : CliLayer));
 	},
 );
 

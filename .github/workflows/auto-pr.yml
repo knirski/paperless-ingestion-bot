@@ -30,6 +30,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.event.repository.default_branch }}
+
       - name: Generate GitHub App token
         id: app-token
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
@@ -43,7 +46,7 @@ jobs:
         run: |
           BRANCH="${{ github.ref_name }}"
           DEFAULT="${{ github.event.repository.default_branch }}"
-          OUTPUT=$(npx tsx scripts/fill-pr-body.ts "$DEFAULT" --format title-body)
+          OUTPUT=$(npx tsx scripts/fill-pr-body.ts "origin/$DEFAULT" --format title-body --quiet)
           TITLE=$(echo "$OUTPUT" | head -1)
           if [ -z "$TITLE" ]; then
             echo "::error::PR title is empty. Add at least one conventional commit (e.g. feat: add X) before pushing."
