@@ -28,6 +28,7 @@ Setup is a bit involved. Geeks will feel at home - determined non-geeks can get 
 - **Signal**: Webhook server for document attachments sent via Signal.
 - **Gmail**: IMAP-based crawl for email attachments. One-shot (runs once, exits). Schedule with cron or systemd timer.
 - **Ollama**: Optional AI eligibility filter for email attachments (images, plain text).
+- **AI-assisted development**: Push to `ai/**` branches to auto-create PRs with Ollama-generated titles from conventional commits. See [Auto-PR setup](docs/GITHUB_APP_AUTO_PR_SETUP.md).
 
 Supported file types: PDF, Word (.doc, .docx), RTF, Office formats, images (JPEG, PNG, etc.), plain text, HTML, CSV.
 
@@ -40,7 +41,7 @@ Might add: other email providers (Outlook, Proton), other IMs (Matrix, Telegram)
 | Dependency                                                              | Required   | Purpose                                                                                                                                            |
 | ----------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx)         | Yes        | Document management system; bot writes files to the consume directory                                                                              |
-| [Ollama](https://ollama.ai/)                                            | No         | Optional AI-based eligibility assessment for documents (runs locally)                                                                              |
+| [Ollama](https://ollama.ai/)                                            | No         | Optional AI eligibility assessment; also used for AI-generated PR titles in the auto-PR workflow (runs locally)                                    |
 | [paperless-ai](https://github.com/clusterzx/paperless-ai)               | No         | Optional AI post-processing (tags, titles, correspondents). This bot uses Ollama directly for pre-ingestion; paperless-ai augments after ingestion |
 | [signal-cli-rest-api](https://github.com/bbernhard/signal-cli-rest-api) | For Signal | Webhook server for Signal Messenger                                                                                                                |
 | Node.js ≥ 24                                                            | Yes        | Runtime                                                                                                                                            |
@@ -214,7 +215,7 @@ TypeScript implementation using [Effect](https://effect.website/) and functional
 
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md): Project structure and design
 - [CONTRIBUTING.md](CONTRIBUTING.md): How to contribute
-- [docs/GITHUB_APP_AUTO_PR_SETUP.md](docs/GITHUB_APP_AUTO_PR_SETUP.md): Auto-PR workflow setup (maintainers)
+- [docs/GITHUB_APP_AUTO_PR_SETUP.md](docs/GITHUB_APP_AUTO_PR_SETUP.md): Auto-PR workflow — push to `ai/**` branches to auto-create PRs with Ollama-generated titles (maintainer setup)
 - [docs/SCHEDULED_WORKFLOWS.md](docs/SCHEDULED_WORKFLOWS.md): Enable scheduled workflows (cron)
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): Community standards
 - [SECURITY.md](SECURITY.md): Vulnerability reporting

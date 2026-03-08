@@ -1,23 +1,26 @@
 /**
  * Fill PR template from conventional commit messages.
- * Pure core + Effect shell. Run: npx tsx scripts/fill-pr-body.ts [base]
+ * Pure core + Effect shell. Run: npx tsx scripts/fill-pr-body.ts --log-file <path> --files-file <path>
  *
  * Reads .github/PULL_REQUEST_TEMPLATE.md (or --template path), replaces
  * {{placeholder}} values, outputs to stdout. See docs/PR_TEMPLATE.md for
  * how this template works for both manual and automated PRs.
+ *
+ * Requires --log-file and --files-file (commit log and changed files). The workflow
+ * or create-or-update-pr.sh generates these via git before invoking this script.
  */
 
+import * as path from "node:path";
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { CommitParser } from "conventional-commits-parser";
-import { Console, Effect, FileSystem, Layer, Logger, Option, Path, pipe, Result } from "effect";
-import { Argument, Command, Flag } from "effect/unstable/cli";
+import { Console, Effect, FileSystem, Layer, Logger, Option, pipe, Result } from "effect";
+import { Command, Flag } from "effect/unstable/cli";
 import pkg from "../package.json" with { type: "json" };
-import { GitClient, type GitClientService } from "./git-client.js";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-export interface CommitInfo {
+interface CommitInfo {
 	readonly subject: string;
 	readonly body: string;
 	readonly fullMessage: string;
@@ -78,6 +81,12 @@ const TYPE_MAP: Record<string, TypeOfChange> = {
 };
 
 const parser = new CommitParser();
+
+/** Parser with conventionalcommits preset options (supports feat!, etc.) for single-line validation. */
+const validationParser = new CommitParser({
+	headerPattern: /^(\w*)(?:\((.*)\))?!?: (.*)$/,
+	headerCorrespondence: ["type", "scope", "subject"],
+});
 
 function mapParsedToCommitInfo(
 	block: string,
@@ -143,6 +152,14 @@ function getTitle(commits: readonly CommitInfo[]): string {
 	return first?.subject ?? "";
 }
 
+export function isValidConventionalTitle(s: string): boolean {
+	const trimmed = s.trim();
+	if (trimmed.length === 0 || trimmed.length > 72) return false;
+	const parsed = validationParser.parse(trimmed);
+	const type = (parsed as { type?: string }).type;
+	return type != null && type.length > 0;
+}
+
 export function getDescription(first: CommitInfo): string {
 	const body = first.body.trim();
 	const firstLine = body.split("\n")[0] ?? "";
@@ -176,6 +193,16 @@ export function hasDocsFiles(files: readonly string[]): boolean {
 
 export function isConventional(commit: CommitInfo): boolean {
 	return commit.type != null;
+}
+
+/** Merge commits (e.g. "Merge branch 'x' into y") add no semantic value for PR body/title. */
+export function isMergeCommit(c: CommitInfo): boolean {
+	return /^Merge /i.test(c.subject.trim());
+}
+
+/** Exclude merge commits; keep only semantic commits for body and title. */
+export function filterMergeCommits(commits: readonly CommitInfo[]): readonly CommitInfo[] {
+	return commits.filter((c) => !isMergeCommit(c));
 }
 
 export function getRelatedIssues(commits: readonly CommitInfo[]): readonly string[] {
@@ -284,99 +311,105 @@ function readTemplate(filePath: string): Effect.Effect<string, Error, FileSystem
 			fs
 				.readFileString(filePath)
 				.pipe(
-					Effect.mapError(
-						(e) =>
-							new Error(
-								`Template not found: ${filePath}. ${e instanceof Error ? e.message : String(e)}`,
-							),
-					),
+					Effect.mapError((e) => new Error(`Template not found: ${filePath}. ${formatError(e)}`)),
 				),
 		),
 	);
 }
 
-/** Fetch log and diff; fallback to origin/base when base fails (e.g. local branch missing in shallow clone). */
-export function fetchCommitsAndFiles(
-	git: GitClientService,
-	base: string,
-): Effect.Effect<readonly [string, readonly string[]], Error> {
-	const originBase = base.startsWith("origin/") ? base : `origin/${base}`;
-	return Effect.all([git.log(base), git.diffNames(base)]).pipe(
-		Effect.catch((e1) =>
-			originBase === base
-				? Effect.fail(
-						new Error(
-							`Base branch "${base}" not found: ${e1 instanceof Error ? e1.message : String(e1)}`,
-						),
-					)
-				: Effect.gen(function* () {
-						yield* Effect.log({
-							event: "fetch_commits_fallback",
-							base,
-							originBase,
-							reason: e1 instanceof Error ? e1.message : String(e1),
-						});
-						return yield* Effect.all([git.log(originBase), git.diffNames(originBase)]).pipe(
-							Effect.mapError(
-								(e2) =>
-									new Error(
-										`Base branch "${base}" not found. Tried ${originBase}: ${e2 instanceof Error ? e2.message : String(e2)}`,
-									),
-							),
-						);
-					}),
-		),
-	);
+function formatError(e: unknown): string {
+	return e instanceof Error ? e.message : String(e);
 }
 
-export type OutputFormat = "body" | "title-body";
+type OutputFormat = "body" | "title-body";
+
+function resolveTemplatePath(templatePath: string | undefined): string {
+	const cwd = process.cwd();
+	return templatePath
+		? path.isAbsolute(templatePath)
+			? templatePath
+			: path.resolve(cwd, templatePath)
+		: path.resolve(cwd, ".github/PULL_REQUEST_TEMPLATE.md");
+}
+
+function readLogAndFiles(
+	logFilePath: string,
+	filesFilePath: string,
+): Effect.Effect<readonly [string, readonly string[]], Error, FileSystem.FileSystem> {
+	return Effect.gen(function* () {
+		const fs = yield* FileSystem.FileSystem.asEffect();
+		const [logContent, filesContent] = yield* Effect.all([
+			fs
+				.readFileString(logFilePath)
+				.pipe(
+					Effect.mapError(
+						(e) => new Error(`Log file not found: ${logFilePath}. ${formatError(e)}`),
+					),
+				),
+			fs
+				.readFileString(filesFilePath)
+				.pipe(
+					Effect.mapError(
+						(e) => new Error(`Files file not found: ${filesFilePath}. ${formatError(e)}`),
+					),
+				),
+		]);
+		const files = filesContent
+			.split("\n")
+			.map((f) => f.trim())
+			.filter(Boolean);
+		return [logContent, files] as const;
+	});
+}
+
+export function renderBody(
+	commits: readonly CommitInfo[],
+	files: readonly string[],
+	template: string,
+): Effect.Effect<string> {
+	const data = fillTemplate(commits, files);
+	const body = renderFromTemplate(template, data);
+	return body.includes("{{")
+		? Effect.gen(function* () {
+				yield* Effect.logWarning({
+					event: "fill_pr_body",
+					message: "Output contains unreplaced {{placeholder}}s",
+				});
+				return body;
+			})
+		: Effect.succeed(body);
+}
 
 export function runFillBody(
-	baseArg: string | undefined,
+	logFilePath: string,
+	filesFilePath: string,
 	templatePath: string | undefined,
 	format: OutputFormat = "body",
-): Effect.Effect<string, Error | ParseError, FileSystem.FileSystem | GitClient | Path.Path> {
+): Effect.Effect<string, Error | ParseError, FileSystem.FileSystem> {
 	return Effect.gen(function* () {
-		const path = yield* Path.Path.asEffect();
-		const git = yield* GitClient;
-		const base = baseArg ?? (yield* git.defaultBranch());
-
-		const repoRoot = yield* git.repoRoot();
-		const resolvedTemplatePath = templatePath
-			? path.isAbsolute(templatePath)
-				? templatePath
-				: path.resolve(repoRoot, templatePath)
-			: path.resolve(repoRoot, ".github/PULL_REQUEST_TEMPLATE.md");
+		const resolvedTemplatePath = resolveTemplatePath(templatePath);
 
 		yield* Effect.log({
 			event: "fill_pr_body",
 			status: "started",
-			base,
+			logFile: logFilePath,
+			filesFile: filesFilePath,
 			templatePath: resolvedTemplatePath,
 			format,
 		});
 
 		const template = yield* readTemplate(resolvedTemplatePath);
-
-		const [logOut, files] = yield* fetchCommitsAndFiles(git, base);
-
-		const parseResult = parseCommits(logOut);
-		const commits = yield* Effect.fromResult(parseResult);
-
-		const data = fillTemplate(commits, files);
-		const body = renderFromTemplate(template, data);
-		if (body.includes("{{")) {
-			yield* Effect.logWarning({
-				event: "fill_pr_body",
-				message: "Output contains unreplaced {{placeholder}}s",
-			});
-		}
-
+		const [logContent, files] = yield* readLogAndFiles(logFilePath, filesFilePath);
+		const parseResult = parseCommits(logContent);
+		const rawCommits = yield* Effect.fromResult(parseResult);
+		const commits = filterMergeCommits(rawCommits);
+		const body = yield* renderBody(commits, files, template);
 		const title = getTitle(commits);
+
 		if (format === "title-body" && !title.trim()) {
 			return yield* Effect.fail(
 				new Error(
-					"PR title is empty. Add at least one conventional commit (e.g. feat: add X) before pushing.",
+					"PR title is empty. Add at least one non-merge commit with non-empty subject (e.g. feat: add X) before pushing.",
 				),
 			);
 		}
@@ -386,7 +419,6 @@ export function runFillBody(
 		yield* Effect.log({
 			event: "fill_pr_body",
 			status: "succeeded",
-			base,
 			commitsCount: commits.length,
 			filesCount: files.length,
 		});
@@ -394,9 +426,14 @@ export function runFillBody(
 	});
 }
 
-const baseArg = Argument.string("base").pipe(
-	Argument.optional,
-	Argument.withDescription("Base branch to compare against (default: inferred from origin/HEAD)"),
+const logFileFlag = Flag.string("log-file").pipe(
+	Flag.optional,
+	Flag.withDescription("Path to file containing commit log (---COMMIT--- separated blocks)."),
+);
+
+const filesFileFlag = Flag.string("files-file").pipe(
+	Flag.optional,
+	Flag.withDescription("Path to file containing newline-separated changed file names."),
 );
 
 const templateFlag = Flag.string("template").pipe(
@@ -411,23 +448,39 @@ const formatFlag = Flag.string("format").pipe(
 
 const quietFlag = Flag.boolean("quiet").pipe(
 	Flag.withDefault(false),
-	Flag.withDescription("Suppress log output (use when capturing stdout for piping)."),
+	Flag.withDescription("Suppress logs (for CI when capturing stdout)."),
 );
 
 const fillCommand = Command.make(
 	"fill-pr-body",
-	{ base: baseArg, template: templateFlag, format: formatFlag, quiet: quietFlag },
-	({ base, template, format, quiet }) => {
+	{
+		logFile: logFileFlag,
+		filesFile: filesFileFlag,
+		template: templateFlag,
+		format: formatFlag,
+		quiet: quietFlag,
+	},
+	({ logFile, filesFile, template, format, quiet }) => {
+		const logFilePath = Option.getOrUndefined(logFile);
+		const filesFilePath = Option.getOrUndefined(filesFile);
+		if (!logFilePath || !filesFilePath) {
+			return Effect.fail(
+				new Error(
+					"--log-file and --files-file are required. Generate them via git before invoking.",
+				),
+			);
+		}
 		const formatVal = Option.getOrUndefined(format) === "title-body" ? "title-body" : "body";
-		const QuietLayer = NodeServices.layer.pipe(
-			Layer.provideMerge(GitClient.Live),
-			Layer.provideMerge(Logger.layer([])),
+		const loggerLayer = quiet
+			? Logger.layer([])
+			: Logger.layer([Logger.consolePretty({ colors: process.env.NO_COLOR === undefined })]).pipe(
+					Layer.provide(Layer.succeed(Logger.LogToStderr)(true)),
+				);
+		const layer = NodeServices.layer.pipe(Layer.provideMerge(loggerLayer));
+		return runFillBody(logFilePath, filesFilePath, Option.getOrUndefined(template), formatVal).pipe(
+			Effect.provide(layer),
+			Effect.flatMap(Console.log),
 		);
-		return runFillBody(
-			Option.getOrUndefined(base),
-			Option.getOrUndefined(template),
-			formatVal,
-		).pipe(Effect.flatMap(Console.log), Effect.provide(quiet ? QuietLayer : CliLayer));
 	},
 );
 
@@ -438,11 +491,8 @@ const LoggerLayer = Logger.layer([
 	Logger.consolePretty({ colors: process.env.NO_COLOR === undefined }),
 ]).pipe(Layer.provide(Layer.succeed(Logger.LogToStderr)(true)));
 
-/** CLI services: NodeServices + GitClient + Logger. */
-const CliLayer = NodeServices.layer.pipe(
-	Layer.provideMerge(GitClient.Live),
-	Layer.provideMerge(LoggerLayer),
-);
+/** CLI services: NodeServices + Logger. */
+const CliLayer = NodeServices.layer.pipe(Layer.provideMerge(LoggerLayer));
 
 // ─── Entry ─────────────────────────────────────────────────────────────────
 
@@ -453,7 +503,7 @@ if (import.meta.main) {
 			Effect.tapError((e) =>
 				Effect.logError({
 					event: "fill_pr_body_failed",
-					error: e instanceof Error ? e.message : String(e),
+					error: formatError(e),
 					...(e instanceof Error && e.stack ? { stack: e.stack } : {}),
 				}),
 			),

@@ -80,4 +80,4 @@ For failure tests, pass `configOverrides: { imapRetrySchedule: imapRetrySchedule
 
 ### fill-pr-body script
 
-Creates a temp git repo with conventional commits and runs `npx tsx scripts/fill-pr-body.ts main` via subprocess. Asserts output contains expected PR template sections. No mocks; uses real `git` binary.
+Tests live in `test/scripts/fill-pr-body.test.ts`. Uses string-based log/files (no git); writes to temp files and runs `runFillBody`.
