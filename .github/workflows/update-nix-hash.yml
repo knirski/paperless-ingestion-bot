@@ -9,5 +9,7 @@ on:
 
 jobs:
   update-hash:
+    permissions:
+      contents: read
     uses: ./.github/workflows/nix.yml
     secrets: inherit
