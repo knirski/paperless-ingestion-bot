@@ -254,6 +254,7 @@ const PLACEHOLDERS = [
 	"checklistTests",
 	"relatedIssues",
 	"breakingChanges",
+	"placeholder", // Template comment "Replace each {{placeholder}} below"
 ] as const;
 
 function buildSubstitutionMap(data: TemplateData): Record<string, string> {
@@ -270,6 +271,7 @@ function buildSubstitutionMap(data: TemplateData): Record<string, string> {
 		checklistTests: tests,
 		relatedIssues: data.relatedIssues.length ? data.relatedIssues.join("\n") : "",
 		breakingChanges: data.breakingChanges || "",
+		placeholder: "placeholder",
 	};
 }
 

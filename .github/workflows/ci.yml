@@ -1,3 +1,7 @@
+# CI: check, dependency-review, nix build.
+# Uses GitHub reusable workflows, paths-filter for conditional jobs,
+# concurrency for cancel-in-progress, least-privilege permissions.
+
 name: CI
 
 on:
@@ -22,7 +26,7 @@ jobs:
       code: ${{ steps.filter.outputs.code }}
       nix: ${{ steps.filter.outputs.nix }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
       - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
@@ -53,135 +57,20 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
 
   check:
     needs: changes
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-
-      - name: Docs-only (skip full CI)
-        if: needs.changes.outputs.code != 'true'
-        run: echo "Documentation-only change, skipping full CI"
-
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        if: needs.changes.outputs.code == 'true'
-        with:
-          node-version-file: ".nvmrc"
-          cache: "npm"
-
-      - run: npm ci
-        if: needs.changes.outputs.code == 'true'
-
-      - name: Generate SBOM
-        if: needs.changes.outputs.code == 'true'
-        run: npx @cyclonedx/cyclonedx-npm@4.2.0 --output-file sbom.json
-
-      - name: Upload SBOM
-        if: needs.changes.outputs.code == 'true'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: sbom
-          path: sbom.json
-
-      - name: Audit dependencies
-        if: needs.changes.outputs.code == 'true'
-        run: npm audit --audit-level=high
-
-      - name: Lint workflow files
-        if: needs.changes.outputs.code == 'true'
-        uses: eifinger/actionlint-action@7802e0cc3ab3f81cbffb36fb0bf1a3621d994b89 # v1.10.1
-
-      - name: Validate commit messages
-        if: needs.changes.outputs.code == 'true' && github.actor != 'dependabot[bot]'
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npx commitlint --from=origin/main --to=HEAD
-          else
-            BEFORE="${{ github.event.before }}"
-            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-              echo "Skipping commitlint: initial push (no previous commit)"
-            else
-              npx commitlint --from="$BEFORE" --to=${{ github.sha }}
-            fi
-          fi
-
-      - run: npm run check
-        if: needs.changes.outputs.code == 'true'
-
-      - name: Upload coverage to Codecov
-        if: needs.changes.outputs.code == 'true'
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          fail_ci_if_error: false
-
-      - name: Upload test results to Codecov
-        if: needs.changes.outputs.code == 'true'
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./test-report.junit.xml
-          report_type: test_results
+    if: needs.changes.outputs.code == 'true'
+    uses: ./.github/workflows/check.yml
+    secrets: inherit
 
   nix:
     needs: changes
     if: (github.event_name == 'push' && needs.changes.outputs.code == 'true') || (github.event_name == 'pull_request' && needs.changes.outputs.nix == 'true')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
-
-      - uses: DeterminateSystems/nix-installer-action@d96bc962e61b3049ce8128d03d57a1144fa96539 # main
-
-      - name: Update npmDepsHash if mismatch
-        id: hash
-        run: |
-          expected=$(nix run nixpkgs#prefetch-npm-deps -- package-lock.json)
-          if [ -z "$expected" ] || [[ ! "$expected" =~ ^sha256-[A-Za-z0-9+/=]+$ ]]; then
-            echo "::error::prefetch-npm-deps failed or returned invalid hash"
-            exit 1
-          fi
-          current=$(sed -n 's/.*npmDepsHash = "\([^"]*\)".*/\1/p' default.nix | head -1)
-          if [ -z "$current" ] || [[ ! "$current" =~ ^sha256-[A-Za-z0-9+/=]+$ ]]; then
-            echo "::error::Could not parse npmDepsHash from default.nix (expected format: npmDepsHash = \"sha256-...\")"
-            exit 1
-          fi
-          if [ "$expected" = "$current" ]; then
-            echo "Hash correct, no update needed"
-            exit 0
-          fi
-          echo "hash=$expected" >> "$GITHUB_OUTPUT"
-          sed -i "s|npmDepsHash = \"sha256-[^\"]*\"|npmDepsHash = \"$expected\"|" default.nix
-          echo "Updated npmDepsHash in default.nix"
-
-      - name: Commit and push (same-repo only)
-        if: steps.hash.outputs.hash != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add default.nix
-          git commit -m "fix(nix): update npmDepsHash for package-lock.json"
-          git push
-
-      - name: Fail for fork PR with stale hash
-        if: steps.hash.outputs.hash != '' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
-        run: |
-          echo "::error::npmDepsHash mismatch. CI cannot push to fork PRs."
-          echo ""
-          echo "Update locally and commit:"
-          echo "  nix run .#update-npm-deps-hash"
-          echo "  # or: npm run update-nix-hash -- ${{ steps.hash.outputs.hash }}"
-          echo "  git add default.nix && git commit -m 'fix(nix): update npmDepsHash for package-lock.json'"
-          exit 1
-
-      # Skip magic-nix-cache-action: requires FlakeHub registration; default cache.nixos.org works
-      - run: nix build .#default
+    uses: ./.github/workflows/nix.yml
+    with:
+      ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+      push_allowed: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    secrets: inherit

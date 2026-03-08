@@ -216,6 +216,7 @@ TypeScript implementation using [Effect](https://effect.website/) and functional
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md): Project structure and design
 - [CONTRIBUTING.md](CONTRIBUTING.md): How to contribute
 - [docs/GITHUB_APP_AUTO_PR_SETUP.md](docs/GITHUB_APP_AUTO_PR_SETUP.md): Auto-PR workflow — push to `ai/**` branches to auto-create PRs with Ollama-generated titles (maintainer setup)
+- [docs/SCHEDULED_WORKFLOWS.md](docs/SCHEDULED_WORKFLOWS.md): Enable scheduled workflows (cron)
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): Community standards
 - [SECURITY.md](SECURITY.md): Vulnerability reporting
 - [SUPPORT.md](SUPPORT.md): Getting help
