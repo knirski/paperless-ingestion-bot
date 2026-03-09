@@ -49,7 +49,7 @@
 		"@js-temporal/polyfill": "^0.5.1",
 		"@napi-rs/keyring": "1.2.0",
 		"conventional-commits-parser": "^6.3.0",
-		"effect": "4.0.0-beta.28",
+		"effect": "4.0.0-beta.29",
 		"file-type": "^21.3.0",
 		"imapflow": "^1.2.12",
 		"mime": "^4.1.0"
