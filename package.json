@@ -44,7 +44,7 @@
 		"update-nix-hash": "node scripts/update-nix-hash.mjs"
 	},
 	"dependencies": {
-		"@effect/platform-node": "4.0.0-beta.28",
+		"@effect/platform-node": "4.0.0-beta.29",
 		"@effect/platform-node-shared": "4.0.0-beta.28",
 		"@js-temporal/polyfill": "^0.5.1",
 		"@napi-rs/keyring": "1.2.0",
