@@ -1,0 +1,20 @@
+memory_config:
+  disabled: false
+
+pull_request_opened:
+  summary: true         # Automatically post a summary of changes
+  code_review: true     # Automatically run the "Agent" review immediately
+  help: false           # Set to true if you want the bot to list commands on every PR
+  include_drafts: false # Set to false to avoid wasting "quota" on unfinished work
+
+code_review:
+  # Limits noise: only comments on issues it's sure about
+  comment_severity_threshold: MEDIUM  # Options: LOW, MEDIUM, HIGH, CRITICAL
+  
+  # Prevents the bot from spamming too many comments on huge PRs
+  max_review_comments: 20           # -1 for unlimited
+
+# 4. Ignore non-essential files to save processing time
+ignore_patterns:
+  - "*.lock"
+  - "package-lock.json"
