@@ -1,6 +1,6 @@
 # Nix build when deps change. Uses built-in paths: runs only when nix/deps change.
 
-name: Nix CI
+name: CI
 
 on:
   push:

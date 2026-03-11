@@ -21,6 +21,20 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 - **check.yml** — test, lint, typecheck, SBOM, Codecov. Called by ci.yml.
 - **nix.yml** — Nix build + npmDepsHash update. Called by ci-nix.yml and update-nix-hash.yml.
 
+## Branch Protection
+
+Both ci.yml and ci-docs.yml use `name: CI` and job `check`, so both produce status **`CI / check`**. Configure main branch protection to require only this one check:
+
+- **Status checks that are required:** `CI / check`
+
+This covers all PR types:
+- **Code PRs:** ci.yml runs → `CI / check` ✓
+- **Docs-only PRs:** ci-docs.yml runs → `CI / check` ✓
+- **Nix-only PRs:** ci.yml runs → `CI / check` ✓
+- **Mixed PRs:** ci.yml runs → `CI / check` ✓
+
+Do not require `dependency-review` (PR-only) or `nix` (path-filtered); they would block when skipped.
+
 ## Fork PRs
 
 CI cannot push to forks. If the nix job fails (ci-nix.yml), update locally: `nix run .#update-npm-deps-hash` (or `npm run update-nix-hash -- <hash>` using the hash from the failed job), then commit and push. See [CONTRIBUTING.md](../CONTRIBUTING.md).
