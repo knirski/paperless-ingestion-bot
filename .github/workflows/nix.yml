@@ -19,6 +19,8 @@ on:
         type: boolean
         default: true
 
+permissions: {}
+
 jobs:
   nix:
     runs-on: ubuntu-latest
