@@ -1,0 +1,33 @@
+# Nix build when deps change. Uses built-in paths: runs only when nix/deps change.
+
+name: Nix CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.nix'
+      - 'package*.json'
+      - 'flake.lock'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**/*.nix'
+      - 'package*.json'
+      - 'flake.lock'
+
+concurrency:
+  group: nix-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nix:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/nix.yml
+    with:
+      ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+      push_allowed: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    secrets: inherit

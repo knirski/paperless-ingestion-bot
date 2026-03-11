@@ -1,5 +1,5 @@
 # Reusable workflow: run full check (test, lint, typecheck, SBOM, Codecov).
-# Called by ci.yml when code changes are detected.
+# Called by ci.yml (runs when non-.md files change).
 #
 # Uses GitHub-provided: setup-node (built-in npm cache), upload-artifact, GITHUB_TOKEN.
 

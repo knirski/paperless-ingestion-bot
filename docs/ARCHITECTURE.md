@@ -152,7 +152,7 @@ Domain errors use `Schema.TaggedErrorClass` in [`domain/errors.ts`](../src/domai
 
 Tests swap live layers for mocks. Integration tests call pipelines directly with mock layers; no real IMAP, Ollama, or Signal API. See [test/integration/README.md](../test/integration/README.md) for fixtures, `buildTestLayer`, and how to add tests.
 
-**Related:** [AGENTS.md](../AGENTS.md) for AI agent instructions; [EFFECT_UNSTABLE_PLAN.md](EFFECT_UNSTABLE_PLAN.md) for Effect unstable adoption.
+**Related:** [AGENTS.md](../AGENTS.md) for AI agent instructions; [EFFECT_UNSTABLE_PLAN.md](EFFECT_UNSTABLE_PLAN.md) for Effect unstable adoption; [CI.md](CI.md) for workflow structure.
 
 ## Project Structure
 

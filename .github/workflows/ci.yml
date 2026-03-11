@@ -1,10 +1,5 @@
-# CI: check, dependency-review, nix build.
-# Uses GitHub reusable workflows, paths-filter for conditional jobs,
-# concurrency for cancel-in-progress, least-privilege permissions.
-#
-# Paths filter rationale:
-# - code: triggers check (test, lint, typecheck, SBOM, Codecov) and dependency-review
-# - nix: triggers Nix build and npmDepsHash update
+# CI: check, dependency-review. Nix runs in nix-ci.yml when deps change.
+# Uses built-in paths-ignore: skip when only *.md changes.
 
 name: CI
 
@@ -12,9 +7,13 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**/*.md'
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - '**/*.md'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,44 +23,8 @@ permissions:
   contents: read
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      code: ${{ steps.filter.outputs.code }}
-      nix: ${{ steps.filter.outputs.nix }}
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-      - uses: dorny/paths-filter@ce10459c8b92cd8901166c0a222fbb033ef39365 # v3 + node24
-        id: filter
-        with:
-          filters: |
-            code:
-              - '**/*.ts'
-              - '**/*.tsx'
-              - '**/*.mjs'
-              - '**/*.sh'
-              - '**/*.json'
-              - '**/*.nix'
-              - '.github/**'
-              - '.allstar/**'
-              - '.husky/**'
-              - '**/Dockerfile'
-              - '**/.dockerignore'
-              - '**/.nvmrc'
-              - '**/.editorconfig'
-              - '**/*.md'
-              - 'CODEOWNERS'
-              - 'LICENSE'
-            nix:
-              - '**/*.nix'
-              - 'package*.json'
-              - 'flake.lock'
-
   dependency-review:
-    needs: changes
-    if: github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -71,18 +34,5 @@ jobs:
       - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
 
   check:
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/check.yml
-    secrets: inherit
-
-  nix:
-    needs: changes
-    if: (github.event_name == 'push' && (needs.changes.outputs.code == 'true' || needs.changes.outputs.nix == 'true')) || (github.event_name == 'pull_request' && needs.changes.outputs.nix == 'true')
-    permissions:
-      contents: write
-    uses: ./.github/workflows/nix.yml
-    with:
-      ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
-      push_allowed: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     secrets: inherit
