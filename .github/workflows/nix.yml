@@ -1,5 +1,5 @@
 # Reusable workflow: Nix build with npmDepsHash auto-update.
-# Called by nix-ci.yml and update-nix-hash.yml.
+# Called by ci-nix.yml and update-nix-hash.yml.
 #
 # Uses GitHub-provided: GITHUB_TOKEN (for push), composite actions for modularity.
 

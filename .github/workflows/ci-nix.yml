@@ -19,7 +19,7 @@ on:
       - 'flake.lock'
 
 concurrency:
-  group: nix-ci-${{ github.ref }}
+  group: ci-nix-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
