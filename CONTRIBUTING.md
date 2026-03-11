@@ -16,7 +16,7 @@ If you change `package-lock.json` (e.g. add a dependency), the Nix hash must be 
 
 **Local warning:** `npm run check` warns when the hash is stale. You can ignore it — CI will fix it when you push.
 
-**Fork PRs:** CI cannot push to forks. If the nix job fails (nix-ci.yml), update locally: `nix run .#update-npm-deps-hash` (or `npm run update-nix-hash -- <hash>` using the hash from the failed job), then commit and push. See [docs/CI.md](docs/CI.md).
+**Fork PRs:** CI cannot push to forks. If the nix job fails (ci-nix.yml), update locally: `nix run .#update-npm-deps-hash` (or `npm run update-nix-hash -- <hash>` using the hash from the failed job), then commit and push. See [docs/CI.md](docs/CI.md).
 
 See [README.md](README.md) for runtime requirements and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for project structure.
 

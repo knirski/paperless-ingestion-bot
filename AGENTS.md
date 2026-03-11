@@ -22,7 +22,7 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 
 - Install: `npm install`
 - Verify: `npm run check` (test, lint, knip, typecheck)
-- CI: [docs/CI.md](docs/CI.md) — ci.yml (check, dependency-review), nix-ci.yml (Nix build)
+- CI: [docs/CI.md](docs/CI.md) — ci.yml (check, dependency-review), ci-nix.yml (Nix build)
 
 ## Commands
 

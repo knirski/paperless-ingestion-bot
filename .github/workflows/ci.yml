@@ -1,4 +1,4 @@
-# CI: check, dependency-review. Nix runs in nix-ci.yml when deps change.
+# CI: check, dependency-review. Nix runs in ci-nix.yml when deps change.
 # Uses built-in paths-ignore: skip when only *.md changes.
 
 name: CI
