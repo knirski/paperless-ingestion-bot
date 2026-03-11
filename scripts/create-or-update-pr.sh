@@ -27,5 +27,5 @@ if gh pr view "$BRANCH" 2>/dev/null; then
 	retry gh pr edit "$BRANCH" --title "$PR_TITLE" --body-file /tmp/pr-body.md
 else
 	echo "Creating PR..."
-	retry gh pr create --base "$DEFAULT_BRANCH" --title "$PR_TITLE" --body-file /tmp/pr-body.md --draft
+	retry gh pr create --base "$DEFAULT_BRANCH" --title "$PR_TITLE" --body-file /tmp/pr-body.md
 fi
