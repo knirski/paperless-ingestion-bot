@@ -86,7 +86,7 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
    git push origin ai/test-setup
    ```
 2. Check **Actions** in your repo — the workflow should run
-3. A new **draft** PR should appear, opened by `your-app-name[bot]`
+3. A new PR should appear, opened by `your-app-name[bot]`
 4. You can approve it as the repo owner
 
 ---
