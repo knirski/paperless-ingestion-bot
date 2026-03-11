@@ -14,7 +14,7 @@ let
       && builtins.baseNameOf path != ".git"
       && builtins.baseNameOf path != "result";
   };
-  npmDepsHash = "sha256-ICSse4hKm08780AFHjyYvWY7oNcjeHVWr9Z435nAlek=";
+  npmDepsHash = "sha256-keE3bu7Bs4bj5poDmS1Bzavby4uKpKYgsOPdZn2XRNI=";
 in
 pkgs.buildNpmPackage rec {
   pname = "paperless-ingestion-bot";
