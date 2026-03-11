@@ -73,7 +73,7 @@ In **Settings → Branches → Add rule** for `main`:
 
 ## Recommended Additions
 
-- [x] Nix CI job (`.github/workflows/nix-ci.yml`; runs when nix/deps change)
+- [x] Nix CI job (`.github/workflows/ci-nix.yml`; runs when nix/deps change)
 - [x] update-flake-lock workflow (weekly flake.lock updates; `.github/workflows/update-flake-lock.yml`). Runs on schedule from the default branch. See [docs/SCHEDULED_WORKFLOWS.md](SCHEDULED_WORKFLOWS.md) for enabling scheduled workflows. PRs from this workflow must pass CI (`check`, `nix`, `dependency-review`) before merging.
 - [x] Badges (CI, Version, Coverage, License, etc.) in README
 - [x] .editorconfig (editor consistency)

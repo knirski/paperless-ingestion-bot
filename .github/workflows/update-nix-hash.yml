@@ -1,5 +1,5 @@
 # Updates npmDepsHash in default.nix. Manual fix when main is stale.
-# nix-ci.yml handles updates on push and PR when nix/deps change.
+# ci-nix.yml handles updates on push and PR when nix/deps change.
 # Reuses the nix workflow (same-repo, push allowed).
 
 name: Update Nix hash
