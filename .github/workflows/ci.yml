@@ -79,6 +79,8 @@ jobs:
   nix:
     needs: changes
     if: (github.event_name == 'push' && (needs.changes.outputs.code == 'true' || needs.changes.outputs.nix == 'true')) || (github.event_name == 'pull_request' && needs.changes.outputs.nix == 'true')
+    permissions:
+      contents: write
     uses: ./.github/workflows/nix.yml
     with:
       ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
