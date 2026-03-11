@@ -1,0 +1,10 @@
+---
+description: GitHub Actions workflow and composite action conventions — run actionlint before finishing
+globs: [".github/workflows/**/*.yml", ".github/actions/**/*.yml"]
+---
+
+# GitHub Actions (workflows and composite actions)
+
+- **Lint:** Run `actionlint` on workflow and action files before finishing.
+- **Project command:** `npm run lint:workflows` (uses system actionlint or `nix run nixpkgs#actionlint`).
+- **Full CI simulation:** `npm run check:ci` (includes actionlint).

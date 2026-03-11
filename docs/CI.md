@@ -43,6 +43,10 @@ This covers all PR types:
 
 Do not require `dependency-review` (PR-only) or `nix` (path-filtered); they would block when skipped.
 
+## Local CI-like checks
+
+Run `npm run check:ci` to mirror CI locally: `check` plus actionlint and shellcheck. Uses system binaries when available, otherwise Nix (`nix run nixpkgs#actionlint`, `nix run nixpkgs#shellcheck`).
+
 ## Fork PRs
 
 CI cannot push to forks. If the nix job fails (ci-nix.yml), update locally: `nix run .#update-npm-deps-hash` (or `npm run update-nix-hash -- <hash>` using the hash from the failed job), then commit and push. See [CONTRIBUTING.md](../CONTRIBUTING.md).
