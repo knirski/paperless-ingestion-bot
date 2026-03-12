@@ -1,0 +1,25 @@
+# Runs check for release-please PRs. Release-please PRs don't trigger ci.yml
+# (path filter or event timing). This workflow runs when .release-please-manifest.json
+# changes, which only release-please touches. Reports "check / check" for branch protection.
+# See docs/CI.md.
+
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.release-please-manifest.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-release-please-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    uses: ./.github/workflows/check.yml
+    secrets: inherit
