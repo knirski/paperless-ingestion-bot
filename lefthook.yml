@@ -1,0 +1,10 @@
+# Git hooks via Lefthook. See https://lefthook.dev/
+
+pre-commit:
+  jobs:
+    - run: npx lint-staged
+
+commit-msg:
+  jobs:
+    - run: npx --no -- commitlint --edit {1}
+    - run: node scripts/commit-msg-hint.mjs {1}
