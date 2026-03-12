@@ -1,8 +1,7 @@
 # Complementary to ci.yml: runs when only *.md changes.
-# Reports passing "check" so branch protection allows merge.
-# See https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks
+# Calls check-docs.yml so both report "check / check" for branch protection.
+# See docs/CI.md.
 
-# Same workflow name as ci.yml so status "CI / check" satisfies branch protection
 name: CI
 
 on:
@@ -17,7 +16,8 @@ on:
     paths:
       - '**/*.md'
 
-permissions: {}
+permissions:
+  contents: read
 
 concurrency:
   group: ci-docs-${{ github.ref }}
@@ -25,6 +25,4 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Docs-only change, no checks required"
+    uses: ./.github/workflows/check-docs.yml
