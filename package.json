@@ -32,7 +32,7 @@
 		"test:watch": "vitest",
 		"check": "bash scripts/check-nix-hash.sh && npm audit --audit-level=high && npm run test && npm run lint && npm run knip && npm run typecheck",
 		"check:ci": "npm run check && npm run lint:workflows && npm run lint:scripts",
-		"check:docs": "bash scripts/check-docs.sh",
+		"check:docs": "scripts/nix-run-if-missing.sh rumdl check . && scripts/nix-run-if-missing.sh lychee . && scripts/nix-run-if-missing.sh typos",
 		"lint": "biome check .",
 		"lint:fix": "biome check . --write --unsafe",
 		"lint:scripts": "find scripts -name '*.sh' -print0 | xargs -0 -r scripts/nix-run-if-missing.sh shellcheck",

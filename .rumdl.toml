@@ -1,0 +1,7 @@
+# rumdl config. Replaces .markdownlint-cli2.jsonc. See docs/CI.md.
+# Disabled rules match previous markdownlint-cli2 behavior.
+
+[global]
+include = ["**/*.md"]
+exclude = ["**/node_modules/**", "**/result/**"]
+disable = ["MD013", "MD004", "MD012", "MD032", "MD038", "MD040", "MD041"]

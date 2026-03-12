@@ -30,7 +30,7 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run check`            | Full verification (test, lint, knip, typecheck). Warns when npmDepsHash is stale (package-lock.json changed); CI auto-updates on push. Run before committing. |
 | `npm run check:ci`         | Same as check plus actionlint and shellcheck (mirrors code CI locally). See [docs/CI.md](docs/CI.md). |
-| `npm run check:docs`       | Markdownlint, Lychee (links), cspell (spelling). Run before pushing docs-only changes. |
+| `npm run check:docs`       | rumdl (markdown lint), lychee (links), typos (spelling). Run before pushing docs-only changes. |
 | `npm test`                 | Unit tests with coverage                                                                                                           |
 | `npm run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
 | `npm run lint`             | Lint (Biome)                                                                                                                       |

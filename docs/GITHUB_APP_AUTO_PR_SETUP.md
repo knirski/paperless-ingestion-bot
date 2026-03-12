@@ -80,11 +80,13 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
 **Workflow validation is manual.** There is no GitHub API mock for integration tests. To verify the workflow:
 
 1. Create and push a branch:
+
    ```bash
    git checkout -b ai/test-setup
    git commit --allow-empty -m "chore: test auto-PR workflow"
    git push origin ai/test-setup
    ```
+
 2. Check **Actions** in your repo — the workflow should run
 3. A new PR should appear, opened by `your-app-name[bot]`
 4. You can approve it as the repo owner
