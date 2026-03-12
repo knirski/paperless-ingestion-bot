@@ -206,7 +206,7 @@ Plan for integrating `effect/unstable/*` modules into paperless-ingestion-bot. O
 ### 4.2 When to Adopt
 
 - **Trigger:** When we add external tool invocations (e.g. OCR, PDF text extraction, image conversion)
-- **Usage:** `ChildProcess.make\`pdftotext - ${file}\``, `ChildProcess.pipeTo` for pipelines
+- **Usage:** `ChildProcess.make` for `pdftotext - ${file}`, `ChildProcess.pipeTo` for pipelines
 
 **Implementation (future):**
 
@@ -244,8 +244,8 @@ All modules are in `effect` 4.0.0-beta.27. No new packages required.
 
 ## References
 
-- Effect v4 beta: https://effect.website/blog/releases/effect/40-beta/
-- Tracing: https://effect.website/docs/observability/tracing/
+- Effect v4 beta: <https://effect.website/blog/releases/effect/40-beta/>
+- Tracing: <https://effect.website/docs/observability/tracing/>
 - `effect/unstable/observability`: OtlpTracer, PrometheusMetrics
 - `effect/unstable/ai`: LanguageModel, Tool, Toolkit, Tokenizer
 - `effect/unstable/persistence`: KeyValueStore, Persistence, RateLimiter
