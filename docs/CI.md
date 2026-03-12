@@ -45,7 +45,8 @@ Do not require `dependency-review` (PR-only) or `nix` (path-filtered); they woul
 
 ## Local CI-like checks
 
-Run `npm run check:ci` to mirror CI locally: `check` plus actionlint and shellcheck. Uses system binaries when available, otherwise Nix (`nix run nixpkgs#actionlint`, `nix run nixpkgs#shellcheck`).
+- **`npm run check:ci`** — Mirrors the code path (ci.yml → check.yml): `check` plus actionlint and shellcheck. Uses system binaries when available, otherwise Nix.
+- **`npm run check:docs`** — Mirrors the docs path (ci-docs.yml → check-docs.yml): markdownlint, Lychee (link check), cspell (spell check). Run before pushing docs-only changes.
 
 ## Fork PRs
 

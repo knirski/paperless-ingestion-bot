@@ -22,14 +22,15 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 
 - Install: `npm install`
 - Verify: `npm run check` (test, lint, knip, typecheck)
-- CI: [docs/CI.md](docs/CI.md) — ci.yml (check, dependency-review), ci-nix.yml (Nix build)
+- CI: [docs/CI.md](docs/CI.md) — ci.yml (check, dependency-review), ci-docs.yml (markdown), ci-nix.yml (Nix build)
 
 ## Commands
 
 | Command                    | Purpose                                                                                                                            |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run check`            | Full verification (test, lint, knip, typecheck). Warns when npmDepsHash is stale (package-lock.json changed); CI auto-updates on push. Run before committing. |
-| `npm run check:ci`         | Same as check plus actionlint and shellcheck (mirrors CI locally). See [docs/CI.md](docs/CI.md). |
+| `npm run check:ci`         | Same as check plus actionlint and shellcheck (mirrors code CI locally). See [docs/CI.md](docs/CI.md). |
+| `npm run check:docs`       | Markdownlint, Lychee (links), cspell (spelling). Run before pushing docs-only changes. |
 | `npm test`                 | Unit tests with coverage                                                                                                           |
 | `npm run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
 | `npm run lint`             | Lint (Biome)                                                                                                                       |

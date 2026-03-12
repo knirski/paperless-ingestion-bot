@@ -32,6 +32,7 @@
 		"test:watch": "vitest",
 		"check": "bash scripts/check-nix-hash.sh && npm audit --audit-level=high && npm run test && npm run lint && npm run knip && npm run typecheck",
 		"check:ci": "npm run check && npm run lint:workflows && npm run lint:scripts",
+		"check:docs": "bash scripts/check-docs.sh",
 		"lint": "biome check .",
 		"lint:fix": "biome check . --write --unsafe",
 		"lint:scripts": "bash -c 'if command -v shellcheck >/dev/null 2>&1; then find scripts -name \"*.sh\" -exec shellcheck {} +; else find scripts -name \"*.sh\" -print0 | xargs -0 -r nix run nixpkgs#shellcheck --; fi'",
