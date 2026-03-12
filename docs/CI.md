@@ -19,19 +19,20 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 ## Reusable Workflows
 
 - **check.yml** — test, lint, typecheck, SBOM, Codecov. Called by ci.yml.
+- **check-docs.yml** — lightweight pass-through for docs-only. Called by ci-docs.yml.
 - **nix.yml** — Nix build + npmDepsHash update. Called by ci-nix.yml and update-nix-hash.yml.
 
 ## Branch Protection
 
-Both ci.yml and ci-docs.yml use `name: CI` and job `check`, so both produce status **`CI / check`**. Configure main branch protection to require only this one check:
+Both ci.yml and ci-docs.yml call reusable workflows with job `check`, so both report **`check / check`**. Configure main branch protection to require:
 
-- **Status checks that are required:** `CI / check`
+- **Status checks that are required:** `check / check`
 
 This covers all PR types:
-- **Code PRs:** ci.yml runs → `CI / check` ✓
-- **Docs-only PRs:** ci-docs.yml runs → `CI / check` ✓
-- **Nix-only PRs:** ci.yml runs → `CI / check` ✓
-- **Mixed PRs:** ci.yml runs → `CI / check` ✓
+- **Code PRs:** ci.yml runs → `check / check` ✓
+- **Docs-only PRs:** ci-docs.yml runs → `check / check` ✓ (lightweight pass-through)
+- **Nix-only PRs:** ci.yml runs → `check / check` ✓
+- **Mixed PRs:** ci.yml runs → `check / check` ✓ (ci-docs also runs but same check name)
 
 Do not require `dependency-review` (PR-only) or `nix` (path-filtered); they would block when skipped.
 

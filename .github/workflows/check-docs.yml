@@ -1,0 +1,17 @@
+# Minimal reusable workflow for docs-only PRs.
+# Reports "check / check" so branch protection (requiring check / check) allows merge.
+# See docs/CI.md.
+
+name: Check
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Docs-only change, no checks required"
