@@ -8,6 +8,8 @@ on:
   schedule:
     - cron: "0 0 * * 0" # Weekly on Sunday at 00:00 UTC
 
+permissions: {}
+
 jobs:
   update-flake-lock:
     runs-on: ubuntu-latest
