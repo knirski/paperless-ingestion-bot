@@ -55,6 +55,16 @@ jobs:
       - uses: ./.github/actions/nix-commit-npm-deps-hash
         if: steps.hash.outputs.hash != '' && inputs.push_allowed
 
+      - name: Trigger check on new commit
+        if: steps.hash.outputs.hash != '' && inputs.push_allowed
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REF: ${{ inputs.ref || github.ref }}
+        run: |
+          # gh expects branch name; strip refs/heads/ if present
+          BRANCH="${REF#refs/heads/}"
+          gh workflow run ci.yml --ref "$BRANCH"
+
       - uses: ./.github/actions/nix-fail-npm-deps-hash-fork
         if: steps.hash.outputs.hash != '' && !inputs.push_allowed
         with:

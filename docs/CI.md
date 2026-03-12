@@ -15,7 +15,7 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 
 **ci-docs.yml** is complementary: runs when only `*.md` files change. Reports a passing `check` job so branch protection allows merge. See [troubleshooting required status checks](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks).
 
-**ci-nix.yml** runs only when Nix or dependency files change. Runs Nix build and auto-updates `npmDepsHash` in `default.nix` for same-repo PRs and main. Uses the same GitHub App as auto-pr for the push so CI triggers on the new commit (GITHUB_TOKEN pushes do not trigger workflows).
+**ci-nix.yml** runs only when Nix or dependency files change. Runs Nix build and auto-updates `npmDepsHash` in `default.nix` for same-repo PRs and main. Uses the same GitHub App as auto-pr for the push so CI triggers on the new commit (GITHUB_TOKEN pushes do not trigger workflows). When ci-nix pushes an npmDepsHash update, it also triggers the check workflow via `workflow_dispatch` so the required status is reported on the new commit.
 
 **codeql-docs.yml** is complementary to codeql.yml: runs when only docs change. CodeQL skips for docs (paths-ignore); this reports passing status so code scanning allows merge.
 
@@ -42,6 +42,29 @@ This covers all PR types:
 - **Mixed PRs:** ci.yml runs → `check / check` ✓ (ci-docs also runs but same check name)
 
 Do not require `dependency-review` (PR-only) or `nix` (path-filtered); they would block when skipped.
+
+## Troubleshooting: "check / check" waiting for status
+
+When ci-nix pushes an npmDepsHash update, the PR head changes to a new commit. The required check must run on that new commit. If you see "waiting for status to be reported":
+
+1. **Wait 1–2 minutes** — The push triggers the check workflow; it may take a moment to start.
+2. **Re-run workflows** — If the check still hasn't run, use "Re-run all jobs" from the Actions tab.
+3. **Manual trigger** — Push an empty commit: `git commit --allow-empty -m "ci: trigger workflows" && git push`.
+
+## Design: ensuring check runs after ci-nix push
+
+We use a **workflow_dispatch trigger** so that when ci-nix pushes an npmDepsHash update, the check workflow is explicitly triggered on the new commit. This guarantees the required status is reported even if the push-triggered run is delayed or cancelled by concurrency.
+
+**Alternatives considered:**
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **workflow_dispatch trigger** (chosen) | Explicitly runs check on new commit; reliable safety net | Extra workflow run; requires App "Actions: write" permission |
+| **App token push only** | Push should trigger workflows; no extra step | Can be delayed or race with concurrency; we hit this in practice |
+| **Don't push on PRs** | No commit mismatch; simpler | Worse DX; contributors must run `nix run .#update-npm-deps-hash` locally |
+| **Documentation only** | Simple | No technical fix; still depends on timing |
+
+**GitHub App permission:** The App used for the push must have **Actions: Read and write** so it can trigger workflows via `gh workflow run`. If the trigger step fails, verify this permission in the App settings.
 
 ## Local CI-like checks
 
