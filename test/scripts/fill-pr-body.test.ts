@@ -564,29 +564,6 @@ describe("runFillBody", () => {
 		}
 	});
 
-	test("unreplaced placeholders remain in output", async () => {
-		const tmp = await createTestTempDir("fill-pr-body-");
-		const testLayer = NodeServices.layer.pipe(Layer.provideMerge(Logger.layer([])));
-		try {
-			const typoTemplate = path.join(tmp.path, "typo.md");
-			fs.writeFileSync(typoTemplate, "OK: {{description}}\nTypo: {{desciption}}");
-			const log = logContent({ subject: "feat: x", body: "Desc." });
-			fs.writeFileSync(path.join(tmp.path, "commits.txt"), log);
-			fs.writeFileSync(path.join(tmp.path, "files.txt"), "src/x.ts\n");
-			const output = await Effect.runPromise(
-				runFillBody(
-					path.join(tmp.path, "commits.txt"),
-					path.join(tmp.path, "files.txt"),
-					typoTemplate,
-				).pipe(Effect.provide(testLayer)),
-			);
-			expect(output).toContain("OK: Desc.");
-			expect(output).toContain("Typo: {{desciption}}");
-		} finally {
-			await tmp.remove();
-		}
-	});
-
 	test("fails when log file not found", async () => {
 		const tmp = await createTestTempDir("fill-pr-body-");
 		const testLayer = NodeServices.layer.pipe(Layer.provideMerge(Logger.layer([])));

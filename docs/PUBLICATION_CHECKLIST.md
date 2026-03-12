@@ -135,7 +135,7 @@ gh label create "nix" --color "7f7f7f" --description "Nix-related changes"
 gh label create "automated" --color "ededed" --description "Automated by CI"
 ```
 
-The `dependencies`, `nix`, and `automated` labels are used by the [update-flake-lock](.github/workflows/update-flake-lock.yml) workflow. Create them before the first scheduled run, or PR creation may fail. See [scripts/create-labels.sh](../scripts/create-labels.sh).
+The `dependencies`, `nix`, and `automated` labels are used by the [update-flake-lock](../.github/workflows/update-flake-lock.yml) workflow. Create them before the first scheduled run, or PR creation may fail. See [scripts/create-labels.sh](../scripts/create-labels.sh).
 
 ### 7. Allstar (optional)
 

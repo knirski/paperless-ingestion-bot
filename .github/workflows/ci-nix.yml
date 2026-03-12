@@ -18,6 +18,8 @@ on:
       - 'package*.json'
       - 'flake.lock'
 
+permissions: {}
+
 concurrency:
   group: ci-nix-${{ github.ref }}
   cancel-in-progress: true

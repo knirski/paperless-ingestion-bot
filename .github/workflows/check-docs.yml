@@ -1,5 +1,6 @@
-# Minimal reusable workflow for docs-only PRs.
-# Reports "check / check" so branch protection (requiring check / check) allows merge.
+# Reusable workflow for docs-only PRs.
+# Runs markdownlint, link check (Lychee), and cspell.
+# Reports "check / check" so branch protection allows merge.
 # See docs/CI.md.
 
 name: Check
@@ -14,4 +15,27 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Docs-only change, no checks required"
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Markdownlint
+        uses: DavidAnson/markdownlint-cli2-action@07035fd053f7be764496c0f8d8f9f41f98305101 # v22.0.0
+        with:
+          globs: |
+            **/*.md
+            !**/node_modules/**
+            !**/result/**
+
+      - name: Check links
+        uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v1.21.0
+        with:
+          args: --no-progress --max-retries 5 .
+          fail: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Spell check
+        uses: streetsidesoftware/cspell-action@dcd03dc3e8a59ec2e360d0c62db517baa0b4bb6d # v7.2.0
+        with:
+          inline: warning
+          strict: false
+          incremental_files_only: true

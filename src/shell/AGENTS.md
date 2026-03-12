@@ -14,4 +14,4 @@ Pipelines, config, layers. Orchestrates I/O and calls core.
 - [signal-pipeline.ts](signal-pipeline.ts) — Webhook server, attachment handling, account commands.
 - [layers.ts](layers.ts) — Composes `SignalAppLayer` and `EmailLayer`.
 
-See [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) for flows and config.
+See [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) for flows and config.

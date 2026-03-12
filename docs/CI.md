@@ -9,17 +9,24 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | [ci.yml](../.github/workflows/ci.yml) | push, pull_request → main | `paths-ignore: '**/*.md'` | check, dependency-review |
 | [ci-docs.yml](../.github/workflows/ci-docs.yml) | push, pull_request → main | `paths: '**/*.md'` | check (pass-through) |
 | [ci-nix.yml](../.github/workflows/ci-nix.yml) | push, pull_request → main | `paths: **/*.nix, package*.json, flake.lock` | nix |
+| [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through) |
 
 **ci.yml** runs when any non-.md file changes. Skips when only docs change.
 
 **ci-docs.yml** is complementary: runs when only `*.md` files change. Reports a passing `check` job so branch protection allows merge. See [troubleshooting required status checks](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks).
 
-**ci-nix.yml** runs only when Nix or dependency files change. Runs Nix build and auto-updates `npmDepsHash` in `default.nix` for same-repo PRs and main.
+**ci-nix.yml** runs only when Nix or dependency files change. Runs Nix build and auto-updates `npmDepsHash` in `default.nix` for same-repo PRs and main. Uses the same GitHub App as auto-pr for the push so CI triggers on the new commit (GITHUB_TOKEN pushes do not trigger workflows).
+
+**codeql-docs.yml** is complementary to codeql.yml: runs when only docs change. CodeQL skips for docs (paths-ignore); this reports passing status so code scanning allows merge.
+
+## Permissions
+
+All workflows declare explicit permissions. Use `permissions: {}` when no workflow-level access is needed (jobs override with their own). Jobs that need write access (e.g. nix push, dependency-review) declare job-level permissions.
 
 ## Reusable Workflows
 
 - **check.yml** — test, lint, typecheck, SBOM, Codecov. Called by ci.yml.
-- **check-docs.yml** — lightweight pass-through for docs-only. Called by ci-docs.yml.
+- **check-docs.yml** — markdownlint, link check (Lychee), spell check (cspell). Called by ci-docs.yml.
 - **nix.yml** — Nix build + npmDepsHash update. Called by ci-nix.yml and update-nix-hash.yml.
 
 ## Branch Protection
@@ -30,7 +37,7 @@ Both ci.yml and ci-docs.yml call reusable workflows with job `check`, so both re
 
 This covers all PR types:
 - **Code PRs:** ci.yml runs → `check / check` ✓
-- **Docs-only PRs:** ci-docs.yml runs → `check / check` ✓ (lightweight pass-through)
+- **Docs-only PRs:** ci-docs.yml runs → `check / check` ✓ (markdownlint, links, spelling)
 - **Nix-only PRs:** ci.yml runs → `check / check` ✓
 - **Mixed PRs:** ci.yml runs → `check / check` ✓ (ci-docs also runs but same check name)
 

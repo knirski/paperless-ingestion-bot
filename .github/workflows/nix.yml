@@ -1,7 +1,8 @@
 # Reusable workflow: Nix build with npmDepsHash auto-update.
 # Called by ci-nix.yml and update-nix-hash.yml.
 #
-# Uses GitHub-provided: GITHUB_TOKEN (for push), composite actions for modularity.
+# Uses GitHub App token when push_allowed so the push triggers CI on the new commit
+# (GITHUB_TOKEN pushes do not trigger workflows). Same App as auto-pr (APP_ID, APP_PRIVATE_KEY).
 
 name: Nix
 
@@ -19,6 +20,8 @@ on:
         type: boolean
         default: true
 
+permissions: {}
+
 jobs:
   nix:
     runs-on: ubuntu-latest
@@ -26,9 +29,18 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Generate GitHub App token
+        if: inputs.push_allowed
+        id: app-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ inputs.ref || github.ref }}
+          token: ${{ inputs.push_allowed && steps.app-token.outputs.token || github.token }}
       - uses: ./.github/actions/nix-setup
         with:
           ref: ${{ inputs.ref || github.ref }}
