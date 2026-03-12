@@ -1,0 +1,3 @@
+# GitHub compare URLs in CHANGELOG point to tags that don't exist until the release is merged.
+# They 404 in release-please PRs.
+https?://github\.com/knirski/paperless-ingestion-bot/compare/
