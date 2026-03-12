@@ -1,12 +1,13 @@
-# Composite action: checkout, install Nix, enable magic cache.
+# Composite action: checkout, install Nix.
 # Reused by ci (nix job), update-nix-hash, update-flake-lock.
+# magic-nix-cache removed: now requires FlakeHub auth (DeterminateSystems/magic-nix-cache#148).
 #
 # Inputs:
 #   ref: Checkout ref (e.g. PR head for ci). Omit for default.
 #   fetch-depth: Git fetch depth. Default 0 (full history).
 
 name: "Nix setup"
-description: "Checkout repo, install Nix, enable magic-nix-cache"
+description: "Checkout repo, install Nix"
 
 inputs:
   ref:
@@ -27,5 +28,3 @@ runs:
         ref: ${{ inputs.ref || github.ref }}
 
     - uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
-
-    - uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
