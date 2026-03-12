@@ -9,9 +9,12 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | [ci.yml](../.github/workflows/ci.yml) | push, pull_request → main | `paths-ignore: '**/*.md'` | check, dependency-review |
 | [ci-docs.yml](../.github/workflows/ci-docs.yml) | push, pull_request → main | `paths: '**/*.md'` | check (pass-through) |
 | [ci-nix.yml](../.github/workflows/ci-nix.yml) | push, pull_request → main | `paths: **/*.nix, package*.json, flake.lock` | nix |
+| [ci-release-please.yml](../.github/workflows/ci-release-please.yml) | pull_request → main | `paths: .release-please-manifest.json` | check |
 | [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through) |
 
 **ci.yml** runs when any non-.md file changes. Skips when only docs change.
+
+**ci-release-please.yml** runs when `.release-please-manifest.json` changes (only release-please touches this file). Release-please PRs often don't trigger ci.yml due to path-filter timing; this ensures `check / check` runs on the pull_request event so branch protection allows merge.
 
 **ci-docs.yml** is complementary: runs when only `*.md` files change. Reports a passing `check` job so branch protection allows merge. See [troubleshooting required status checks](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks).
 
@@ -40,6 +43,7 @@ This covers all PR types:
 - **Docs-only PRs:** ci-docs.yml runs → `check / check` ✓ (markdownlint, links, spelling)
 - **Nix-only PRs:** ci.yml runs → `check / check` ✓
 - **Mixed PRs:** ci.yml runs → `check / check` ✓ (ci-docs also runs but same check name)
+- **Release-please PRs:** ci-release-please.yml runs → `check / check` ✓
 
 Do not require `dependency-review` (PR-only) or `nix` (path-filtered); they would block when skipped.
 
