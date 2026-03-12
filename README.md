@@ -2,16 +2,16 @@
 
 [![CI](https://github.com/knirski/paperless-ingestion-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/knirski/paperless-ingestion-bot/actions)
 [![Version](https://img.shields.io/github/package-json/v/knirski/paperless-ingestion-bot)](https://github.com/knirski/paperless-ingestion-bot/blob/main/package.json)
-[![Coverage](https://codecov.io/gh/knirski/paperless-ingestion-bot/graph/badge.svg)](https://codecov.io/gh/knirski/paperless-ingestion-bot)
+[![Coverage](https://app.codecov.io/gh/knirski/paperless-ingestion-bot/graph/badge.svg)](https://app.codecov.io/gh/knirski/paperless-ingestion-bot)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/knirski/paperless-ingestion-bot/badge)](https://scorecard.dev/viewer/?uri=github.com/knirski/paperless-ingestion-bot)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/license/Apache-2.0)
 [![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-Support-ea4aaa.svg)](https://github.com/sponsors/knirski)
 [![Liberapay](https://img.shields.io/badge/Liberapay-Support-yellow.svg)](https://liberapay.com/knirski/)
-[![CII Best Practices](https://img.shields.io/badge/CII%20Best%20Practices-register-green)](https://bestpractices.coreinfrastructure.org/en/projects/new?project_url=https%3A%2F%2Fgithub.com%2Fknirski%2Fpaperless-ingestion-bot)
+[![CII Best Practices](https://img.shields.io/badge/CII%20Best%20Practices-register-green)](https://www.bestpractices.dev/en/projects/new?project_url=https%3A%2F%2Fgithub.com%2Fknirski%2Fpaperless-ingestion-bot)
 
 Signal and Gmail document ingestion for [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx).
 
-**Stop drowning in paper.** Hundreds of emails with receipts, contracts, and attachments buried in your Gmail, or physical docs piling up on your desk? Scan or snap, send via [Signal](https://signal.org/) or email, and let [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx) do the rest. Optional AI (local [Ollama](https://ollama.ai/)) filters junk; pair with [paperless-ai](https://github.com/clusterzx/paperless-ai) for tags and summaries. Find any document when you need it.
+**Stop drowning in paper.** Hundreds of emails with receipts, contracts, and attachments buried in your Gmail, or physical docs piling up on your desk? Scan or snap, send via [Signal](https://signal.org/) or email, and let [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx) do the rest. Optional AI (local [Ollama](https://ollama.com/)) filters junk; pair with [paperless-ai](https://github.com/clusterzx/paperless-ai) for tags and summaries. Find any document when you need it.
 
 **Privacy-first:** Runs fully locally. No cloud APIs, no telemetry. Signal is a privacy-focused IM; AI uses local Ollama. Your documents stay on your machine.
 
@@ -41,7 +41,7 @@ Might add: other email providers (Outlook, Proton), other IMs (Matrix, Telegram)
 | Dependency                                                              | Required   | Purpose                                                                                                                                            |
 | ----------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx)         | Yes        | Document management system; bot writes files to the consume directory                                                                              |
-| [Ollama](https://ollama.ai/)                                            | No         | Optional AI eligibility assessment; also used for AI-generated PR titles in the auto-PR workflow (runs locally)                                    |
+| [Ollama](https://ollama.com/)                                            | No         | Optional AI eligibility assessment; also used for AI-generated PR titles in the auto-PR workflow (runs locally)                                    |
 | [paperless-ai](https://github.com/clusterzx/paperless-ai)               | No         | Optional AI post-processing (tags, titles, correspondents). This bot uses Ollama directly for pre-ingestion; paperless-ai augments after ingestion |
 | [signal-cli-rest-api](https://github.com/bbernhard/signal-cli-rest-api) | For Signal | Webhook server for Signal Messenger                                                                                                                |
 | Node.js ≥ 24                                                            | Yes        | Runtime                                                                                                                                            |
@@ -223,7 +223,7 @@ TypeScript implementation using [Effect](https://effect.website/) and functional
 - [test/integration/README.md](test/integration/README.md): Integration test guide
 - [docs/adr/](docs/adr/): Architecture Decision Records
 
-**CII Best Practices:** See [docs/CII.md](docs/CII.md) for progress. Complete the [self-assessment](https://bestpractices.coreinfrastructure.org/en/projects/new?project_url=https%3A%2F%2Fgithub.com%2Fknirski%2Fpaperless-ingestion-bot) to earn the badge.
+**CII Best Practices:** See [docs/CII.md](docs/CII.md) for progress. Complete the [self-assessment](https://www.bestpractices.dev/en/projects/new?project_url=https%3A%2F%2Fgithub.com%2Fknirski%2Fpaperless-ingestion-bot) to earn the badge.
 
 This project was developed with assistance from AI coding tools.
 
