@@ -12,7 +12,7 @@ Use this checklist when preparing paperless-ingestion-bot for independent public
 - [x] config.example.json
 - [x] docs/ARCHITECTURE.md
 - [x] package.json metadata (license, repository, keywords)
-- [x] Conventional commits (commitlint + husky + lint-staged)
+- [x] Conventional commits (commitlint + lefthook + lint-staged)
 - [x] release-please (version + changelog automation)
 - [x] Dependabot (dependency updates)
 - [x] GitHub Actions CI

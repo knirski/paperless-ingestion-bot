@@ -26,7 +26,7 @@ See [README.md](README.md) for runtime requirements and [docs/ARCHITECTURE.md](d
 
 ## Commits
 
-All commits must follow [Conventional Commits](https://www.conventionalcommits.org/). This is enforced locally via [commitlint](https://commitlint.js.org/) (husky hook) and in CI.
+All commits must follow [Conventional Commits](https://www.conventionalcommits.org/). This is enforced locally via [commitlint](https://commitlint.js.org/) (lefthook hook) and in CI.
 
 Examples:
 
