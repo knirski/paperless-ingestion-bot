@@ -1,6 +1,6 @@
 # GitHub App Setup for Auto-PR Creation
 
-This guide walks you through setting up a GitHub App so that when an AI agent (or any tool) pushes a branch with the `ai/` prefix, a workflow automatically creates or updates a pull request **opened by the bot**. PR titles are generated from conventional commits; for multi-commit PRs, local [Ollama](https://ollama.ai/) (llama3.1:8b) summarizes commits into a conventional title. You can then approve the PR as the repo owner.
+This guide walks you through setting up a GitHub App so that when an AI agent (or any tool) pushes a branch with the `ai/` prefix, a workflow automatically creates or updates a pull request **opened by the bot**. PR titles are generated from conventional commits; for multi-commit PRs, local [Ollama](https://ollama.com/) (llama3.1:8b) summarizes commits into a conventional title. You can then approve the PR as the repo owner.
 
 ## Overview
 
@@ -80,11 +80,13 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
 **Workflow validation is manual.** There is no GitHub API mock for integration tests. To verify the workflow:
 
 1. Create and push a branch:
+
    ```bash
    git checkout -b ai/test-setup
    git commit --allow-empty -m "chore: test auto-PR workflow"
    git push origin ai/test-setup
    ```
+
 2. Check **Actions** in your repo — the workflow should run
 3. A new PR should appear, opened by `your-app-name[bot]`
 4. You can approve it as the repo owner

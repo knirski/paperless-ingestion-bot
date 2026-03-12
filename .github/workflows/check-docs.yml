@@ -1,5 +1,6 @@
 # Reusable workflow for docs-only PRs.
-# Runs markdownlint, link check (Lychee), and cspell.
+# Runs rumdl (markdown lint), lychee (link check), typos (spell check).
+# No npm ci — all tools run via GitHub Actions.
 # Reports "check / check" so branch protection allows merge.
 # See docs/CI.md.
 
@@ -17,25 +18,11 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Markdownlint
-        uses: DavidAnson/markdownlint-cli2-action@07035fd053f7be764496c0f8d8f9f41f98305101 # v22.0.0
-        with:
-          globs: |
-            **/*.md
-            !**/node_modules/**
-            !**/result/**
+      - name: Markdown lint
+        uses: rvben/rumdl@8c1798b13cf961c88a4c5d1136448f4f4391383d # v0.1.47
 
       - name: Check links
-        uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v1.21.0
-        with:
-          args: --no-progress --max-retries 5 .
-          fail: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2.8.0
 
       - name: Spell check
-        uses: streetsidesoftware/cspell-action@dcd03dc3e8a59ec2e360d0c62db517baa0b4bb6d # v7.2.0
-        with:
-          inline: warning
-          strict: false
-          incremental_files_only: true
+        uses: crate-ci/typos@631208b7aac2daa8b707f55e7331f9112b0e062d # v1.44.0

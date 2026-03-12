@@ -22,13 +22,15 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 
 - Install: `npm install`
 - Verify: `npm run check` (test, lint, knip, typecheck)
-- CI: [docs/CI.md](docs/CI.md) — ci.yml (check, dependency-review), ci-nix.yml (Nix build)
+- CI: [docs/CI.md](docs/CI.md) — ci.yml (check, dependency-review), ci-docs.yml (markdown), ci-nix.yml (Nix build)
 
 ## Commands
 
 | Command                    | Purpose                                                                                                                            |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run check`            | Full verification (test, lint, knip, typecheck). Warns when npmDepsHash is stale (package-lock.json changed); CI auto-updates on push. Run before committing. |
+| `npm run check:ci`         | Same as check plus actionlint and shellcheck (mirrors code CI locally). See [docs/CI.md](docs/CI.md). |
+| `npm run check:docs`       | rumdl (markdown lint), lychee (links), typos (spelling). Run before pushing docs-only changes. |
 | `npm test`                 | Unit tests with coverage                                                                                                           |
 | `npm run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
 | `npm run lint`             | Lint (Biome)                                                                                                                       |
@@ -152,6 +154,7 @@ Runs: `npm run test && npm run lint && npm run knip && npm run typecheck`. Cover
 - Focus a test: `npm test -- -t "pattern"`
 - Add or update tests for the code you change, even if nobody asked.
 - Before committing: run `npm run check`; ensure all tests pass.
+- **Use `check:ci` instead of `check`** when you edited `.github/workflows/`, `.github/actions/`, or `scripts/*.sh` — actionlint and shellcheck catch issues that CI would fail on.
 
 ## Security
 

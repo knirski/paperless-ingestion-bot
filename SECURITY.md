@@ -48,6 +48,6 @@ See [README.md](README.md#security) for configuration guidance.
 
 Redact helpers (`redactPath`, `redactEmail`, `redactPhone`, `redactUrl`) produce the label; they mask the value (e.g. `***@example.com`). Error creation: `redactedForLog(path, redactPath)`. See `src/domain/utils.ts`, `src/domain/errors.ts`, [ADR 0001](docs/adr/0001-delegate-credentials-to-os-keyring.md).
 
-**CII Best Practices badge:** The project aims to pursue the [OpenSSF Best Practices badge](https://bestpractices.coreinfrastructure.org/) (formerly CII). Self-certify at [bestpractices.coreinfrastructure.org](https://bestpractices.coreinfrastructure.org/en/projects/new). Criteria cover security, quality, and community practices. The README links to the registration form.
+**CII Best Practices badge:** The project aims to pursue the [OpenSSF Best Practices badge](https://www.bestpractices.dev/en) (formerly CII). Self-certify at [bestpractices.dev](https://www.bestpractices.dev/en/projects/new). Criteria cover security, quality, and community practices. The README links to the registration form.
 
 **Maintainers:** Keep GitHub secret scanning and push protection enabled in **Settings → Security → Code security and analysis**. Do not disable.

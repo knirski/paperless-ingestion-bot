@@ -1,6 +1,6 @@
 # CII Best Practices Badge — Progress
 
-This project pursues the [OpenSSF Best Practices badge](https://bestpractices.coreinfrastructure.org/) (formerly CII). Self-certify at [bestpractices.coreinfrastructure.org](https://bestpractices.coreinfrastructure.org/en/projects/new).
+This project pursues the [OpenSSF Best Practices badge](https://www.bestpractices.dev/en) (formerly CII). Self-certify at [bestpractices.dev](https://www.bestpractices.dev/en/projects/new).
 
 ## Implemented
 
@@ -18,6 +18,6 @@ This project pursues the [OpenSSF Best Practices badge](https://bestpractices.co
 
 ## Next steps
 
-- Complete self-assessment at bestpractices.coreinfrastructure.org
+- Complete self-assessment at bestpractices.dev
 - Signed releases (if/when publishing)
 - Fuzzing (N/A for TypeScript)

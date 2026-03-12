@@ -26,7 +26,7 @@ All workflows declare explicit permissions. Use `permissions: {}` when no workfl
 ## Reusable Workflows
 
 - **check.yml** — test, lint, typecheck, SBOM, Codecov. Called by ci.yml.
-- **check-docs.yml** — markdownlint, link check (Lychee), spell check (cspell). Called by ci-docs.yml.
+- **check-docs.yml** — rumdl (markdown lint), lychee (link check), typos (spell check). No npm ci. Config: `.rumdl.toml`, `_typos.toml`. Lychee respects `.gitignore`.
 - **nix.yml** — Nix build + npmDepsHash update. Called by ci-nix.yml and update-nix-hash.yml.
 
 ## Branch Protection
@@ -42,6 +42,11 @@ This covers all PR types:
 - **Mixed PRs:** ci.yml runs → `check / check` ✓ (ci-docs also runs but same check name)
 
 Do not require `dependency-review` (PR-only) or `nix` (path-filtered); they would block when skipped.
+
+## Local CI-like checks
+
+- **`npm run check:ci`** — Mirrors the code path (ci.yml → check.yml): `check` plus actionlint and shellcheck. Uses system binaries when available, otherwise Nix.
+- **`npm run check:docs`** — Mirrors the docs path (ci-docs.yml → check-docs.yml): rumdl, lychee, typos. All via `scripts/nix-run-if-missing.sh` (system binary or `nix run nixpkgs#<tool>`). Run before pushing docs-only changes.
 
 ## Fork PRs
 
