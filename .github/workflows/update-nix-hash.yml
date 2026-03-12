@@ -11,7 +11,8 @@ permissions: {}
 
 jobs:
   update-hash:
+    # Push uses App token from nix.yml; GITHUB_TOKEN needs read only
     permissions:
-      contents: write
+      contents: read
     uses: ./.github/workflows/nix.yml
     secrets: inherit
