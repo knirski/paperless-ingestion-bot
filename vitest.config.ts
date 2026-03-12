@@ -14,6 +14,7 @@ export default defineConfig({
 				"**/test/**",
 				"**/index.ts",
 				"src/cli.ts",
+				"src/interfaces/**",
 				"src/live/**",
 				"src/shell/**",
 			],
