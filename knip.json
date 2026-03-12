@@ -2,5 +2,5 @@
 	"$schema": "https://unpkg.com/knip@5/schema.json",
 	"project": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"],
 	"tags": ["-lintignore"],
-	"ignoreBinaries": ["gh"]
+	"ignoreBinaries": ["gh", "nix", "scripts/nix-run-if-missing.sh"]
 }
