@@ -6,7 +6,7 @@ Reusable actions for Nix-related CI workflows. Used by reusable workflows (check
 
 | Action | Purpose | Used by |
 |--------|---------|---------|
-| **nix-setup** | Checkout, install Nix, enable magic cache | nix workflow, update-flake-lock |
+| **nix-setup** | Checkout, install Nix | nix workflow, update-flake-lock |
 | **nix-npm-deps-hash** | Run update-npm-deps-hash.sh, output hash when updated | nix workflow |
 | **nix-commit-npm-deps-hash** | Commit and push npmDepsHash update | nix workflow |
 | **nix-fail-npm-deps-hash-fork** | Fail with instructions for fork PRs | nix workflow |
