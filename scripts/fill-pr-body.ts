@@ -46,6 +46,7 @@ interface TemplateData {
 
 const TYPE_OF_CHANGE = [
 	"Bug fix",
+	"Security fix",
 	"Breaking change",
 	"Chore",
 	"Documentation update",
@@ -58,6 +59,7 @@ const CONVENTIONAL_TYPES = [
 	"feat",
 	"fix",
 	"docs",
+	"security",
 	"chore",
 	"ci",
 	"build",
@@ -89,6 +91,7 @@ const TYPE_MAP: Record<ConventionalType, TypeOfChange> = {
 	feat: "New feature",
 	fix: "Bug fix",
 	docs: "Documentation update",
+	security: "Security fix",
 	chore: "Chore",
 	ci: "Chore",
 	build: "Chore",
