@@ -1,6 +1,6 @@
 # GitHub App Setup for Auto-PR Creation
 
-This guide walks you through setting up a GitHub App so that when an AI agent (or any tool) pushes a branch with the `ai/` prefix, a workflow automatically creates or updates a pull request **opened by the bot**. PR titles are generated from conventional commits; for multi-commit PRs, local [Ollama](https://ollama.com/) (llama3.1:8b) summarizes commits into a conventional title. You can then approve the PR as the repo owner.
+This guide walks you through setting up a GitHub App so that when an AI agent (or any tool) pushes a branch with the `ai/` prefix, a workflow automatically creates or updates a pull request **opened by the bot**. PR titles are generated from conventional commits; for multi-commit PRs, local [Ollama](https://ollama.com/) summarizes commits into a conventional title and description (default model: `llama3.1:8b`, overridable via `OLLAMA_MODEL`). You can then approve the PR as the repo owner.
 
 ## Overview
 
@@ -59,9 +59,35 @@ This guide walks you through setting up a GitHub App so that when an AI agent (o
 
 ---
 
+## Environment variables
+
+Each script expects specific env vars. The workflow sets these automatically; for manual runs, set them yourself.
+
+| Script | Required | Optional |
+|--------|----------|----------|
+| **auto-pr-get-commits** | `DEFAULT_BRANCH`, `GITHUB_WORKSPACE`, `GITHUB_OUTPUT` | — |
+| **auto-pr-ollama** | `COMMITS`, `GITHUB_OUTPUT` | `OLLAMA_MODEL` (default: `llama3.1:8b`), `OLLAMA_URL` (default: `http://localhost:11434/api/generate`), `GITHUB_WORKSPACE` (default: `.`) |
+| **create-or-update-pr** | `GH_TOKEN`, `BRANCH`, `DEFAULT_BRANCH`, `COMMITS`, `FILES` | `PR_TITLE` (when empty, uses first line of `semantic_subjects.txt`), `DESCRIPTION_FILE` (Ollama output path), `GITHUB_WORKSPACE` (default: `.`) |
+
+---
+
 ## Step 5: Add the Workflow File
 
-Copy from this repository: [.github/workflows/auto-pr.yml](../.github/workflows/auto-pr.yml), [.github/scripts/auto-pr-get-commits.sh](../.github/scripts/auto-pr-get-commits.sh), [.github/scripts/auto-pr-set-title.sh](../.github/scripts/auto-pr-set-title.sh), [.github/scripts/create-or-update-pr.sh](../.github/scripts/create-or-update-pr.sh), and [scripts/fill-pr-body.ts](../scripts/fill-pr-body.ts). The workflow uses the PR template at [.github/PULL_REQUEST_TEMPLATE.md](../.github/PULL_REQUEST_TEMPLATE.md) (see [PR template](PR_TEMPLATE.md) for details).
+Copy from this repository: [.github/workflows/auto-pr.yml](../.github/workflows/auto-pr.yml), [scripts/auto-pr/prompts/](../scripts/auto-pr/prompts/) (pr-title.txt, pr-description.txt), [scripts/fill-pr-template.ts](../scripts/fill-pr-template.ts), [scripts/auto-pr-get-commits.ts](../scripts/auto-pr-get-commits.ts), [scripts/auto-pr-ollama.ts](../scripts/auto-pr-ollama.ts), and [scripts/create-or-update-pr.ts](../scripts/create-or-update-pr.ts). The workflow uses the PR template at [.github/PULL_REQUEST_TEMPLATE.md](../.github/PULL_REQUEST_TEMPLATE.md) (see [PR template](PR_TEMPLATE.md) for details).
+
+---
+
+## Script reference
+
+Scripts used by the auto-PR workflow live in `scripts/`; prompts in `scripts/auto-pr/prompts/`. All run from the repository root (workspace).
+
+**Merge commit filter:** Lines matching `^Merge ` (case-insensitive) are excluded. Keep in sync: `scripts/auto-pr-get-commits.ts` (`filterSemanticSubjects`) and `scripts/fill-pr-template.ts` (`isMergeCommit`).
+
+| Script | Purpose | Used by |
+|--------|---------|---------|
+| **scripts/auto-pr-get-commits.ts** | Get commit log, filter semantic commits (exclude merge/blank), output paths and count | auto-pr.yml |
+| **scripts/auto-pr-ollama.ts** | Generate PR title and description via Ollama (2+ commits). Uses prompts from `scripts/auto-pr/prompts/`. Outputs `title` and `description_file`. Retries 3× each. `OLLAMA_MODEL` and `OLLAMA_URL` env overridable. | auto-pr.yml |
+| **scripts/create-or-update-pr.ts** | Create or update PR with fill-pr-template output. Uses `--description-file` when Ollama-generated description is available. | auto-pr.yml |
 
 ---
 
@@ -104,8 +130,9 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
 | **All merge commits** | Fails with empty title | Branch with only merge commits (e.g. after merging base) yields no semantic commits; add at least one regular commit. |
 | **gh auth / rate limit** | Unclear errors possible | Workflow retries `gh` up to 3 times with 5s delay. If token scope is wrong, retries won't help. |
 | **Token scope** | Requires `pull_requests: write` | App must have Pull requests: Read and write. |
-| **fill-pr-body** | Base branch must exist | The workflow passes the default branch to `create-or-update-pr.sh`. If renamed, update the workflow. |
+| **fill-pr-template** | Base branch must exist | The workflow passes the default branch to `create-or-update-pr.ts`. If renamed, update the workflow. |
 | **Ollama model** | Overridable via repo var | Set repository variable `OLLAMA_MODEL` (e.g. `llama3.2`) to use a different model. Default: `llama3.1:8b`. |
+| **Ollama URL** | Overridable via repo var | Set repository variable `OLLAMA_URL` for remote Ollama. Default: `http://localhost:11434/api/generate` (setup-ollama runs server on localhost). |
 | **npmDepsHash** | CI cannot push to fork PRs | See [CONTRIBUTING](../CONTRIBUTING.md). Update locally: `nix run .#update-npm-deps-hash`. |
 
 ---
@@ -118,18 +145,18 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
 | "Resource not accessible" | Check app permissions (Contents: Read and write, Pull requests: Read and write, Actions: Read and write) |
 | "Secret not found" | Verify `APP_ID` and `APP_PRIVATE_KEY` in repo secrets |
 | PR already exists | Workflow updates the PR title and body from the latest commits |
-| Ollama returns invalid or odd title | Workflow validates with `fill-pr-body --validate-title`; falls back to first semantic commit subject after 3 attempts |
+| Ollama returns invalid or odd title | Workflow validates with `fill-pr-template --validate-title`; falls back to first semantic commit subject after 3 attempts |
 
 ---
 
 ## How PR title and body are set
 
-The workflow uses `scripts/fill-pr-body.ts` (invoked by `.github/scripts/create-or-update-pr.sh`) to parse conventional commits and fill the [PR template](../.github/PULL_REQUEST_TEMPLATE.md). See [PR template](PR_TEMPLATE.md).
+The workflow uses `scripts/fill-pr-template.ts` (invoked by `scripts/create-or-update-pr.ts`) to parse conventional commits and fill the [PR template](../.github/PULL_REQUEST_TEMPLATE.md). See [PR template](PR_TEMPLATE.md).
 
 | Section | Source |
 |---------|--------|
 | **Title** | First semantic commit subject (1 semantic commit) or Ollama-generated (2+ semantic commits); falls back to first semantic commit if Ollama fails or is skipped. Merge commits and blank lines are filtered before counting. |
-| **Description** | First commit body, or subject with conventional prefix stripped |
+| **Description** | For 1 commit: first commit body (or subject after colon). For 2+ commits: Ollama summarizes all commit bodies; fallback to concatenated bodies if Ollama fails |
 | **Type of change** | Inferred from conventional commit (`feat`→New feature, `fix`→Bug fix, `docs`→Documentation update, `chore`→Chore, `feat!`/`BREAKING`→Breaking change); non-conventional commits fall back to Chore. |
 | **Changes made** | One bullet per non-merge commit (merge commits filtered; non-conventional included) |
 | **How to test** | `N/A` for docs-only changes; otherwise `1. Run \`npm run check\`` + placeholder |
@@ -141,9 +168,9 @@ The script is TypeScript (Effect, pure core + shell) for type safety, readabilit
 
 ## Testing
 
-- **Script:** Unit tests in `test/scripts/fill-pr-body.test.ts` (pure logic + runFillBody file-based pipeline)
+- **Script:** Unit tests in `test/scripts/fill-pr-template.test.ts` (pure logic + runFillBody file-based pipeline)
 - **Workflow:** No GitHub API mock exists. Validate by pushing to `ai/**` and checking Actions/PR
 
 ## Optional: Add labels
 
-To tag auto-created PRs, add `--label "ai"` to the `gh pr create` command in [.github/scripts/create-or-update-pr.sh](../.github/scripts/create-or-update-pr.sh) (requires an `ai` label in the repo).
+To tag auto-created PRs, add `--label "ai"` to the `gh pr create` command in [scripts/create-or-update-pr.ts](../scripts/create-or-update-pr.ts) (requires an `ai` label in the repo).
