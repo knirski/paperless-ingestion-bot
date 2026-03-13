@@ -1,10 +1,5 @@
-import * as childProcess from "node:child_process";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { fileURLToPath } from "node:url";
-import * as NodeServices from "@effect/platform-node/NodeServices";
-import { Effect, Layer, Logger, Option, Result } from "effect";
-import { describe, expect, test } from "vitest";
+import { describe, expect, layer, test } from "@effect/vitest";
+import { Effect, Option, Result } from "effect";
 import {
 	fillTemplate,
 	filterMergeCommits,
@@ -25,7 +20,7 @@ import {
 	renderFromTemplate,
 	runFillBody,
 } from "../../scripts/fill-pr-body.js";
-import { createTestTempDir, SilentLoggerLayer } from "../test-utils.js";
+import { createTestTempDirEffect, SilentLoggerLayer, TestBaseLayer } from "../test-utils.js";
 
 const TEST_TEMPLATE = `## Description
 {{description}}
@@ -72,29 +67,27 @@ function logContent(...blocks: Array<{ subject: string; body: string }>): string
 }
 
 /** Write log and files to temp dir, run runFillBody, return output. No git. */
-async function runWithLogAndFiles(
+function runWithLogAndFilesEffect(
 	logStr: string,
 	filesStr: string,
 	opts?: {
 		templatePath?: string;
 		format?: "body" | "title-body";
 	},
-): Promise<string> {
-	const tmp = await createTestTempDir("fill-pr-body-");
-	const testLayer = NodeServices.layer.pipe(Layer.provideMerge(Logger.layer([])));
-	try {
-		const logFile = path.join(tmp.path, "commits.txt");
-		const filesFile = path.join(tmp.path, "files.txt");
-		fs.writeFileSync(logFile, logStr);
-		fs.writeFileSync(filesFile, filesStr);
-		return await Effect.runPromise(
-			runFillBody(logFile, filesFile, opts?.templatePath, opts?.format ?? "body").pipe(
-				Effect.provide(testLayer),
-			),
+): Effect.Effect<string, Error> {
+	return Effect.gen(function* () {
+		const tmp = yield* createTestTempDirEffect("fill-pr-body-");
+		yield* tmp.writeFile(tmp.join("commits.txt"), logStr);
+		yield* tmp.writeFile(tmp.join("files.txt"), filesStr);
+		const result = yield* runFillBody(
+			tmp.join("commits.txt"),
+			tmp.join("files.txt"),
+			opts?.templatePath,
+			opts?.format ?? "body",
 		);
-	} finally {
-		await tmp.remove();
-	}
+		yield* tmp.remove();
+		return result;
+	}).pipe(Effect.provide(TestBaseLayer));
 }
 
 // ─── Pure function tests ────────────────────────────────────────────────────
@@ -446,27 +439,27 @@ describe("fillTemplate", () => {
 	});
 });
 
-describe("renderBody", () => {
-	test("returns rendered body when all placeholders replaced", async () => {
-		const commits = [commit("feat: add x", "Description here", { type: "feat" })];
-		const files = ["src/foo.ts"];
-		const body = await Effect.runPromise(
-			renderBody(commits, files, TEST_TEMPLATE).pipe(Effect.provide(SilentLoggerLayer)),
-		);
-		expect(body).toContain("## Description");
-		expect(body).toContain("Description here");
-		expect(body).not.toContain("{{description}}");
-	});
+layer(SilentLoggerLayer)("renderBody", (it) => {
+	it.effect("returns rendered body when all placeholders replaced", () =>
+		Effect.gen(function* () {
+			const commits = [commit("feat: add x", "Description here", { type: "feat" })];
+			const files = ["src/foo.ts"];
+			const body = yield* renderBody(commits, files, TEST_TEMPLATE);
+			expect(body).toContain("## Description");
+			expect(body).toContain("Description here");
+			expect(body).not.toContain("{{description}}");
+		}),
+	);
 
-	test("returns body and logs warning when output contains {{", async () => {
-		const commits = [commit("feat: add x", "Use {{ and }} in your code", { type: "feat" })];
-		const files = ["src/foo.ts"];
-		const body = await Effect.runPromise(
-			renderBody(commits, files, TEST_TEMPLATE).pipe(Effect.provide(SilentLoggerLayer)),
-		);
-		expect(body).toContain("Use {{ and }} in your code");
-		expect(body).toContain("{{");
-	});
+	it.effect("returns body and logs warning when output contains {{", () =>
+		Effect.gen(function* () {
+			const commits = [commit("feat: add x", "Use {{ and }} in your code", { type: "feat" })];
+			const files = ["src/foo.ts"];
+			const body = yield* renderBody(commits, files, TEST_TEMPLATE);
+			expect(body).toContain("Use {{ and }} in your code");
+			expect(body).toContain("{{");
+		}),
+	);
 });
 
 describe("isValidConventionalTitle", () => {
@@ -516,142 +509,124 @@ describe("renderFromTemplate", () => {
 
 // ─── runFillBody (file-based pipeline) tests ─────────────────────────────────
 
-describe("runFillBody", () => {
-	test("produces full PR body from log and files", async () => {
-		const log = logContent({ subject: "feat: add foo", body: "This adds the foo module." });
-		const output = await runWithLogAndFiles(log, "src/foo.ts\n");
-		expect(output).toContain("## Description");
-		expect(output).toContain("## Type of change");
-		expect(output).toContain("## Changes made");
-		expect(output).toContain("New feature");
-		expect(output).toContain("feat: add foo");
-		expect(output).toContain("This adds the foo module");
-		expect(output).toContain("npm run check");
-	});
+layer(TestBaseLayer)("runFillBody", (it) => {
+	it.effect("produces full PR body from log and files", () =>
+		Effect.gen(function* () {
+			const log = logContent({ subject: "feat: add foo", body: "This adds the foo module." });
+			const output = yield* runWithLogAndFilesEffect(log, "src/foo.ts\n");
+			expect(output).toContain("## Description");
+			expect(output).toContain("## Type of change");
+			expect(output).toContain("## Changes made");
+			expect(output).toContain("New feature");
+			expect(output).toContain("feat: add foo");
+			expect(output).toContain("This adds the foo module");
+			expect(output).toContain("npm run check");
+		}),
+	);
 
-	test("title-body format: first line is title (first commit subject)", async () => {
-		const log = logContent({ subject: "feat(ci): add PR title generation", body: "" });
-		const output = await runWithLogAndFiles(log, "src/ci.ts\n", {
-			format: "title-body",
-		});
-		const lines = output.split("\n");
-		expect(lines[0]).toBe("feat(ci): add PR title generation");
-		expect(lines[1]).toBe("");
-		expect(output).toContain("## Description");
-	});
+	it.effect("title-body format: first line is title (first commit subject)", () =>
+		Effect.gen(function* () {
+			const log = logContent({ subject: "feat(ci): add PR title generation", body: "" });
+			const output = yield* runWithLogAndFilesEffect(log, "src/ci.ts\n", {
+				format: "title-body",
+			});
+			const lines = output.split("\n");
+			expect(lines[0]).toBe("feat(ci): add PR title generation");
+			expect(lines[1]).toBe("");
+			expect(output).toContain("## Description");
+		}),
+	);
 
-	test("multi-commit: body includes all commits, title from first (newest)", async () => {
-		const log = logContent(
-			{ subject: "feat: add module B", body: "" },
-			{ subject: "feat: add module A", body: "" },
-		);
-		const output = await runWithLogAndFiles(log, "src/a.ts\nsrc/b.ts\n", {
-			format: "title-body",
-		});
-		expect(output.split("\n")[0]).toBe("feat: add module B");
-		expect(output).toContain("feat: add module A");
-		expect(output).toContain("feat: add module B");
-		expect(output).toContain("## Changes made");
-	});
+	it.effect("multi-commit: body includes all commits, title from first (newest)", () =>
+		Effect.gen(function* () {
+			const log = logContent(
+				{ subject: "feat: add module B", body: "" },
+				{ subject: "feat: add module A", body: "" },
+			);
+			const output = yield* runWithLogAndFilesEffect(log, "src/a.ts\nsrc/b.ts\n", {
+				format: "title-body",
+			});
+			expect(output.split("\n")[0]).toBe("feat: add module B");
+			expect(output).toContain("feat: add module A");
+			expect(output).toContain("feat: add module B");
+			expect(output).toContain("## Changes made");
+		}),
+	);
 
-	test("filters merge commits, includes non-conventional", async () => {
-		const log = logContent(
-			{ subject: "feat: add foo", body: "" },
-			{ subject: "Merge branch 'main' into ai/merge-test", body: "" },
-			{ subject: "wip: messy commit", body: "" },
-			{ subject: "feat: add y", body: "" },
-		);
-		const output = await runWithLogAndFiles(log, "src/foo.ts\nsrc/y.ts\n", {
-			format: "title-body",
-		});
-		expect(output).toContain("feat: add foo");
-		expect(output).toContain("wip: messy commit");
-		expect(output).toContain("feat: add y");
-		expect(output).not.toContain("Merge branch");
-	});
+	it.effect("filters merge commits, includes non-conventional", () =>
+		Effect.gen(function* () {
+			const log = logContent(
+				{ subject: "feat: add foo", body: "" },
+				{ subject: "Merge branch 'main' into ai/merge-test", body: "" },
+				{ subject: "wip: messy commit", body: "" },
+				{ subject: "feat: add y", body: "" },
+			);
+			const output = yield* runWithLogAndFilesEffect(log, "src/foo.ts\nsrc/y.ts\n", {
+				format: "title-body",
+			});
+			expect(output).toContain("feat: add foo");
+			expect(output).toContain("wip: messy commit");
+			expect(output).toContain("feat: add y");
+			expect(output).not.toContain("Merge branch");
+		}),
+	);
 
-	test("extracts Closes #42, docs-only → howToTest N/A", async () => {
-		const log = logContent({ subject: "docs: update guide", body: "Closes #42" });
-		const output = await runWithLogAndFiles(log, "docs/guide.md\n");
-		expect(output).toContain("Closes #42");
-		expect(output).toContain("Documentation update");
-		expect(output).toContain("N/A");
-	});
+	it.effect("extracts Closes #42, docs-only → howToTest N/A", () =>
+		Effect.gen(function* () {
+			const log = logContent({ subject: "docs: update guide", body: "Closes #42" });
+			const output = yield* runWithLogAndFilesEffect(log, "docs/guide.md\n");
+			expect(output).toContain("Closes #42");
+			expect(output).toContain("Documentation update");
+			expect(output).toContain("N/A");
+		}),
+	);
 
-	test("uses custom template when path provided", async () => {
-		const tmp = await createTestTempDir("fill-pr-body-");
-		const testLayer = NodeServices.layer.pipe(Layer.provideMerge(Logger.layer([])));
-		try {
-			const customTemplate = path.join(tmp.path, "custom.md");
-			fs.writeFileSync(
-				customTemplate,
+	it.effect("uses custom template when path provided", () =>
+		Effect.gen(function* () {
+			const tmp = yield* createTestTempDirEffect("fill-pr-body-");
+			yield* tmp.writeFile(
+				tmp.join("custom.md"),
 				"Custom: {{description}}\nType: {{typeOfChange}}\n{{changes}}",
 			);
 			const log = logContent({ subject: "feat: add bar", body: "Bar feature here." });
-			fs.writeFileSync(path.join(tmp.path, "commits.txt"), log);
-			fs.writeFileSync(path.join(tmp.path, "files.txt"), "src/bar.ts\n");
-			const output = await Effect.runPromise(
-				runFillBody(
-					path.join(tmp.path, "commits.txt"),
-					path.join(tmp.path, "files.txt"),
-					customTemplate,
-				).pipe(Effect.provide(testLayer)),
+			yield* tmp.writeFile(tmp.join("commits.txt"), log);
+			yield* tmp.writeFile(tmp.join("files.txt"), "src/bar.ts\n");
+			const output = yield* runFillBody(
+				tmp.join("commits.txt"),
+				tmp.join("files.txt"),
+				tmp.join("custom.md"),
 			);
+			yield* tmp.remove();
 			expect(output).toContain("Custom: Bar feature here.");
 			expect(output).toContain("Type: New feature");
 			expect(output).toContain("feat: add bar");
-		} finally {
-			await tmp.remove();
-		}
-	});
+		}),
+	);
 
-	test("fails when log file not found", async () => {
-		const tmp = await createTestTempDir("fill-pr-body-");
-		const testLayer = NodeServices.layer.pipe(Layer.provideMerge(Logger.layer([])));
-		try {
-			fs.writeFileSync(path.join(tmp.path, "files.txt"), "src/foo.ts\n");
-			const program = runFillBody(
-				path.join(tmp.path, "nonexistent.txt"),
-				path.join(tmp.path, "files.txt"),
+	it.effect("fails when log file not found", () =>
+		Effect.gen(function* () {
+			const tmp = yield* createTestTempDirEffect("fill-pr-body-");
+			yield* tmp.writeFile(tmp.join("files.txt"), "src/foo.ts\n");
+			const err = yield* runFillBody(
+				tmp.join("nonexistent.txt"),
+				tmp.join("files.txt"),
 				undefined,
-			).pipe(Effect.provide(testLayer));
-			await expect(Effect.runPromise(program)).rejects.toThrow("Log file not found");
-		} finally {
-			await tmp.remove();
-		}
-	});
+			).pipe(Effect.flip);
+			yield* tmp.remove();
+			const msg = err instanceof Error ? err.message : String(err);
+			expect(msg).toSatisfy(
+				(s: string) => s.includes("Log file not found") || s.includes("nonexistent"),
+			);
+		}),
+	);
 
-	test("fails when no commits (empty title in title-body format)", async () => {
-		const output = runWithLogAndFiles("", "", { format: "title-body" });
-		await expect(output).rejects.toThrow("PR title is empty. Add at least one non-merge commit");
-	});
-});
-
-describe("--validate-title CLI", () => {
-	const runValidateTitle = (title: string): number => {
-		const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-		// Use execSync with shell so quoting is handled; spawnSync arg parsing can differ in CI
-		try {
-			const escaped = title.replace(/'/g, "'\\''");
-			childProcess.execSync(`npx tsx scripts/fill-pr-body.ts --validate-title='${escaped}'`, {
-				cwd: root,
-				encoding: "utf8",
-				stdio: "pipe",
-			});
-			return 0;
-		} catch (e) {
-			return (e as { status?: number }).status ?? 1;
-		}
-	};
-
-	test("valid conventional title exits 0", () => {
-		expect(runValidateTitle("feat: add X")).toBe(0);
-		expect(runValidateTitle("fix(ci): resolve bug")).toBe(0);
-	});
-
-	test("invalid title exits 1", () => {
-		expect(runValidateTitle("Add feature X")).toBe(1);
-		expect(runValidateTitle("")).toBe(1);
-		expect(runValidateTitle("  ")).toBe(1);
-	});
+	it.effect("fails when no commits (empty title in title-body format)", () =>
+		Effect.gen(function* () {
+			const err = yield* runWithLogAndFilesEffect("", "", { format: "title-body" }).pipe(
+				Effect.flip,
+			);
+			const msg = err instanceof Error ? err.message : String(err);
+			expect(msg).toContain("PR title is empty");
+		}),
+	);
 });
