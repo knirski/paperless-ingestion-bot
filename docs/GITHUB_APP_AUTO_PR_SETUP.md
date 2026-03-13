@@ -115,6 +115,7 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
 | Issue | Fix |
 |-------|-----|
 | Workflow doesn't run | Ensure branch name matches `ai/**`; workflow skips on forks |
+| "Failed to trigger ci.yml. Ensure App has Actions: Read and write permission." | Go to [github.com/settings/apps](https://github.com/settings/apps) → your app → **Repository permissions** → set **Actions** to **Read and write**. If already set, go to **Install App** → **Configure** next to the repo → accept any pending permission changes. |
 | "Resource not accessible" | Check app permissions (Contents: Read and write, Pull requests: Read and write, Actions: Read and write) |
 | "Secret not found" | Verify `APP_ID` and `APP_PRIVATE_KEY` in repo secrets |
 | PR already exists | Workflow updates the PR title and body from the latest commits |
