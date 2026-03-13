@@ -8,6 +8,8 @@ Security updates are provided for the latest major version. Older major versions
 | ------- | ------------------ |
 | 0.2.x   | :white_check_mark: |
 
+**Node.js:** We support Node.js 24+ (e.g. Node 24.x; see `engines` in `package.json`). We target the current Node LTS line(s) that Effect v4 supports and do not commit to older LTS lines once we move forward.
+
 ## Reporting a Vulnerability
 
 **Please do not report security vulnerabilities through public GitHub issues, discussions, or pull requests.**
