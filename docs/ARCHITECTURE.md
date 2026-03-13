@@ -1,6 +1,6 @@
 # Architecture
 
-Bleeding edge: this project uses the latest [Effect](https://effect.website/) version (v4 beta). Expect occasional breaking changes as Effect stabilizes.
+Bleeding edge: this project uses the latest [Effect](https://effect.website/) version (v4 beta) and [TypeScript Native](https://devblogs.microsoft.com/typescript/announcing-typescript-native-previews/) (`tsgo`) for build and typecheck. Expect occasional breaking changes as Effect stabilizes; TypeScript Native is a preview (eventually TypeScript 7) and may have gaps (e.g. no `--declaration` emit yet—we omit it as a standalone app).
 
 ## High-Level Structure
 

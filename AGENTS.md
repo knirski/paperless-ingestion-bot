@@ -22,6 +22,7 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 
 - Install: `npm install`
 - Verify: `npm run check` (test, lint, knip, typecheck)
+- **Build/typecheck:** Uses [TypeScript Native](https://devblogs.microsoft.com/typescript/announcing-typescript-native-previews/) (`tsgo`) for faster compile and typecheck. No declaration emit (standalone app).
 - CI: [docs/CI.md](docs/CI.md) — ci.yml (check, dependency-review), ci-docs.yml (markdown), ci-nix.yml (Nix build)
 
 ## Commands
