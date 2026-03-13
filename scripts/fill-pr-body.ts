@@ -451,6 +451,13 @@ const quietFlag = Flag.boolean("quiet").pipe(
 	Flag.withDescription("Suppress logs (for CI when capturing stdout)."),
 );
 
+const validateTitleFlag = Flag.string("validate-title").pipe(
+	Flag.optional,
+	Flag.withDescription(
+		"Validate conventional commit title; exit 0 if valid, 1 otherwise. Skips fill when used.",
+	),
+);
+
 const fillCommand = Command.make(
 	"fill-pr-body",
 	{
@@ -459,8 +466,16 @@ const fillCommand = Command.make(
 		template: templateFlag,
 		format: formatFlag,
 		quiet: quietFlag,
+		validateTitle: validateTitleFlag,
 	},
-	({ logFile, filesFile, template, format, quiet }) => {
+	({ logFile, filesFile, template, format, quiet, validateTitle }) => {
+		const titleToValidate = Option.getOrUndefined(validateTitle);
+		if (titleToValidate !== undefined) {
+			const valid = isValidConventionalTitle(titleToValidate);
+			return Effect.sync(() => {
+				process.exit(valid ? 0 : 1);
+			});
+		}
 		const logFilePath = Option.getOrUndefined(logFile);
 		const filesFilePath = Option.getOrUndefined(filesFile);
 		if (!logFilePath || !filesFilePath) {

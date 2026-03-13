@@ -18,6 +18,8 @@ jobs:
     if: github.event.repository.fork != true
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL || 'llama3.1:8b' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -35,21 +37,9 @@ jobs:
 
       - name: Get commit log and changed files
         id: commits
-        run: |
-          BASE_REF="origin/${{ github.event.repository.default_branch }}"
-          git log --format="---COMMIT---%n%s%n%n%b" "$BASE_REF..HEAD" > commits.txt
-          git log --format="%s" "$BASE_REF..HEAD" > subjects.txt
-          git diff --name-only "$BASE_REF..HEAD" > files.txt
-          COUNT=$(wc -l < subjects.txt | tr -d ' ')
-          if [ "$COUNT" -eq 0 ]; then
-            echo "::error::No commits to push. Add at least one commit before pushing to ai/ branch."
-            exit 1
-          fi
-          {
-            echo "commits=${{ github.workspace }}/commits.txt"
-            echo "files=${{ github.workspace }}/files.txt"
-            echo "count=$COUNT"
-          } >> "$GITHUB_OUTPUT"
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: bash .github/scripts/auto-pr-get-commits.sh
 
       - name: Setup Ollama
         if: steps.commits.outputs.count != '1'
@@ -57,31 +47,14 @@ jobs:
 
       - name: Pull model
         if: steps.commits.outputs.count != '1'
-        run: ollama pull llama3.1:8b
+        run: ollama pull ${{ env.OLLAMA_MODEL }}
 
       - name: Set PR title
         id: title
-        run: |
-          if [ "${{ steps.commits.outputs.count }}" = "1" ]; then
-            TITLE=$(head -1 subjects.txt)
-          else
-            {
-              echo "Generate a single conventional commit title (max 72 chars) that summarizes this PR."
-              echo "Format: type(scope): subject (e.g. feat: add X, fix(ci): resolve bug)."
-              echo "Use the most significant type from the commits. Reply with only the title, nothing else."
-              echo ""
-              echo "Commits:"
-              sed 's/^/- /' subjects.txt
-            } > prompt.txt
-            BODY=$(jq -n --rawfile p prompt.txt '{model: "llama3.1:8b", prompt: $p, stream: false}')
-            RAW=$(curl -s http://localhost:11434/api/generate -d "$BODY" | jq -r '.response')
-            TITLE=$(echo "$RAW" | sed 's/^"//;s/"$//' | head -1)
-            if [ -z "$TITLE" ] || [ "$TITLE" = "null" ]; then
-              echo "::error::Failed to generate PR title with Ollama. Using first commit subject as fallback."
-              TITLE=$(head -1 subjects.txt)
-            fi
-          fi
-          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
+        env:
+          COMMIT_COUNT: ${{ steps.commits.outputs.count }}
+          OLLAMA_MODEL: ${{ env.OLLAMA_MODEL }}
+        run: bash .github/scripts/auto-pr-set-title.sh
 
       - name: Generate GitHub App token
         id: app-token
@@ -98,4 +71,4 @@ jobs:
           COMMITS: ${{ steps.commits.outputs.commits }}
           FILES: ${{ steps.commits.outputs.files }}
           PR_TITLE: ${{ steps.title.outputs.title }}
-        run: bash scripts/create-or-update-pr.sh
+        run: bash .github/scripts/create-or-update-pr.sh

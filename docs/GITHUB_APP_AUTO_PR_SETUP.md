@@ -5,7 +5,7 @@ This guide walks you through setting up a GitHub App so that when an AI agent (o
 ## Overview
 
 1. **AI agent** (or terminal) pushes a branch (e.g. `ai/feature-x` or `ai/fix-y`)
-2. **Workflow** runs on push to `ai/**` branches (installs Ollama, pulls model, generates title)
+2. **Workflow** runs on push to `ai/**` branches (for 1 semantic commit: uses its subject; for 2+: installs Ollama, pulls model, generates title)
 3. **GitHub App** creates or updates the PR using its token
 4. **PR** is opened by `your-app-name[bot]` → you can approve it
 
@@ -60,7 +60,7 @@ This guide walks you through setting up a GitHub App so that when an AI agent (o
 
 ## Step 5: Add the Workflow File
 
-Copy from this repository: [.github/workflows/auto-pr.yml](../.github/workflows/auto-pr.yml), [scripts/create-or-update-pr.sh](../scripts/create-or-update-pr.sh), and [scripts/fill-pr-body.ts](../scripts/fill-pr-body.ts). The workflow uses the PR template at [.github/PULL_REQUEST_TEMPLATE.md](../.github/PULL_REQUEST_TEMPLATE.md) (see [PR template](PR_TEMPLATE.md) for details).
+Copy from this repository: [.github/workflows/auto-pr.yml](../.github/workflows/auto-pr.yml), [.github/scripts/auto-pr-get-commits.sh](../.github/scripts/auto-pr-get-commits.sh), [.github/scripts/auto-pr-set-title.sh](../.github/scripts/auto-pr-set-title.sh), [.github/scripts/create-or-update-pr.sh](../.github/scripts/create-or-update-pr.sh), and [scripts/fill-pr-body.ts](../scripts/fill-pr-body.ts). The workflow uses the PR template at [.github/PULL_REQUEST_TEMPLATE.md](../.github/PULL_REQUEST_TEMPLATE.md) (see [PR template](PR_TEMPLATE.md) for details).
 
 ---
 
@@ -104,6 +104,7 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
 | **gh auth / rate limit** | Unclear errors possible | Workflow retries `gh` up to 3 times with 5s delay. If token scope is wrong, retries won't help. |
 | **Token scope** | Requires `pull_requests: write` | App must have Pull requests: Read and write. |
 | **fill-pr-body** | Base branch must exist | The workflow passes the default branch to `create-or-update-pr.sh`. If renamed, update the workflow. |
+| **Ollama model** | Overridable via repo var | Set repository variable `OLLAMA_MODEL` (e.g. `llama3.2`) to use a different model. Default: `llama3.1:8b`. |
 | **npmDepsHash** | CI cannot push to fork PRs | See [CONTRIBUTING](../CONTRIBUTING.md). Update locally: `nix run .#update-npm-deps-hash`. |
 
 ---
@@ -116,16 +117,17 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
 | "Resource not accessible" | Check app permissions (Contents: Read, Pull requests: Read and write) |
 | "Secret not found" | Verify `APP_ID` and `APP_PRIVATE_KEY` in repo secrets |
 | PR already exists | Workflow updates the PR title and body from the latest commits |
+| Ollama returns invalid or odd title | Workflow validates with `fill-pr-body --validate-title`; falls back to first semantic commit subject after 3 attempts |
 
 ---
 
 ## How PR title and body are set
 
-The workflow uses `scripts/fill-pr-body.ts` to parse conventional commits and fill the [PR template](../.github/PULL_REQUEST_TEMPLATE.md). See [PR template](PR_TEMPLATE.md).
+The workflow uses `scripts/fill-pr-body.ts` (invoked by `.github/scripts/create-or-update-pr.sh`) to parse conventional commits and fill the [PR template](../.github/PULL_REQUEST_TEMPLATE.md). See [PR template](PR_TEMPLATE.md).
 
 | Section | Source |
 |---------|--------|
-| **Title** | First commit subject (1 commit) or Ollama-generated (2+ commits); falls back to first commit if Ollama fails or is skipped |
+| **Title** | First semantic commit subject (1 semantic commit) or Ollama-generated (2+ semantic commits); falls back to first semantic commit if Ollama fails or is skipped. Merge commits and blank lines are filtered before counting. |
 | **Description** | First commit body, or subject with conventional prefix stripped |
 | **Type of change** | Inferred from conventional commit (`feat`→New feature, `fix`→Bug fix, `docs`→Documentation update, `chore`→Chore, `feat!`/`BREAKING`→Breaking change); non-conventional commits fall back to Chore. |
 | **Changes made** | One bullet per non-merge commit (merge commits filtered; non-conventional included) |
@@ -143,4 +145,4 @@ The script is TypeScript (Effect, pure core + shell) for type safety, readabilit
 
 ## Optional: Add labels
 
-To tag auto-created PRs, add `--label "ai"` to the `gh pr create` command in [scripts/create-or-update-pr.sh](../scripts/create-or-update-pr.sh) (requires an `ai` label in the repo).
+To tag auto-created PRs, add `--label "ai"` to the `gh pr create` command in [.github/scripts/create-or-update-pr.sh](../.github/scripts/create-or-update-pr.sh) (requires an `ai` label in the repo).

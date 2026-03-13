@@ -1,5 +1,7 @@
+import * as childProcess from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, Layer, Logger, Option, Result } from "effect";
 import { describe, expect, test } from "vitest";
@@ -583,5 +585,28 @@ describe("runFillBody", () => {
 	test("fails when no commits (empty title in title-body format)", async () => {
 		const output = runWithLogAndFiles("", "", { format: "title-body" });
 		await expect(output).rejects.toThrow("PR title is empty. Add at least one non-merge commit");
+	});
+});
+
+describe("--validate-title CLI", () => {
+	const runValidateTitle = (title: string): number => {
+		const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+		const result = childProcess.spawnSync(
+			"npx",
+			["tsx", "scripts/fill-pr-body.ts", "--validate-title", title],
+			{ cwd: root, encoding: "utf8" },
+		);
+		return result.status ?? -1;
+	};
+
+	test("valid conventional title exits 0", () => {
+		expect(runValidateTitle("feat: add X")).toBe(0);
+		expect(runValidateTitle("fix(ci): resolve bug")).toBe(0);
+	});
+
+	test("invalid title exits 1", () => {
+		expect(runValidateTitle("Add feature X")).toBe(1);
+		expect(runValidateTitle("")).toBe(1);
+		expect(runValidateTitle("  ")).toBe(1);
 	});
 });
