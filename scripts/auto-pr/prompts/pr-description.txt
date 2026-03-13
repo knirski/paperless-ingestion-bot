@@ -1,0 +1,2 @@
+Summarize these commit messages into a single PR description paragraph (2-4 sentences). Focus on what changed and why. Reply with only the description, nothing else. Do not wrap in quotes.
+

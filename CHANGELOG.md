@@ -72,8 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * **ci:** Modern CI (2026): reusable workflows (check.yml, nix.yml), `secrets: inherit`, GitHub-provided actions (checkout@v4, setup-node@v4 with built-in npm cache, upload-artifact@v4). Add packageManager to package.json for reproducibility. Determinate Nix tooling, modular composite actions.
-* **fill-pr-body:** Ollama-based PR title generation for multi-commit PRs. `--ai-title` uses llama3.1:8b to generate conventional commit titles; falls back to first commit subject on failure. `--quiet`, `--ollama-url`, `--ollama-model` flags. Auto-PR workflow updated with Ollama install, model cache, and readiness check.
-* **fill-pr-body:** Filter merge commits from body and title input; include non-conventional commits (type falls back to Chore). Auto-PR workflow: retry `gh` up to 3 times with 5s delay.
+* **auto-pr:** TypeScript/Effect scripts replace shell scripts. `auto-pr-ollama.ts` generates PR title and description via Ollama when 2+ semantic commits; `OLLAMA_MODEL` (default: `llama3.1:8b`) and `OLLAMA_URL` overridable via repo vars. Prompts moved from `.github/prompts/` to `scripts/auto-pr/prompts/`. `fill-pr-template` gains `--description-file` for Ollama output. Error handling aligned with main project (Schema.TaggedErrorClass, formatAutoPrError, mapFsError, redactPath).
+* **fill-pr-template:** Renamed from fill-pr-body. Filter merge commits from body and title input; include non-conventional commits (type falls back to Chore). Auto-PR workflow: retry `gh` up to 3 times with 5s delay.
 * **PII redaction:** Effect `Redacted` for paths, emails, phones, URLs in domain errors. `redactedForLog`, `redactPath`, `redactEmail`, `redactPhone`, `redactUrl` in domain/utils. Raw values never appear in structured logs.
 
 ### Breaking Changes

@@ -1,13 +1,13 @@
 /**
  * Fill PR template from conventional commit messages.
- * Pure core + Effect shell. Run: npx tsx scripts/fill-pr-body.ts --log-file <path> --files-file <path>
+ * Pure core + Effect shell. Run: npx tsx scripts/fill-pr-template.ts --log-file <path> --files-file <path>
  *
  * Reads .github/PULL_REQUEST_TEMPLATE.md (or --template path), replaces
  * {{placeholder}} values, outputs to stdout. See docs/PR_TEMPLATE.md for
  * how this template works for both manual and automated PRs.
  *
  * Requires --log-file and --files-file (commit log and changed files). The workflow
- * or create-or-update-pr.sh generates these via git before invoking this script.
+ * or create-or-update-pr.ts generates these via git before invoking this script.
  */
 
 import * as path from "node:path";
@@ -19,6 +19,13 @@ import { Console, Effect, FileSystem, Layer, Logger, Option, pipe, Result } from
 import * as Arr from "effect/Array";
 import { Command, Flag } from "effect/unstable/cli";
 import pkg from "../package.json" with { type: "json" };
+import { formatAutoPrError, ParseError, PrTitleBlank } from "./auto-pr/index.js";
+
+export { ParseError };
+
+import type { FileSystemError } from "../src/domain/errors.js";
+import { redactPath } from "../src/domain/utils.js";
+import { mapFsError } from "../src/shell/fs-utils.js";
 import { collapseProseParagraphs } from "./collapse-prose-paragraphs.js";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -46,6 +53,7 @@ interface TemplateData {
 
 const TYPE_OF_CHANGE = [
 	"Bug fix",
+	"Security fix",
 	"Breaking change",
 	"Chore",
 	"Documentation update",
@@ -58,6 +66,7 @@ const CONVENTIONAL_TYPES = [
 	"feat",
 	"fix",
 	"docs",
+	"security",
 	"chore",
 	"ci",
 	"build",
@@ -69,18 +78,6 @@ const CONVENTIONAL_TYPES = [
 ] as const;
 type ConventionalType = (typeof CONVENTIONAL_TYPES)[number];
 
-/** Parse error for commit message parsing failures. */
-export class ParseError extends Error {
-	readonly _tag = "ParseError";
-	constructor(
-		message: string,
-		readonly cause?: unknown,
-	) {
-		super(message);
-		this.name = "ParseError";
-	}
-}
-
 // ─── Pure core ─────────────────────────────────────────────────────────────
 
 const ISSUE_STARTS_PATTERN = /^(Closes|Fixes|Fix|Resolves|Resolve|Closed|Close) #\d+/i;
@@ -89,6 +86,7 @@ const TYPE_MAP: Record<ConventionalType, TypeOfChange> = {
 	feat: "New feature",
 	fix: "Bug fix",
 	docs: "Documentation update",
+	security: "Security fix",
 	chore: "Chore",
 	ci: "Chore",
 	build: "Chore",
@@ -110,12 +108,6 @@ function typeFromString(s: string | null | undefined): TypeOfChange {
 }
 
 const parser = new CommitParser();
-
-/** Parser with conventionalcommits preset options (supports feat!, etc.) for single-line validation. */
-const validationParser = new CommitParser({
-	headerPattern: /^(\w*)(?:\((.*)\))?!?: (.*)$/,
-	headerCorrespondence: ["type", "scope", "subject"],
-});
 
 function mapParsedToCommitInfo(block: string, parsed: Commit): CommitInfo {
 	const header = parsed.header ?? block.split("\n")[0] ?? "";
@@ -150,7 +142,10 @@ export function parseCommits(logOutput: string): Result.Result<readonly CommitIn
 			return blocks.map((block) => mapParsedToCommitInfo(block, parser.parse(block)));
 		},
 		catch: (e) =>
-			new ParseError("Failed to parse commits", e instanceof Error ? e : new Error(String(e))),
+			new ParseError({
+				message: "Failed to parse commits",
+				cause: e instanceof Error ? e : new Error(String(e)),
+			}),
 	});
 }
 
@@ -173,12 +168,13 @@ function getTitle(commits: readonly CommitInfo[]): string {
 	return first?.subject ?? "";
 }
 
+/** Conventional commit header: type(scope)?!?: subject. Explicit regex to avoid parser fallback behavior. */
+const CONVENTIONAL_HEADER_PATTERN = /^(\w+)(?:\([^)]*\))?!?: .+$/;
+
 export function isValidConventionalTitle(s: string): boolean {
 	const trimmed = s.trim();
 	if (trimmed.length === 0 || trimmed.length > 72) return false;
-	const parsed = validationParser.parse(trimmed);
-	const type = parsed.type;
-	return type != null && type.length > 0;
+	return CONVENTIONAL_HEADER_PATTERN.test(trimmed);
 }
 
 export function getDescription(first: CommitInfo): string {
@@ -191,6 +187,22 @@ export function getDescription(first: CommitInfo): string {
 	const match = /^[^:]+:\s*(.+)$/.exec(first.subject);
 	const captured = match?.[1];
 	return captured != null ? captured.trim() : first.subject;
+}
+
+/** Concatenate all commit bodies/subjects into one description. Uses getDescription per commit, joins with blank lines. Fallback when Ollama is not used. */
+export function getDescriptionFromCommits(commits: readonly CommitInfo[]): string {
+	const parts = commits.map((c) => getDescription(c)).filter(Boolean);
+	return parts.join("\n\n");
+}
+
+/** Output text for Ollama to summarize into PR description. One block per commit: subject + body. */
+export function getDescriptionPromptText(commits: readonly CommitInfo[]): string {
+	return commits
+		.map((c) => {
+			const block = c.body.trim() ? `${c.subject}\n\n${c.body}` : c.subject;
+			return `- ${block}`;
+		})
+		.join("\n\n");
 }
 
 export function getChanges(commits: readonly CommitInfo[]): readonly string[] {
@@ -248,10 +260,13 @@ export function getBreakingChanges(commits: readonly CommitInfo[]): Option.Optio
 export function fillTemplate(
 	commits: readonly CommitInfo[],
 	files: readonly string[],
+	descriptionOverride?: string,
 ): TemplateData {
-	const first = commits[0];
 	const typeOfChange = inferTypeOfChange(commits);
-	const description = first ? getDescription(first) : "";
+	const description =
+		descriptionOverride !== undefined && descriptionOverride !== ""
+			? descriptionOverride
+			: getDescriptionFromCommits(commits);
 	const changes = commits.length ? getChanges(commits) : ["- "];
 	const howToTest = isDocsOnly(files) ? "N/A" : "1. Run `npm run check`\n2. ";
 	const breaking = pipe(
@@ -331,21 +346,15 @@ export function renderFromTemplate(template: string, data: TemplateData): string
 
 // ─── Shell (Effect) ────────────────────────────────────────────────────────
 
-function readTemplate(filePath: string): Effect.Effect<string, Error, FileSystem.FileSystem> {
+function readTemplate(
+	filePath: string,
+): Effect.Effect<string, FileSystemError, FileSystem.FileSystem> {
 	return pipe(
 		FileSystem.FileSystem.asEffect(),
 		Effect.flatMap((fs) =>
-			fs
-				.readFileString(filePath)
-				.pipe(
-					Effect.mapError((e) => new Error(`Template not found: ${filePath}. ${formatError(e)}`)),
-				),
+			fs.readFileString(filePath).pipe(mapFsError(filePath, "readFileString")),
 		),
 	);
-}
-
-function formatError(e: unknown): string {
-	return e instanceof Error ? e.message : String(e);
 }
 
 type OutputFormat = "body" | "title-body";
@@ -362,24 +371,12 @@ function resolveTemplatePath(templatePath: string | undefined): string {
 function readLogAndFiles(
 	logFilePath: string,
 	filesFilePath: string,
-): Effect.Effect<readonly [string, readonly string[]], Error, FileSystem.FileSystem> {
+): Effect.Effect<readonly [string, readonly string[]], FileSystemError, FileSystem.FileSystem> {
 	return Effect.gen(function* () {
 		const fs = yield* FileSystem.FileSystem.asEffect();
 		const [logContent, filesContent] = yield* Effect.all([
-			fs
-				.readFileString(logFilePath)
-				.pipe(
-					Effect.mapError(
-						(e) => new Error(`Log file not found: ${logFilePath}. ${formatError(e)}`),
-					),
-				),
-			fs
-				.readFileString(filesFilePath)
-				.pipe(
-					Effect.mapError(
-						(e) => new Error(`Files file not found: ${filesFilePath}. ${formatError(e)}`),
-					),
-				),
+			fs.readFileString(logFilePath).pipe(mapFsError(logFilePath, "readFileString")),
+			fs.readFileString(filesFilePath).pipe(mapFsError(filesFilePath, "readFileString")),
 		]);
 		const files = filesContent
 			.split("\n")
@@ -393,13 +390,14 @@ export function renderBody(
 	commits: readonly CommitInfo[],
 	files: readonly string[],
 	template: string,
+	descriptionOverride?: string,
 ): Effect.Effect<string> {
-	const data = fillTemplate(commits, files);
+	const data = fillTemplate(commits, files, descriptionOverride);
 	const body = renderFromTemplate(template, data);
 	return body.includes("{{")
 		? Effect.gen(function* () {
 				yield* Effect.logWarning({
-					event: "fill_pr_body",
+					event: "fill_pr_template",
 					message: "Output contains unreplaced {{placeholder}}s",
 				});
 				return body;
@@ -412,17 +410,19 @@ export function runFillBody(
 	filesFilePath: string,
 	templatePath: string | undefined,
 	format: OutputFormat = "body",
-): Effect.Effect<string, Error | ParseError, FileSystem.FileSystem> {
+	descriptionFilePath?: string,
+): Effect.Effect<string, ParseError | FileSystemError | PrTitleBlank, FileSystem.FileSystem> {
 	return Effect.gen(function* () {
 		const resolvedTemplatePath = resolveTemplatePath(templatePath);
 
 		yield* Effect.log({
-			event: "fill_pr_body",
+			event: "fill_pr_template",
 			status: "started",
-			logFile: logFilePath,
-			filesFile: filesFilePath,
-			templatePath: resolvedTemplatePath,
+			logFile: redactPath(logFilePath),
+			filesFile: redactPath(filesFilePath),
+			templatePath: redactPath(resolvedTemplatePath),
 			format,
+			descriptionFile: descriptionFilePath ? redactPath(descriptionFilePath) : undefined,
 		});
 
 		const template = yield* readTemplate(resolvedTemplatePath);
@@ -430,21 +430,31 @@ export function runFillBody(
 		const parseResult = parseCommits(logContent);
 		const rawCommits = yield* Effect.fromResult(parseResult);
 		const commits = filterMergeCommits(rawCommits);
-		const body = yield* renderBody(commits, files, template);
+
+		let descriptionOverride: string | undefined;
+		if (descriptionFilePath) {
+			const fs = yield* FileSystem.FileSystem.asEffect();
+			descriptionOverride = yield* fs
+				.readFileString(descriptionFilePath)
+				.pipe(mapFsError(descriptionFilePath, "readFileString"));
+		}
+
+		const body = yield* renderBody(commits, files, template, descriptionOverride);
 		const title = getTitle(commits);
 
 		if (format === "title-body" && !title.trim()) {
 			return yield* Effect.fail(
-				new Error(
-					"PR title is empty. Add at least one non-merge commit with non-empty subject (e.g. feat: add X) before pushing.",
-				),
+				new PrTitleBlank({
+					message:
+						"PR title is empty. Add at least one non-merge commit with non-empty subject (e.g. feat: add X) before pushing.",
+				}),
 			);
 		}
 
 		const result = format === "title-body" ? `${title}\n\n${body}` : body;
 
 		yield* Effect.log({
-			event: "fill_pr_body",
+			event: "fill_pr_template",
 			status: "succeeded",
 			commitsCount: commits.length,
 			filesCount: files.length,
@@ -485,8 +495,22 @@ const validateTitleFlag = Flag.string("validate-title").pipe(
 	),
 );
 
+const outputDescriptionPromptFlag = Flag.boolean("output-description-prompt").pipe(
+	Flag.withDefault(false),
+	Flag.withDescription(
+		"Output commit content for Ollama to summarize into PR description. Requires --log-file only. Exits after output.",
+	),
+);
+
+const descriptionFileFlag = Flag.string("description-file").pipe(
+	Flag.optional,
+	Flag.withDescription(
+		"Path to file containing Ollama-generated description. Overrides computed description.",
+	),
+);
+
 const fillCommand = Command.make(
-	"fill-pr-body",
+	"fill-pr-template",
 	{
 		logFile: logFileFlag,
 		filesFile: filesFileFlag,
@@ -494,8 +518,19 @@ const fillCommand = Command.make(
 		format: formatFlag,
 		quiet: quietFlag,
 		validateTitle: validateTitleFlag,
+		outputDescriptionPrompt: outputDescriptionPromptFlag,
+		descriptionFile: descriptionFileFlag,
 	},
-	({ logFile, filesFile, template, format, quiet, validateTitle }) => {
+	({
+		logFile,
+		filesFile,
+		template,
+		format,
+		quiet,
+		validateTitle,
+		outputDescriptionPrompt,
+		descriptionFile,
+	}) => {
 		const titleToValidate = Option.getOrUndefined(validateTitle);
 		if (titleToValidate !== undefined) {
 			const valid = isValidConventionalTitle(titleToValidate);
@@ -505,6 +540,29 @@ const fillCommand = Command.make(
 		}
 		const logFilePath = Option.getOrUndefined(logFile);
 		const filesFilePath = Option.getOrUndefined(filesFile);
+
+		if (outputDescriptionPrompt) {
+			if (!logFilePath) {
+				return Effect.fail(new Error("--output-description-prompt requires --log-file."));
+			}
+			const loggerLayer = quiet
+				? Logger.layer([])
+				: Logger.layer([Logger.consolePretty({ colors: process.env.NO_COLOR === undefined })]).pipe(
+						Layer.provide(Layer.succeed(Logger.LogToStderr)(true)),
+					);
+			const layer = NodeServices.layer.pipe(Layer.provideMerge(loggerLayer));
+			return Effect.gen(function* () {
+				const fs = yield* FileSystem.FileSystem.asEffect();
+				const logContent = yield* fs
+					.readFileString(logFilePath)
+					.pipe(mapFsError(logFilePath, "readFileString"));
+				const parseResult = parseCommits(logContent);
+				const rawCommits = yield* Effect.fromResult(parseResult);
+				const commits = filterMergeCommits(rawCommits);
+				return getDescriptionPromptText(commits);
+			}).pipe(Effect.provide(layer), Effect.flatMap(Console.log));
+		}
+
 		if (!logFilePath || !filesFilePath) {
 			return Effect.fail(
 				new Error(
@@ -519,10 +577,13 @@ const fillCommand = Command.make(
 					Layer.provide(Layer.succeed(Logger.LogToStderr)(true)),
 				);
 		const layer = NodeServices.layer.pipe(Layer.provideMerge(loggerLayer));
-		return runFillBody(logFilePath, filesFilePath, Option.getOrUndefined(template), formatVal).pipe(
-			Effect.provide(layer),
-			Effect.flatMap(Console.log),
-		);
+		return runFillBody(
+			logFilePath,
+			filesFilePath,
+			Option.getOrUndefined(template),
+			formatVal,
+			Option.getOrUndefined(descriptionFile),
+		).pipe(Effect.provide(layer), Effect.flatMap(Console.log));
 	},
 );
 
@@ -544,8 +605,8 @@ if (import.meta.main) {
 			Effect.provide(CliLayer),
 			Effect.tapError((e) =>
 				Effect.logError({
-					event: "fill_pr_body_failed",
-					error: formatError(e),
+					event: "fill_pr_template_failed",
+					error: formatAutoPrError(e),
 					...(e instanceof Error && e.stack ? { stack: e.stack } : {}),
 				}),
 			),

@@ -8,5 +8,6 @@
 	"ollama_vision_model": "moondream",
 	"ollama_text_model": "llama3.2",
 	"mark_processed_label": "paperless",
-	"page_size": 50
+	"page_size": 50,
+	"credential_failure_throttle_hours": 24
 }
