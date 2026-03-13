@@ -214,7 +214,7 @@ Runs tests, lint, and typecheck.
 
 ## Documentation
 
-TypeScript implementation using [Effect](https://effect.website/) and functional programming conventions. Bleeding edge: uses the latest Effect version (v4 beta).
+TypeScript implementation using [Effect](https://effect.website/) and functional programming conventions. Bleeding edge: Effect v4 beta, [TypeScript Native](https://devblogs.microsoft.com/typescript/announcing-typescript-native-previews/) (`tsgo`) for build and typecheck (~10× faster than `tsc`).
 
 - [deploy/](deploy/): Deployment recipes — [Compose](deploy/compose/README.md) (Docker) and [systemd](deploy/systemd/README.md) (service units)
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md): Project structure and design
