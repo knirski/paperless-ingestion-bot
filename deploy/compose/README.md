@@ -70,6 +70,15 @@ Shared `consume` volume: ingestion bot writes here; Paperless ingests from here.
 
 5. **Connect to Paperless** — Either add the `consume` volume to your Paperless compose as an external volume, or bind-mount your Paperless consume path.
 
+## What's not included (and why)
+
+| Omission | Reason |
+|----------|--------|
+| **Email pipeline in Docker** | Gmail/IMAP credentials require the OS keychain (libsecret). Containers typically lack a usable secret store; the bot would fail at credential lookup. Use systemd or bare-metal for email. |
+| **paperless-ai** | Separate project; runs after Paperless ingests. Add it alongside Paperless if desired. |
+| **Reverse proxy / HTTPS** | Out of scope. Add Traefik, Caddy, or nginx in front of Paperless/Signal API if exposing publicly. |
+| **Generic IMAP** | Same keychain constraint as Gmail. |
+
 ## paperless-ai
 
 [paperless-ai](https://github.com/clusterzx/paperless-ai) is a **separate** project that runs **after** Paperless ingests documents. It adds AI-generated tags, titles, and correspondents.

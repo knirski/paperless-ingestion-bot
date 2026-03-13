@@ -65,6 +65,14 @@ Edit `paperless-ingestion-email.timer` to change the schedule. `OnCalendar=*:0/1
 - `hourly` — every hour
 - `*-*-* 09,18:00:00` — 9:00 and 18:00 daily
 
+## What's not included (and why)
+
+| Omission | Reason |
+|----------|--------|
+| **Units for Paperless, signal-cli-rest-api, Ollama** | Separate projects with their own installers and units. Use their official deployment (Docker, native packages). |
+| **paperless-ai** | Separate project; runs after Paperless ingests. Add it alongside Paperless if desired. |
+| **Reverse proxy / HTTPS** | Out of scope. Add Caddy, nginx, or similar if exposing Paperless/Signal API publicly. |
+
 ## paperless-ai
 
 [paperless-ai](https://github.com/clusterzx/paperless-ai) runs **after** Paperless ingests documents (tags, titles, correspondents). It is separate from this bot. See [paperless-ai installation](https://github.com/clusterzx/paperless-ai/wiki/2.-Installation).
