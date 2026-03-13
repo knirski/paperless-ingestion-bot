@@ -1,5 +1,5 @@
 ---
-description: GitHub Actions workflow and composite action conventions — run actionlint before finishing
+description: GitHub Actions workflow and composite action conventions - run actionlint before finishing
 globs: [".github/workflows/**/*.yml", ".github/actions/**/*.yml"]
 ---
 

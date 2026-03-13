@@ -1,5 +1,5 @@
 ---
-description: Shell script conventions — run shellcheck before finishing
+description: Shell script conventions - run shellcheck before finishing
 globs: ["**/*.sh"]
 ---
 
