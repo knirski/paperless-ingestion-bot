@@ -19,5 +19,5 @@ This project pursues the [OpenSSF Best Practices badge](https://www.bestpractice
 ## Next steps
 
 - Complete self-assessment at bestpractices.dev
-- Signed releases (if/when publishing)
+- ~~Signed releases (if/when publishing)~~ — Done: Sigstore/cosign keyless signing on release images; see [CI.md](CI.md) for verification steps
 - Fuzzing (N/A for TypeScript)

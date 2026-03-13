@@ -80,6 +80,11 @@ In **Settings → Branches → Add rule** for `main`:
 - [x] Docker image (Dockerfile + `.github/workflows/docker.yml`; experimental, build-only — publishing disabled)
 - [x] Allstar config (`.allstar/` for security policy enforcement)
 - [x] CII Best Practices badge link (README)
+- [x] CITATION.cff (citation metadata for academic use)
+
+### On each release
+
+- [ ] **CITATION.cff** — Update `version` and `date-released` to match the new release (package.json and release date)
 - [x] GitHub Sponsors (FUNDING.yml)
 - [x] Architecture diagrams (Mermaid in docs/ARCHITECTURE.md)
 - [x] ADRs (docs/adr/)
