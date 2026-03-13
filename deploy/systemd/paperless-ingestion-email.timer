@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Paperless ingestion email pipeline every 15 minutes
+Documentation=https://github.com/knirski/paperless-ingestion-bot
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+
+[Install]
+WantedBy=timers.target

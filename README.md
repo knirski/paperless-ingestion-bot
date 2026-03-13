@@ -70,21 +70,22 @@ nix develop                  # Development shell
 nix run .#default -- signal --config /path/to/config.json
 ```
 
-**Docker (experimental, in progress):**
+**Docker:**
 
-A Dockerfile is available; image publishing to GHCR is not yet enabled. You can build locally:
+Images are published to [GHCR](https://github.com/knirski/paperless-ingestion-bot/pkgs/container/paperless-ingestion-bot) on each release. Use [Compose](deploy/compose/README.md) for Signal + ingestion bot, or run standalone:
 
 ```bash
-docker build -t paperless-ingestion-bot .
 docker run --rm \
   -v /path/to/config:/etc/paperless-ingestion-bot:ro \
   -v /path/to/data:/var/lib/paperless-ingestion-bot \
-  paperless-ingestion-bot signal
+  ghcr.io/knirski/paperless-ingestion-bot:latest signal
 ```
 
-Mount your config directory at `/etc/paperless-ingestion-bot` (must contain `config.json`) and a data directory at `/var/lib/paperless-ingestion-bot` (for consume, email-accounts.json, users.json). Headless Linux requires a system credential store (libsecret/Secret Service); see [Troubleshooting](#troubleshooting).
+Mount your config directory at `/etc/paperless-ingestion-bot` (must contain `config.json`) and a data directory at `/var/lib/paperless-ingestion-bot` (for consume, email-accounts.json, users.json). For Gmail, headless Linux requires a system credential store (libsecret/Secret Service); see [Troubleshooting](#troubleshooting).
 
 **Env overrides:** Override file values with individual env vars (e.g. `-e PAPERLESS_INGESTION_SIGNAL_API_URL=http://signal:8080`). Use `--skip-reachability-check` when the Signal API starts after the bot (e.g. Docker Compose).
+
+**systemd:** See [deploy/systemd/README.md](deploy/systemd/README.md) for service and timer units (Signal webhook, email pipeline).
 
 ### Commands
 

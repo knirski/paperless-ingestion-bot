@@ -1,3 +1,9 @@
 # GitHub compare URLs in CHANGELOG point to tags that don't exist until the release is merged.
 # They 404 in release-please PRs.
 https?://github\.com/knirski/paperless-ingestion-bot/compare/
+
+# localhost URLs (setup instructions; not reachable in CI)
+https?://localhost.*
+
+# GHCR packages page 404s until first image is published
+https://github\.com/knirski/paperless-ingestion-bot/pkgs/container/paperless-ingestion-bot

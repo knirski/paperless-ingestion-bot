@@ -1,0 +1,16 @@
+[Unit]
+Description=Paperless ingestion bot — email pipeline (one-shot)
+Documentation=https://github.com/knirski/paperless-ingestion-bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/paperless-ingestion-bot email --config /etc/paperless-ingestion-bot/config.json
+User=paperless-ingestion
+Group=paperless-ingestion
+# Gmail needs Secret Service (libsecret). For system users, use a user session
+# or ensure gnome-keyring-daemon / secret-tool is available. See README.
+
+[Install]
+WantedBy=multi-user.target

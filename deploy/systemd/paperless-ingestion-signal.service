@@ -1,0 +1,16 @@
+[Unit]
+Description=Paperless ingestion bot — Signal webhook server
+Documentation=https://github.com/knirski/paperless-ingestion-bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/paperless-ingestion-bot signal --config /etc/paperless-ingestion-bot/config.json
+Restart=on-failure
+RestartSec=5
+User=paperless-ingestion
+Group=paperless-ingestion
+
+[Install]
+WantedBy=multi-user.target

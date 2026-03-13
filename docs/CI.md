@@ -11,6 +11,9 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | [ci-nix.yml](../.github/workflows/ci-nix.yml) | push, pull_request → main | `paths: **/*.nix, package*.json, flake.lock` | nix |
 | [ci-release-please.yml](../.github/workflows/ci-release-please.yml) | pull_request → main | `paths: .release-please-manifest.json` | check |
 | [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through) |
+| [docker.yml](../.github/workflows/docker.yml) | release published, workflow_dispatch | — | build (GHCR), sbom |
+
+**docker.yml** builds and pushes images to GHCR on each release, with provenance and SBOM attestations. Also uploads npm SBOM to the release. Manual trigger via workflow_dispatch for testing.
 
 **ci.yml** runs when any non-.md file changes. Skips when only docs change.
 
