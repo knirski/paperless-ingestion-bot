@@ -10,12 +10,11 @@
  * or create-or-update-pr.sh generates these via git before invoking this script.
  */
 
-import * as path from "node:path";
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import type { Commit } from "conventional-commits-parser";
 import { CommitParser } from "conventional-commits-parser";
-import { Console, Effect, FileSystem, Layer, Logger, Option, pipe, Result } from "effect";
+import { Console, Effect, FileSystem, Layer, Logger, Option, Path, pipe, Result } from "effect";
 import * as Arr from "effect/Array";
 import { Command, Flag } from "effect/unstable/cli";
 import pkg from "../package.json" with { type: "json" };
@@ -330,16 +329,14 @@ export function renderFromTemplate(template: string, data: TemplateData): string
 // ─── Shell (Effect) ────────────────────────────────────────────────────────
 
 function readTemplate(filePath: string): Effect.Effect<string, Error, FileSystem.FileSystem> {
-	return pipe(
-		FileSystem.FileSystem.asEffect(),
-		Effect.flatMap((fs) =>
-			fs
-				.readFileString(filePath)
-				.pipe(
-					Effect.mapError((e) => new Error(`Template not found: ${filePath}. ${formatError(e)}`)),
-				),
-		),
-	);
+	return Effect.gen(function* () {
+		const fs = yield* FileSystem.FileSystem;
+		return yield* fs
+			.readFileString(filePath)
+			.pipe(
+				Effect.mapError((e) => new Error(`Template not found: ${filePath}. ${formatError(e)}`)),
+			);
+	});
 }
 
 function formatError(e: unknown): string {
@@ -348,13 +345,18 @@ function formatError(e: unknown): string {
 
 type OutputFormat = "body" | "title-body";
 
-function resolveTemplatePath(templatePath: string | undefined): string {
-	const cwd = process.cwd();
-	return templatePath
-		? path.isAbsolute(templatePath)
-			? templatePath
-			: path.resolve(cwd, templatePath)
-		: path.resolve(cwd, ".github/PULL_REQUEST_TEMPLATE.md");
+function resolveTemplatePath(
+	templatePath: string | undefined,
+): Effect.Effect<string, never, Path.Path> {
+	return Effect.gen(function* () {
+		const pathApi = yield* Path.Path;
+		const cwd = process.cwd();
+		return templatePath
+			? pathApi.isAbsolute(templatePath)
+				? templatePath
+				: pathApi.resolve(cwd, templatePath)
+			: pathApi.resolve(cwd, ".github/PULL_REQUEST_TEMPLATE.md");
+	});
 }
 
 function readLogAndFiles(
@@ -362,7 +364,7 @@ function readLogAndFiles(
 	filesFilePath: string,
 ): Effect.Effect<readonly [string, readonly string[]], Error, FileSystem.FileSystem> {
 	return Effect.gen(function* () {
-		const fs = yield* FileSystem.FileSystem.asEffect();
+		const fs = yield* FileSystem.FileSystem;
 		const [logContent, filesContent] = yield* Effect.all([
 			fs
 				.readFileString(logFilePath)
@@ -394,62 +396,60 @@ export function renderBody(
 ): Effect.Effect<string> {
 	const data = fillTemplate(commits, files);
 	const body = renderFromTemplate(template, data);
-	return body.includes("{{")
-		? Effect.gen(function* () {
-				yield* Effect.logWarning({
-					event: "fill_pr_body",
-					message: "Output contains unreplaced {{placeholder}}s",
-				});
-				return body;
-			})
-		: Effect.succeed(body);
+	return Effect.gen(function* () {
+		if (body.includes("{{")) {
+			yield* Effect.logWarning({
+				event: "fill_pr_body",
+				message: "Output contains unreplaced {{placeholder}}s",
+			});
+		}
+		return body;
+	});
 }
 
-export function runFillBody(
+export const runFillBody = Effect.fn("runFillBody")(function* (
 	logFilePath: string,
 	filesFilePath: string,
 	templatePath: string | undefined,
 	format: OutputFormat = "body",
-): Effect.Effect<string, Error | ParseError, FileSystem.FileSystem> {
-	return Effect.gen(function* () {
-		const resolvedTemplatePath = resolveTemplatePath(templatePath);
+) {
+	const resolvedTemplatePath = yield* resolveTemplatePath(templatePath);
 
-		yield* Effect.log({
-			event: "fill_pr_body",
-			status: "started",
-			logFile: logFilePath,
-			filesFile: filesFilePath,
-			templatePath: resolvedTemplatePath,
-			format,
-		});
-
-		const template = yield* readTemplate(resolvedTemplatePath);
-		const [logContent, files] = yield* readLogAndFiles(logFilePath, filesFilePath);
-		const parseResult = parseCommits(logContent);
-		const rawCommits = yield* Effect.fromResult(parseResult);
-		const commits = filterMergeCommits(rawCommits);
-		const body = yield* renderBody(commits, files, template);
-		const title = getTitle(commits);
-
-		if (format === "title-body" && !title.trim()) {
-			return yield* Effect.fail(
-				new Error(
-					"PR title is empty. Add at least one non-merge commit with non-empty subject (e.g. feat: add X) before pushing.",
-				),
-			);
-		}
-
-		const result = format === "title-body" ? `${title}\n\n${body}` : body;
-
-		yield* Effect.log({
-			event: "fill_pr_body",
-			status: "succeeded",
-			commitsCount: commits.length,
-			filesCount: files.length,
-		});
-		return result;
+	yield* Effect.log({
+		event: "fill_pr_body",
+		status: "started",
+		logFile: logFilePath,
+		filesFile: filesFilePath,
+		templatePath: resolvedTemplatePath,
+		format,
 	});
-}
+
+	const template = yield* readTemplate(resolvedTemplatePath);
+	const [logContent, files] = yield* readLogAndFiles(logFilePath, filesFilePath);
+	const parseResult = parseCommits(logContent);
+	const rawCommits = yield* Effect.fromResult(parseResult);
+	const commits = filterMergeCommits(rawCommits);
+	const body = yield* renderBody(commits, files, template);
+	const title = getTitle(commits);
+
+	if (format === "title-body" && !title.trim()) {
+		return yield* Effect.fail(
+			new Error(
+				"PR title is empty. Add at least one non-merge commit with non-empty subject (e.g. feat: add X) before pushing.",
+			),
+		);
+	}
+
+	const result = format === "title-body" ? `${title}\n\n${body}` : body;
+
+	yield* Effect.log({
+		event: "fill_pr_body",
+		status: "succeeded",
+		commitsCount: commits.length,
+		filesCount: files.length,
+	});
+	return result;
+});
 
 const logFileFlag = Flag.string("log-file").pipe(
 	Flag.optional,
