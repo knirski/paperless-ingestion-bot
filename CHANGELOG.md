@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1](https://github.com/knirski/paperless-ingestion-bot/compare/v0.2.0...v0.2.1) (2026-03-13)
+
+
+### Features
+
+* add artifact signing, code scanning, and policy support ([#102](https://github.com/knirski/paperless-ingestion-bot/issues/102)) ([34a566b](https://github.com/knirski/paperless-ingestion-bot/commit/34a566bce480299a95f5a4e9159ac142fa561e91))
+* enable GHCR publishing and deploy recipes ([#100](https://github.com/knirski/paperless-ingestion-bot/issues/100)) ([3d7fb6b](https://github.com/knirski/paperless-ingestion-bot/commit/3d7fb6b2007ea237e4ae697012f65ebbb699591a))
+
+
+### Bug Fixes
+
+* **ci:** allow contents: write for ci-nix reusable workflow ([#107](https://github.com/knirski/paperless-ingestion-bot/issues/107)) ([6f78032](https://github.com/knirski/paperless-ingestion-bot/commit/6f780322aff3ae37bb0ba18b99b414c3ad016ea7))
+* **ci:** disable cancel-in-progress for release-please workflow ([#108](https://github.com/knirski/paperless-ingestion-bot/issues/108)) ([9df5291](https://github.com/knirski/paperless-ingestion-bot/commit/9df5291a49e32d6c8dc5582156fab1c9c5f8f510))
+* **ci:** restrict GITHUB_TOKEN permissions for code scanning ([#98](https://github.com/knirski/paperless-ingestion-bot/issues/98)) ([e89567c](https://github.com/knirski/paperless-ingestion-bot/commit/e89567c2928bc58d05a42d3db6e38aac00b78fa6))
+* **ci:** simplify Scorecard workflow to avoid code-scanning config mismatch ([#96](https://github.com/knirski/paperless-ingestion-bot/issues/96)) ([310b480](https://github.com/knirski/paperless-ingestion-bot/commit/310b480c6aacd65682fd9f95e108a5d33959be4d))
+* **release:** use v0.2.0 tag format instead of paperless-ingestion-bot-v0.2.0 ([#95](https://github.com/knirski/paperless-ingestion-bot/issues/95)) ([7216834](https://github.com/knirski/paperless-ingestion-bot/commit/7216834b8d9648e6653b8daeb8fd25ebb1ad3027))
+* update Layer.mock to Effect 4 curried API ([#105](https://github.com/knirski/paperless-ingestion-bot/issues/105)) ([91ee562](https://github.com/knirski/paperless-ingestion-bot/commit/91ee5627791cbbe1361c434e26e5fb4b156a54ab))
+* use codecov.io for coverage badge ([#101](https://github.com/knirski/paperless-ingestion-bot/issues/101)) ([7000591](https://github.com/knirski/paperless-ingestion-bot/commit/7000591fa53d927c2529102bb1eea74ca3f4c8f4))
+
 ## [0.2.0](https://github.com/knirski/paperless-ingestion-bot/compare/paperless-ingestion-bot-v0.1.1...paperless-ingestion-bot-v0.2.0) (2026-03-12)
 
 

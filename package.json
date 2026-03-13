@@ -1,6 +1,6 @@
 {
 	"name": "paperless-ingestion-bot",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Signal and Gmail document ingestion for Paperless-ngx",
 	"keywords": [
 		"document-ingestion",
