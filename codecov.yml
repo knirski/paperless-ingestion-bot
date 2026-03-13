@@ -1,0 +1,2 @@
+# Codecov config. Suppresses "No config file could be found" warning.
+# See https://docs.codecov.com/docs/codecov-yaml
