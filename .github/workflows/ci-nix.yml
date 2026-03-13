@@ -26,9 +26,9 @@ concurrency:
 
 jobs:
   nix:
-    # Push uses App token from nix.yml; GITHUB_TOKEN needs read only
+    # nix.yml needs contents: write for git push (npmDepsHash update)
     permissions:
-      contents: read
+      contents: write
     uses: ./.github/workflows/nix.yml
     with:
       ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
