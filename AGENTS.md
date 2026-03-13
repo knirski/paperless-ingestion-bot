@@ -74,7 +74,7 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 | Domain type, error, MIME                              | `src/domain/`                                               |
 | Pipeline step, config, layer                          | `src/shell/`                                                |
 | Extending provider variants (e.g. new email provider) | Add to discriminated union in `domain/` + `Match.when` case |
-| GitHub CI scripts (workflow-only)                      | `.github/scripts/`                                          |
+| GitHub workflow scripts (auto-PR)                     | `scripts/` (auto-pr-get-commits.ts, auto-pr-ollama.ts, create-or-update-pr.ts); prompts in `scripts/auto-pr/prompts/` |
 | General-purpose scripts (build, lint, dev)             | `scripts/`                                                  |
 
 ## Key Rules
@@ -122,7 +122,7 @@ Use `ai/` prefix when pushing so the [auto-PR workflow](.github/workflows/auto-p
 
 - `ai/feature-name` or `ai/fix-bug-description`
 
-The workflow runs on push to `ai/**` branches and creates/updates the PR using `fill-pr-body.ts`.
+The workflow runs on push to `ai/**` branches and creates/updates the PR using `create-or-update-pr.ts` (which invokes `fill-pr-template.ts` and, for 2+ commits, `auto-pr-ollama.ts`).
 
 ## Pull Requests
 
@@ -191,7 +191,6 @@ Credentials and config paths are sensitive; do not log or expose them.
 
 ```
 .github/
-  scripts/         — GitHub CI scripts (auto-PR workflow)
   workflows/       — GitHub Actions
 src/
   cli.ts           — CLI entry point
@@ -200,7 +199,7 @@ src/
   interfaces/      — Tagless Final service interfaces
   live/            — Live interpreters
   shell/           — Imperative shell (pipelines, config, layers)
-scripts/           — General-purpose scripts (fill-pr-body, check-nix-hash, etc.)
+scripts/           — General-purpose and auto-PR scripts (fill-pr-template, auto-pr-ollama, create-or-update-pr, check-nix-hash, etc.)
 test/
   fixtures/        — Config mocks, credentials, imap/signal mocks
   integration/     — Integration tests

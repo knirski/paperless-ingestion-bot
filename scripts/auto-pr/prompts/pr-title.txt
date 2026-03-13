@@ -1,0 +1,3 @@
+Generate a single conventional commit title (max 72 chars) that summarizes this PR.
+Format: type(scope): subject (e.g. feat: add X, fix(ci): resolve bug). Use the most significant type. Reply with only the title, nothing else. Do not wrap in quotes.
+

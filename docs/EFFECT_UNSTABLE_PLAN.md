@@ -152,7 +152,6 @@ Plan for integrating `effect/unstable/*` modules into paperless-ingestion-bot. O
 **Use cases:**
 
 - Last processed UID per account (avoid re-scanning from scratch)
-- Rate-limit state for credential failure notifications
 - Optional: memoization of Ollama responses (risky for eligibility — avoid)
 
 **Implementation:**
@@ -165,21 +164,19 @@ Plan for integrating `effect/unstable/*` modules into paperless-ingestion-bot. O
 
 - `src/shell/layers.ts` — add `KeyValueStore` layer (FileSystemKeyValueStore)
 - `src/shell/email-pipeline.ts` — optional: resume from last UID
-- `src/shell/credential-failure.ts` — optional: rate-limit via KeyValueStore
 
 ---
 
 ### 3.3 RateLimiter
 
-**Adopted.** Used for Signal webhook (120/min, token-bucket). See [ADR 0003](adr/0003-rate-limiting.md). For multi-instance deployments, `layerStoreRedis` is available.
-
-**Use case:** Throttle Signal notifications (credential failure) or Ollama requests.
+**Adopted.** Used for Signal webhook (120/min, token-bucket) and credential failure notifications (1 per 24h per email). See [ADR 0003](adr/0003-rate-limiting.md). For multi-instance deployments, `layerStoreRedis` is available.
 
 **Implementation:**
 
 - `effect/unstable/persistence` includes `RateLimiter`
-- Webhook: `RateLimiter.layer` + `layerStoreMemory` in `signal-pipeline.ts`
-- Add to `credential-failure.ts` if we want stricter throttling than current logic
+- `RateLimiterMemoryLayer` in `src/shell/layers.ts` — `RateLimiter.layer` + `layerStoreMemory`
+- Webhook: `signal-pipeline.ts` uses `RateLimiterMemoryLayer` (120/min)
+- Credential failure: `credential-failure.ts` uses `RateLimiterMemoryLayer` (configurable window, default 24h)
 
 ---
 
@@ -189,7 +186,7 @@ Plan for integrating `effect/unstable/*` modules into paperless-ingestion-bot. O
 | ----- | ---------------------------------------------------------- |
 | 3a    | Add `KeyValueStore` (FileSystemKeyValueStore) to layers    |
 | 3b    | Optional: Crawl state (last UID) in KeyValueStore          |
-| 3c    | Optional: RateLimiter for credential failure notifications |
+| 3c    | Done: RateLimiter for credential failure notifications     |
 | 3d    | Defer: CredentialsStore on KeyValueStore (keep keyring)    |
 
 ---
@@ -238,7 +235,7 @@ Plan for integrating `effect/unstable/*` modules into paperless-ingestion-bot. O
 
 ## Dependencies
 
-All modules are in `effect` 4.0.0-beta.27. No new packages required.
+All modules are in `effect` 4.0.0-beta.31. No new packages required.
 
 ---
 

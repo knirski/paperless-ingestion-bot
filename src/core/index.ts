@@ -1,7 +1,7 @@
 /** Functional core — pure functions only, no Effect, no I/O. */
 
 export { formatStatusMessage, upsertAccount } from "./account.js";
-export { formatCredentialFailureMessage, isAuthFailure, shouldNotify } from "./auth-failure.js";
+export { formatCredentialFailureMessage, isAuthFailure } from "./auth-failure.js";
 export { authorizeSource } from "./authorization.js";
 export { parseAccountCommandInput } from "./commands.js";
 export { isEligibleMime, isEmailAttachmentEligible, MIN_EMAIL_IMAGE_SIZE } from "./eligibility.js";

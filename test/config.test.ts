@@ -29,6 +29,7 @@ const minimalEmailConfig = {
 	ollama_vision_model: "llava",
 	ollama_text_model: "llama2",
 	page_size: 50,
+	credential_failure_throttle_hours: 24,
 };
 
 async function runSignalConfigLayer(
@@ -353,7 +354,38 @@ describe("buildEmailConfigLayer", () => {
 			logLevel: "INFO",
 			markProcessedLabel: "paperless" as EmailLabel,
 			pageSize: 50,
+			credentialFailureThrottleHours: 24,
 		});
+		await tmp.remove();
+	});
+
+	test("credential_failure_throttle_hours defaults to 24 when omitted", async () => {
+		const tmp = await createTestTempDir();
+		const configPath = tmp.join("config.json");
+		const usersPath = tmp.join("users.json");
+		const emailAccountsPath = tmp.join("email-accounts.json");
+		await tmp.writeFile(usersPath, "[]");
+		const { credential_failure_throttle_hours: _, ...configWithoutThrottle } = minimalEmailConfig;
+		await tmp.writeFile(configPath, JSON.stringify(configWithoutThrottle));
+
+		const config = await runEmailConfigLayer(configPath, usersPath, emailAccountsPath);
+		expect(config.credentialFailureThrottleHours).toBe(24);
+		await tmp.remove();
+	});
+
+	test("credential_failure_throttle_hours respects custom value", async () => {
+		const tmp = await createTestTempDir();
+		const configPath = tmp.join("config.json");
+		const usersPath = tmp.join("users.json");
+		const emailAccountsPath = tmp.join("email-accounts.json");
+		await tmp.writeFile(usersPath, "[]");
+		await tmp.writeFile(
+			configPath,
+			JSON.stringify({ ...minimalEmailConfig, credential_failure_throttle_hours: 12 }),
+		);
+
+		const config = await runEmailConfigLayer(configPath, usersPath, emailAccountsPath);
+		expect(config.credentialFailureThrottleHours).toBe(12);
 		await tmp.remove();
 	});
 });

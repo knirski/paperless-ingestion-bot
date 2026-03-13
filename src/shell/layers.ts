@@ -9,6 +9,7 @@ import * as NodeStdio from "@effect/platform-node-shared/NodeStdio";
 import * as NodeTerminal from "@effect/platform-node-shared/NodeTerminal";
 import { Effect, Layer, Logger, type LogLevel, References } from "effect";
 import * as Http from "effect/unstable/http";
+import { RateLimiter } from "effect/unstable/persistence";
 import { CredentialsStore } from "../live/credentials-store.js";
 import { EmailClientLive } from "../live/imap-email-client.js";
 import { OllamaClient } from "../live/ollama-client.js";
@@ -118,11 +119,17 @@ const buildOllamaClientFromConfig = Effect.fn("buildOllamaClientFromConfig")(fun
 /** OllamaClient built from email config. */
 const OllamaClientFromConfig = Layer.unwrap(buildOllamaClientFromConfig());
 
+/** RateLimiter with in-memory store. Use for webhook, credential failure, etc. */
+export const RateLimiterMemoryLayer = RateLimiter.layer.pipe(
+	Layer.provide(RateLimiter.layerStoreMemory),
+);
+
 /** All Email layers that depend on EmailConfig. Provide configWithPlatform once. */
 const EmailConfigDependentLayers = Layer.mergeAll(
 	SignalClientFromEmailConfig,
 	OllamaClientFromConfig,
 	EmailLoggerLevelLayer,
+	RateLimiterMemoryLayer,
 );
 
 export function buildEmailLayer(

@@ -1,4 +1,3 @@
-import { Temporal } from "@js-temporal/polyfill";
 import { Option, Redacted, Result, Schema } from "effect";
 import * as FastCheck from "effect/testing/FastCheck";
 import * as fc from "fast-check";
@@ -21,7 +20,6 @@ import {
 	parseAccountCommandInput,
 	parseOllamaYesNo,
 	safeFilename,
-	shouldNotify,
 	splitFilenameForCollision,
 	upsertAccount,
 	validateAddGmailAccountInput,
@@ -880,22 +878,6 @@ describe("core", () => {
 		test("formatCredentialFailureMessage without displayName uses addedBy", () => {
 			const msg = formatCredentialFailureMessage("a@b.com", "slug1" as UserSlug);
 			expect(msg).toContain("slug1");
-		});
-
-		const FIXED_NOW = Temporal.Instant.from("2024-01-15T12:00:00Z");
-
-		test("shouldNotify: no lastNotified returns true", () => {
-			expect(shouldNotify(undefined, FIXED_NOW)).toBe(true);
-		});
-
-		test("shouldNotify: recent timestamp returns false", () => {
-			const recent = FIXED_NOW.subtract(Temporal.Duration.from({ seconds: 1 }));
-			expect(shouldNotify(recent, FIXED_NOW, Temporal.Duration.from({ hours: 1 }))).toBe(false);
-		});
-
-		test("shouldNotify: old timestamp returns true", () => {
-			const old = FIXED_NOW.subtract(Temporal.Duration.from({ hours: 25 }));
-			expect(shouldNotify(old, FIXED_NOW, Temporal.Duration.from({ hours: 24 }))).toBe(true);
 		});
 	});
 

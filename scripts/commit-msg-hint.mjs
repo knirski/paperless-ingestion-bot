@@ -28,5 +28,5 @@ const issueNum = branchIssueMatch[1];
 if (/Closes\s+#\d+|Fixes\s+#\d+|Resolves\s+#\d+/i.test(msg)) process.exit(0);
 
 console.error(
-	`hint: Branch suggests issue #${issueNum}. Consider adding "Closes #${issueNum}" to the commit body for fill-pr-body and auto-close.`,
+	`hint: Branch suggests issue #${issueNum}. Consider adding "Closes #${issueNum}" to the commit body for fill-pr-template and auto-close.`,
 );

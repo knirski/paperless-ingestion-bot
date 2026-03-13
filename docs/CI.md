@@ -14,7 +14,7 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through) |
 | [docker.yml](../.github/workflows/docker.yml) | release published, workflow_dispatch | — | build (GHCR), sign, sbom |
 
-**auto-pr.yml** runs on push to `ai/**` branches (non-forks). Creates or updates a PR with title from conventional commits (1 semantic commit → use subject; 2+ → Ollama). Uses scripts in `.github/scripts/`. See [GITHUB_APP_AUTO_PR_SETUP.md](GITHUB_APP_AUTO_PR_SETUP.md).
+**auto-pr.yml** runs on push to `ai/**` branches (non-forks). Creates or updates a PR with title from conventional commits (1 semantic commit → use subject; 2+ → Ollama). Uses scripts in `scripts/`. See [GITHUB_APP_AUTO_PR_SETUP.md](GITHUB_APP_AUTO_PR_SETUP.md).
 
 **docker.yml** builds and pushes images to GHCR on each release, with provenance and SBOM attestations, and [Sigstore/cosign keyless signing](https://docs.sigstore.dev/cosign/signing/signing_with_containers/) for release images. Also uploads npm SBOM to the release. Manual trigger via workflow_dispatch for testing.
 

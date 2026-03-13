@@ -1,11 +1,13 @@
 import { describe, expect, layer, test } from "@effect/vitest";
-import { Effect, Option, Result } from "effect";
+import { Effect, Option, pipe, Result } from "effect";
 import {
 	fillTemplate,
 	filterMergeCommits,
 	getBreakingChanges,
 	getChanges,
 	getDescription,
+	getDescriptionFromCommits,
+	getDescriptionPromptText,
 	getRelatedIssues,
 	hasDocsFiles,
 	hasTestFiles,
@@ -19,7 +21,7 @@ import {
 	renderBody,
 	renderFromTemplate,
 	runFillBody,
-} from "../../scripts/fill-pr-body.js";
+} from "../../scripts/fill-pr-template.js";
 import { createTestTempDirEffect, SilentLoggerLayer, TestBaseLayer } from "../test-utils.js";
 
 const TEST_TEMPLATE = `## Description
@@ -76,17 +78,17 @@ function runWithLogAndFilesEffect(
 	},
 ): Effect.Effect<string, Error> {
 	return Effect.gen(function* () {
-		const tmp = yield* createTestTempDirEffect("fill-pr-body-");
-		yield* tmp.writeFile(tmp.join("commits.txt"), logStr);
-		yield* tmp.writeFile(tmp.join("files.txt"), filesStr);
-		const result = yield* runFillBody(
-			tmp.join("commits.txt"),
-			tmp.join("files.txt"),
-			opts?.templatePath,
-			opts?.format ?? "body",
-		);
-		yield* tmp.remove();
-		return result;
+		const tmp = yield* createTestTempDirEffect("fill-pr-template-");
+		return yield* Effect.gen(function* () {
+			yield* tmp.writeFile(tmp.join("commits.txt"), logStr);
+			yield* tmp.writeFile(tmp.join("files.txt"), filesStr);
+			return yield* runFillBody(
+				tmp.join("commits.txt"),
+				tmp.join("files.txt"),
+				opts?.templatePath,
+				opts?.format ?? "body",
+			);
+		}).pipe(Effect.ensuring(tmp.remove()));
 	}).pipe(Effect.provide(TestBaseLayer));
 }
 
@@ -94,39 +96,49 @@ function runWithLogAndFilesEffect(
 
 describe("parseCommits", () => {
 	test("parses single commit", () => {
-		const log = "---COMMIT---\nfeat: add foo\nbody line 1";
-		const out = parseCommits(log);
-		expect(Result.isSuccess(out)).toBe(true);
-		if (Result.isSuccess(out)) {
-			expect(out.success).toHaveLength(1);
-			expect(out.success[0]?.subject).toBe("feat: add foo");
-			expect(out.success[0]?.body).toBe("body line 1");
-			expect(out.success[0]?.type).toBe("feat");
-		}
+		pipe(
+			parseCommits("---COMMIT---\nfeat: add foo\nbody line 1"),
+			Result.match({
+				onSuccess: (commits) => {
+					expect(commits).toHaveLength(1);
+					expect(commits[0]?.subject).toBe("feat: add foo");
+					expect(commits[0]?.body).toBe("body line 1");
+					expect(commits[0]?.type).toBe("feat");
+				},
+				onFailure: () => expect.fail("expected success"),
+			}),
+		);
 	});
 
 	test("parses multiple commits", () => {
-		const log = "---COMMIT---\nfeat: first\n\n---COMMIT---\nfix: second\nbody";
-		const out = parseCommits(log);
-		expect(Result.isSuccess(out)).toBe(true);
-		if (Result.isSuccess(out)) {
-			expect(out.success).toHaveLength(2);
-			expect(out.success[0]?.subject).toBe("feat: first");
-			expect(out.success[1]?.subject).toBe("fix: second");
-			expect(out.success[1]?.body).toBe("body");
-		}
+		pipe(
+			parseCommits("---COMMIT---\nfeat: first\n\n---COMMIT---\nfix: second\nbody"),
+			Result.match({
+				onSuccess: (commits) => {
+					expect(commits).toHaveLength(2);
+					expect(commits[0]?.subject).toBe("feat: first");
+					expect(commits[1]?.subject).toBe("fix: second");
+					expect(commits[1]?.body).toBe("body");
+				},
+				onFailure: () => expect.fail("expected success"),
+			}),
+		);
 	});
 
 	test("returns empty for empty input", () => {
-		const out = parseCommits("");
-		expect(Result.isSuccess(out)).toBe(true);
-		if (Result.isSuccess(out)) expect(out.success).toEqual([]);
+		pipe(
+			parseCommits(""),
+			Result.match({
+				onSuccess: (commits) => expect(commits).toEqual([]),
+				onFailure: () => expect.fail("expected success"),
+			}),
+		);
 	});
 });
 
 describe("ParseError", () => {
 	test("has _tag and extends Error", () => {
-		const err = new ParseError("test", new Error("cause"));
+		const err = new ParseError({ message: "test", cause: new Error("cause") });
 		expect(err._tag).toBe("ParseError");
 		expect(err).toBeInstanceOf(Error);
 		expect(err.message).toBe("test");
@@ -234,6 +246,50 @@ describe("getDescription", () => {
 	test("returns subject when no body", () => {
 		const c = commit("feat: add x", "");
 		expect(getDescription(c)).toBe("add x");
+	});
+});
+
+describe("getDescriptionFromCommits", () => {
+	test("single commit: same as getDescription", () => {
+		const commits = [commit("feat: add x", "This adds the x feature.")];
+		expect(getDescriptionFromCommits(commits)).toBe("This adds the x feature.");
+	});
+
+	test("multiple commits: concatenates bodies with blank line separator", () => {
+		const commits = [
+			commit("feat: add A", "Adds module A."),
+			commit("fix: fix B", "Fixes bug in B."),
+		];
+		expect(getDescriptionFromCommits(commits)).toBe("Adds module A.\n\nFixes bug in B.");
+	});
+
+	test("empty commits: empty string", () => {
+		expect(getDescriptionFromCommits([])).toBe("");
+	});
+
+	test("skips Closes-only body, uses subject; concatenates with others", () => {
+		const commits = [
+			commit("feat: add foo", "Closes #1", { references: ["Closes #1"] }),
+			commit("fix: fix bar", "Fix details here."),
+		];
+		expect(getDescriptionFromCommits(commits)).toBe("add foo\n\nFix details here.");
+	});
+});
+
+describe("getDescriptionPromptText", () => {
+	test("formats commits for Ollama prompt", () => {
+		const commits = [
+			commit("feat: add A", "Adds module A."),
+			commit("fix: fix B", "Fixes bug in B."),
+		];
+		expect(getDescriptionPromptText(commits)).toBe(
+			"- feat: add A\n\nAdds module A.\n\n- fix: fix B\n\nFixes bug in B.",
+		);
+	});
+
+	test("commit with empty body: subject only", () => {
+		const commits = [commit("feat: add x", "")];
+		expect(getDescriptionPromptText(commits)).toBe("- feat: add x");
 	});
 });
 
@@ -388,17 +444,21 @@ describe("getRelatedIssues", () => {
 
 describe("getBreakingChanges", () => {
 	test("no BREAKING CHANGE → none", () => {
-		const commits = [commit("feat: x", "")];
-		expect(getBreakingChanges(commits)).toEqual(Option.none());
+		expect(Option.isNone(getBreakingChanges([commit("feat: x", "")]))).toBe(true);
 	});
 
 	test("BREAKING CHANGE in body → some", () => {
-		const commits = [
-			commit("feat: x", "BREAKING CHANGE: removed old API", {
-				breakingNote: "removed old API",
+		pipe(
+			getBreakingChanges([
+				commit("feat: x", "BREAKING CHANGE: removed old API", {
+					breakingNote: "removed old API",
+				}),
+			]),
+			Option.match({
+				onNone: () => expect.fail("expected some"),
+				onSome: (text) => expect(text).toBe("removed old API"),
 			}),
-		];
-		expect(getBreakingChanges(commits)).toEqual(Option.some("removed old API"));
+		);
 	});
 });
 
@@ -436,6 +496,21 @@ describe("fillTemplate", () => {
 		];
 		const data = fillTemplate(commits, []);
 		expect(data.commitsConventional).toBe(true);
+	});
+
+	test("multi-commit: description concatenates all commit bodies", () => {
+		const commits = [
+			commit("feat: add A", "Adds module A with tests.", { type: "feat" }),
+			commit("fix: fix B", "Fixes null check in B.", { type: "fix" }),
+		];
+		const data = fillTemplate(commits, []);
+		expect(data.description).toBe("Adds module A with tests.\n\nFixes null check in B.");
+	});
+
+	test("descriptionOverride overrides computed description", () => {
+		const commits = [commit("feat: add x", "Original body", { type: "feat" })];
+		const data = fillTemplate(commits, [], "Ollama-generated summary.");
+		expect(data.description).toBe("Ollama-generated summary.");
 	});
 });
 
@@ -553,6 +628,41 @@ layer(TestBaseLayer)("runFillBody", (it) => {
 		}),
 	);
 
+	it.effect("multi-commit: description concatenates all commit bodies", () =>
+		Effect.gen(function* () {
+			const log = logContent(
+				{ subject: "feat: add A", body: "Adds module A." },
+				{ subject: "fix: fix B", body: "Fixes bug in B." },
+			);
+			const output = yield* runWithLogAndFilesEffect(log, "src/a.ts\nsrc/b.ts\n");
+			expect(output).toContain("Adds module A.");
+			expect(output).toContain("Fixes bug in B.");
+			expect(output).toContain("## Description");
+		}),
+	);
+
+	it.effect("--description-file overrides computed description", () =>
+		Effect.gen(function* () {
+			const tmp = yield* createTestTempDirEffect("fill-pr-template-");
+			return yield* Effect.gen(function* () {
+				const log = logContent({ subject: "feat: add x", body: "Original body" });
+				yield* tmp.writeFile(tmp.join("commits.txt"), log);
+				yield* tmp.writeFile(tmp.join("files.txt"), "src/foo.ts\n");
+				yield* tmp.writeFile(tmp.join("description.txt"), "Ollama-generated summary.");
+				const output = yield* runFillBody(
+					tmp.join("commits.txt"),
+					tmp.join("files.txt"),
+					undefined,
+					"body",
+					tmp.join("description.txt"),
+				);
+				expect(output).toContain("Ollama-generated summary.");
+				expect(output).not.toContain("Original body");
+				return output;
+			}).pipe(Effect.ensuring(tmp.remove()));
+		}),
+	);
+
 	it.effect("filters merge commits, includes non-conventional", () =>
 		Effect.gen(function* () {
 			const log = logContent(
@@ -583,43 +693,44 @@ layer(TestBaseLayer)("runFillBody", (it) => {
 
 	it.effect("uses custom template when path provided", () =>
 		Effect.gen(function* () {
-			const tmp = yield* createTestTempDirEffect("fill-pr-body-");
-			yield* tmp.writeFile(
-				tmp.join("custom.md"),
-				"Custom: {{description}}\nType: {{typeOfChange}}\n{{changes}}",
-			);
-			const log = logContent({ subject: "feat: add bar", body: "Bar feature here." });
-			yield* tmp.writeFile(tmp.join("commits.txt"), log);
-			yield* tmp.writeFile(tmp.join("files.txt"), "src/bar.ts\n");
-			const output = yield* runFillBody(
-				tmp.join("commits.txt"),
-				tmp.join("files.txt"),
-				tmp.join("custom.md"),
-			);
-			yield* tmp.remove();
-			expect(output).toContain("Custom: Bar feature here.");
-			expect(output).toContain("Type: New feature");
-			expect(output).toContain("feat: add bar");
+			const tmp = yield* createTestTempDirEffect("fill-pr-template-");
+			return yield* Effect.gen(function* () {
+				yield* tmp.writeFile(
+					tmp.join("custom.md"),
+					"Custom: {{description}}\nType: {{typeOfChange}}\n{{changes}}",
+				);
+				const log = logContent({ subject: "feat: add bar", body: "Bar feature here." });
+				yield* tmp.writeFile(tmp.join("commits.txt"), log);
+				yield* tmp.writeFile(tmp.join("files.txt"), "src/bar.ts\n");
+				const output = yield* runFillBody(
+					tmp.join("commits.txt"),
+					tmp.join("files.txt"),
+					tmp.join("custom.md"),
+				);
+				expect(output).toContain("Custom: Bar feature here.");
+				expect(output).toContain("Type: New feature");
+				expect(output).toContain("feat: add bar");
+				return output;
+			}).pipe(Effect.ensuring(tmp.remove()));
 		}),
 	);
 
 	it.effect("fails when log file not found", () =>
 		Effect.gen(function* () {
-			const tmp = yield* createTestTempDirEffect("fill-pr-body-");
-			yield* tmp.writeFile(tmp.join("files.txt"), "src/foo.ts\n");
-			const err = yield* runFillBody(
-				tmp.join("nonexistent.txt"),
-				tmp.join("files.txt"),
-				undefined,
-			).pipe(Effect.flip);
-			yield* tmp.remove();
-			const msg = err instanceof Error ? err.message : String(err);
-			expect(msg).toSatisfy(
-				(s: string) => s.includes("Log file not found") || s.includes("nonexistent"),
-			);
+			const tmp = yield* createTestTempDirEffect("fill-pr-template-");
+			return yield* Effect.gen(function* () {
+				yield* tmp.writeFile(tmp.join("files.txt"), "src/foo.ts\n");
+				const err = yield* runFillBody(
+					tmp.join("nonexistent.txt"),
+					tmp.join("files.txt"),
+					undefined,
+				).pipe(Effect.flip);
+				const msg = err instanceof Error ? err.message : String(err);
+				expect(msg.includes("Log file not found") || msg.includes("nonexistent")).toBe(true);
+				return err;
+			}).pipe(Effect.ensuring(tmp.remove()));
 		}),
 	);
-
 	it.effect("fails when no commits (empty title in title-body format)", () =>
 		Effect.gen(function* () {
 			const err = yield* runWithLogAndFilesEffect("", "", { format: "title-body" }).pipe(
