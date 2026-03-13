@@ -21,7 +21,7 @@ npm run typecheck
 "$SCRIPT_DIR/nix-run-if-missing.sh" rumdl check .
 "$SCRIPT_DIR/nix-run-if-missing.sh" typos
 if [ "${CHECK_LINKS:-0}" = "1" ]; then
-	"$SCRIPT_DIR/nix-run-if-missing.sh" lychee --timeout 30 --max-retries 5 .
+	"$SCRIPT_DIR/nix-run-if-missing.sh" lychee --timeout 30 --max-retries 10 --retry-wait-time 2 .
 fi
 
 # CI extras
