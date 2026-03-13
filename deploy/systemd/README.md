@@ -1,6 +1,17 @@
 # systemd deployment
 
-Service and timer units for running the ingestion bot under systemd.
+Service and timer units for running the ingestion bot under systemd. For a full Docker-based stack, see [Compose](../compose/README.md).
+
+## Full stack (native)
+
+When running everything on the same host:
+
+- **Paperless-ngx** — Document management (Docker or native)
+- **signal-cli-rest-api** — Signal webhook (Docker or systemd)
+- **Ingestion bot** — These units (Signal webhook + email timer)
+- **Ollama** — Optional, for AI eligibility on email (installs its own `ollama.service`)
+
+The units include optional `After=` for `signal-cli-rest-api.service` and `ollama.service` when those run natively. If they run in Docker or don't exist, the bot still starts.
 
 ## Prerequisites
 
@@ -53,3 +64,7 @@ Edit `paperless-ingestion-email.timer` to change the schedule. `OnCalendar=*:0/1
 - `*:0/30` — every 30 minutes
 - `hourly` — every hour
 - `*-*-* 09,18:00:00` — 9:00 and 18:00 daily
+
+## paperless-ai
+
+[paperless-ai](https://github.com/clusterzx/paperless-ai) runs **after** Paperless ingests documents (tags, titles, correspondents). It is separate from this bot. See [paperless-ai installation](https://github.com/clusterzx/paperless-ai/wiki/2.-Installation).

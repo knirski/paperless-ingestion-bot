@@ -3,6 +3,8 @@ Description=Paperless ingestion bot — email pipeline (one-shot)
 Documentation=https://github.com/knirski/paperless-ingestion-bot
 After=network-online.target
 Wants=network-online.target
+# Optional: when using Ollama for AI eligibility
+After=ollama.service
 
 [Service]
 Type=oneshot
