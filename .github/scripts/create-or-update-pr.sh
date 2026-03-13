@@ -7,8 +7,12 @@ set -euo pipefail
 for v in GH_TOKEN BRANCH DEFAULT_BRANCH COMMITS FILES PR_TITLE; do
 	: "${!v:?$v required}"
 done
+if [ -z "${PR_TITLE//[[:space:]]/}" ]; then
+	echo "::error::PR_TITLE is empty or whitespace-only. Add at least one non-merge commit with non-empty subject."
+	exit 1
+fi
 
-root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$root"
 
 npx tsx scripts/fill-pr-body.ts --log-file "$COMMITS" --files-file "$FILES" --format body --quiet > /tmp/pr-body.md

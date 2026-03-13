@@ -72,6 +72,8 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 | Domain type, error, MIME                              | `src/domain/`                                               |
 | Pipeline step, config, layer                          | `src/shell/`                                                |
 | Extending provider variants (e.g. new email provider) | Add to discriminated union in `domain/` + `Match.when` case |
+| GitHub CI scripts (workflow-only)                      | `.github/scripts/`                                          |
+| General-purpose scripts (build, lint, dev)             | `scripts/`                                                  |
 
 ## Key Rules
 
@@ -155,7 +157,7 @@ Runs: `npm run test && npm run lint && npm run knip && npm run typecheck`. Cover
 - Focus a test: `npm test -- -t "pattern"`
 - Add or update tests for the code you change, even if nobody asked.
 - Before committing: run `npm run check`; ensure all tests pass.
-- **Use `check:ci` instead of `check`** when you edited `.github/workflows/`, `.github/actions/`, or `scripts/*.sh` — actionlint and shellcheck catch issues that CI would fail on.
+- **Use `check:ci` instead of `check`** when you edited `.github/workflows/`, `.github/actions/`, `.github/scripts/`, or `scripts/*.sh` — actionlint and shellcheck catch issues that CI would fail on.
 
 ## Security
 
@@ -186,6 +188,9 @@ Credentials and config paths are sensitive; do not log or expose them.
 ## Project Structure
 
 ```
+.github/
+  scripts/         — GitHub CI scripts (auto-PR workflow)
+  workflows/       — GitHub Actions
 src/
   cli.ts           — CLI entry point
   core/            — Pure domain logic (FC)
@@ -193,6 +198,7 @@ src/
   interfaces/      — Tagless Final service interfaces
   live/            — Live interpreters
   shell/           — Imperative shell (pipelines, config, layers)
+scripts/           — General-purpose scripts (fill-pr-body, check-nix-hash, etc.)
 test/
   fixtures/        — Config mocks, credentials, imap/signal mocks
   integration/     — Integration tests
