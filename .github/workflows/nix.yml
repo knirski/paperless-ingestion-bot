@@ -26,6 +26,7 @@ jobs:
   nix:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Push uses App token; job needs contents: write for git push (exit 128 fix)
     permissions:
       contents: write
     steps:
