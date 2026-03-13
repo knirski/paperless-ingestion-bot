@@ -630,9 +630,10 @@ describe("runFillBody", () => {
 describe("--validate-title CLI", () => {
 	const runValidateTitle = (title: string): number => {
 		const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+		// Use --flag=value form to avoid CLI parsing ambiguity (e.g. "Add feature X" as separate args)
 		const result = childProcess.spawnSync(
 			"npx",
-			["tsx", "scripts/fill-pr-body.ts", "--validate-title", title],
+			["tsx", "scripts/fill-pr-body.ts", `--validate-title=${title}`],
 			{ cwd: root, encoding: "utf8" },
 		);
 		return result.status ?? -1;
