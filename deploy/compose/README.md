@@ -1,45 +1,83 @@
 # Docker Compose deployment
 
-Runs the ingestion bot with Signal CLI REST API. The `consume` volume holds documents; mount it into Paperless-ngx or bind-mount your Paperless consume path.
+Two options: **minimal** (Signal + ingestion bot only) or **full-stack** (Paperless-ngx + Signal + ingestion bot + Ollama).
 
-## Prerequisites
+## Minimal: Signal + ingestion bot
 
-- Docker and Docker Compose
-- Paperless-ngx (to consume the documents)
+Use `docker-compose.yml` when you already have Paperless-ngx elsewhere. The `consume` volume holds documents; mount it into Paperless or bind-mount your Paperless consume path.
 
-## Setup
+## Full-stack: Paperless + Signal + ingestion bot + Ollama
 
-1. **Create config and users**
+Use `docker-compose.full-stack.yml` for a complete setup in one compose:
 
-   Copy and edit the config:
+- **Paperless-ngx** — Document management (PostgreSQL, Redis, Tika, Gotenberg)
+- **Signal CLI REST API** — Signal webhook
+- **Ingestion bot** — Receives Signal attachments, writes to consume
+- **Ollama** — Optional AI (eligibility for email; also for [paperless-ai](#paperless-ai) post-processing)
+
+Shared `consume` volume: ingestion bot writes here; Paperless ingests from here.
+
+### Full-stack setup
+
+1. **Create Paperless env**
+
+   ```bash
+   cp docker-compose.env.example docker-compose.env
+   # Edit docker-compose.env: set PAPERLESS_SECRET_KEY (long random string)
+   ```
+
+2. **Create config and users**
 
    ```bash
    cp ../../config.example.json config.json
-   # Edit config.json: set consume_dir, paths, etc.
+   # Edit config.json if needed (defaults work for full-stack)
    ```
 
    Create `users.json` with your Signal users (see main [README](../../README.md#config) Config section).
 
-2. **Start services**
+3. **Start**
+
+   ```bash
+   docker compose -f docker-compose.full-stack.yml up -d
+   ```
+
+4. **Link Signal** — Open <http://localhost:8080/v1/qrcodelink> and scan.
+
+5. **Configure webhook** — Set `RECEIVE_WEBHOOK_URL=http://ingestion-bot:8089/webhook` in the signal-api service.
+
+6. **Paperless UI** — <http://localhost:8000>
+
+7. **Ollama models** (optional, for email AI or paperless-ai):
+
+   ```bash
+   docker compose -f docker-compose.full-stack.yml exec ollama ollama pull moondream
+   docker compose -f docker-compose.full-stack.yml exec ollama ollama pull llama3.2
+   ```
+
+## Minimal setup (Signal only)
+
+1. **Create config and users** — Same as above.
+
+2. **Start**
 
    ```bash
    docker compose up -d
    ```
 
-3. **Link Signal**
+3. **Link Signal** — Open <http://localhost:8080/v1/qrcodelink> and scan.
 
-   Open <http://localhost:8080/v1/qrcodelink> in a browser and scan with your phone.
+4. **Configure webhook** — Set `RECEIVE_WEBHOOK_URL=http://ingestion-bot:8089/webhook` in the signal-api service.
 
-4. **Configure webhook**
+5. **Connect to Paperless** — Either add the `consume` volume to your Paperless compose as an external volume, or bind-mount your Paperless consume path.
 
-   Set `RECEIVE_WEBHOOK_URL=http://ingestion-bot:8089/webhook` in the signal-api service (add to `environment` in docker-compose.yml, or use the signal-cli-rest-api config).
+## paperless-ai
 
-5. **Connect to Paperless**
+[paperless-ai](https://github.com/clusterzx/paperless-ai) is a **separate** project that runs **after** Paperless ingests documents. It adds AI-generated tags, titles, and correspondents.
 
-   Either:
+- **This ingestion bot** — Pre-ingestion: receives from Signal/Gmail, optionally filters with Ollama, writes to consume.
+- **paperless-ai** — Post-ingestion: augments documents already in Paperless.
 
-   - Use the `consume` volume: add it to your Paperless compose as an external volume, or
-   - Bind-mount your Paperless consume path: replace the consume volume with `./paperless-consume:/var/lib/paperless-ingestion-bot/consume` (create the dir first).
+To add paperless-ai, run it alongside Paperless-ngx (it connects to Paperless API and uses Ollama). See [paperless-ai installation](https://github.com/clusterzx/paperless-ai/wiki/2.-Installation).
 
 ## Image
 
