@@ -19,8 +19,9 @@ This guide walks you through setting up a GitHub App so that when an AI agent (o
    - **Homepage URL**: Your repo URL, e.g. `https://github.com/knirski/paperless-ingestion-bot`
    - **Webhook**: Uncheck **Active** (we don't need webhooks)
 3. Under **Repository permissions**:
-   - **Contents**: Read
+   - **Contents**: Read and write (required for nix npmDepsHash auto-update and release-please; they push commits)
    - **Pull requests**: Read and write
+   - **Actions**: Read and write (required for nix and release-please; they trigger workflows via `gh workflow run`)
 4. Under **Where can this GitHub App be installed?**: Choose **Only on this account**
 5. Click **Create GitHub App**
 
@@ -114,7 +115,7 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
 | Issue | Fix |
 |-------|-----|
 | Workflow doesn't run | Ensure branch name matches `ai/**`; workflow skips on forks |
-| "Resource not accessible" | Check app permissions (Contents: Read, Pull requests: Read and write) |
+| "Resource not accessible" | Check app permissions (Contents: Read and write, Pull requests: Read and write, Actions: Read and write) |
 | "Secret not found" | Verify `APP_ID` and `APP_PRIVATE_KEY` in repo secrets |
 | PR already exists | Workflow updates the PR title and body from the latest commits |
 | Ollama returns invalid or odd title | Workflow validates with `fill-pr-body --validate-title`; falls back to first semantic commit subject after 3 attempts |

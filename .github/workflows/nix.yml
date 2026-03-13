@@ -64,7 +64,10 @@ jobs:
         run: |
           # gh expects branch name; strip refs/heads/ if present
           BRANCH="${REF#refs/heads/}"
-          gh workflow run ci.yml --ref "$BRANCH"
+          if ! gh workflow run ci.yml --ref "$BRANCH"; then
+            echo "::error::Failed to trigger ci.yml. Ensure App has Actions: Read and write permission."
+            exit 1
+          fi
 
       - uses: ./.github/actions/nix-fail-npm-deps-hash-fork
         if: steps.hash.outputs.hash != '' && !inputs.push_allowed
