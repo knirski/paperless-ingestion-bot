@@ -24,11 +24,10 @@ pkgs.buildNpmPackage rec {
   npmBuildScript = "build";
   buildInputs = [ pkgs.libsecret ];
   nativeBuildInputs = [ pkgs.pkg-config ];
-  doCheck = true;
-  checkPhase = ''
-    export PATH="${pkgs.biome}/bin:$PATH"
-    npm run check
-  '';
+  # Skip check: CI runs npm run check in check.yml. scripts/check.sh uses
+  # nix-run-if-missing for rumdl/typos/actionlint/shellcheck; Nix build sandbox
+  # cannot run those. See docs/CI.md.
+  dontCheck = true;
   installPhase = ''
     mkdir -p $out/lib/node_modules/paperless-ingestion-bot
     cp -r dist package.json package-lock.json node_modules $out/lib/node_modules/paperless-ingestion-bot/
