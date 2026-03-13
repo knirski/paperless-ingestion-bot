@@ -19,7 +19,7 @@ This guide walks you through setting up a GitHub App so that when an AI agent (o
    - **Homepage URL**: Your repo URL, e.g. `https://github.com/knirski/paperless-ingestion-bot`
    - **Webhook**: Uncheck **Active** (we don't need webhooks)
 3. Under **Repository permissions**:
-   - **Contents**: Read and write (required for nix npmDepsHash auto-update and release-please; they push commits)
+   - **Contents**: Read and write (needed for release-please and nix pushes; GITHUB_TOKEN pushes do not trigger workflows)
    - **Pull requests**: Read and write
    - **Actions**: Read and write (required for nix and release-please; they trigger workflows via `gh workflow run`)
 4. Under **Where can this GitHub App be installed?**: Choose **Only on this account**
