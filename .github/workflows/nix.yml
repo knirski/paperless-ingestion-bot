@@ -26,9 +26,9 @@ jobs:
   nix:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Push uses App token (checkout token when push_allowed); GITHUB_TOKEN needs read only
+    # Push uses App token; job needs contents: write for git push (exit 128 fix)
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Generate GitHub App token
         if: inputs.push_allowed
