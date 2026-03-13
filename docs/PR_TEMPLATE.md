@@ -7,13 +7,13 @@ A single template at [`.github/PULL_REQUEST_TEMPLATE.md`](../.github/PULL_REQUES
 | Mode | How |
 |------|-----|
 | **Manual** | GitHub shows the template when creating a PR. Replace each `{{placeholder}}` with your content. |
-| **Automated** | `npx tsx scripts/fill-pr-body.ts --log-file <path> --files-file <path>` reads the template, replaces placeholders, outputs to stdout. The workflow or `create-or-update-pr.sh` (in `.github/scripts/`) generates these files via git. Use `--format title-body` for first line = PR title (first commit subject). The workflow uses Ollama for AI-generated titles when there are 2+ semantic commits. |
+| **Automated** | `npx tsx scripts/fill-pr-template.ts --log-file <path> --files-file <path>` reads the template, replaces placeholders, outputs to stdout. The workflow or `create-or-update-pr.ts` generates these files via git. Use `--format title-body` for first line = PR title (first commit subject). The workflow uses Ollama for AI-generated titles when there are 2+ semantic commits. |
 
 ## Placeholders
 
 | Placeholder | Source |
 |------------|--------|
-| `{{description}}` | First commit body (or subject after colon if body starts with Closes/Fixes); max 20 lines |
+| `{{description}}` | For 1 commit: first commit body (or subject after colon if body starts with Closes/Fixes); max 20 lines. For 2+ commits: Ollama summary (workflow) or concatenated bodies (fallback) |
 | `{{typeOfChange}}` | Inferred from conventional commits |
 | `{{changes}}` | One bullet per commit subject |
 | `{{howToTest}}` | `N/A` for docs-only, else `1. Run \`npm run check\`\n2. ` |
@@ -32,6 +32,8 @@ Uses `effect/unstable/cli` (Command, Argument, Flag) like the main project CLI.
 - **`--log-file PATH`:** (Required) Path to file containing commit log. Format: `---COMMIT---`-separated blocks (subject + body per commit). Generate via `git log --format="---COMMIT---%n%s%n%n%b" base..HEAD`.
 - **`--files-file PATH`:** (Required) Path to file containing newline-separated changed file names. Generate via `git diff --name-only base..HEAD`.
 - **`--template PATH`:** Override template file. Default: `.github/PULL_REQUEST_TEMPLATE.md` relative to cwd.
+- **`--description-file PATH`:** Use file content as description (e.g. Ollama-generated). Overrides computed description.
+- **`--output-description-prompt`:** Output commit content for Ollama to summarize. Requires `--log-file` only. Used by auto-pr-ollama.ts.
 - **`--format title-body`:** Output first line = PR title, blank line, then body. Title = first commit subject. The [auto-PR workflow](../.github/workflows/auto-pr.yml) uses `--format body` (title from workflow: first semantic commit for 1 semantic commit, Ollama-generated for 2+ semantic commits; merge commits and blank lines are filtered).
 - **`--validate-title TITLE`:** Validate that the string is a conventional commit title; exit 0 if valid, 1 otherwise. Used by the auto-PR workflow to verify Ollama output before using it.
 - **`--quiet`:** Suppress logs (for CI when capturing stdout).
@@ -63,5 +65,5 @@ With `--format title-body`, the script fails if there are no commits or the firs
 ## Implementation notes
 
 - **Git format:** Commit log uses `---COMMIT---` delimiter (`git log --format=---COMMIT---%n%s%n%b`). Changing this breaks parsing.
-- **Description:** First 20 lines of commit body. PR description is a summary. Prose paragraphs (72-char line wraps) are unwrapped via remark AST; lists and code blocks are preserved.
+- **Description:** For 1 commit: first 20 lines of body. For 2+ commits: auto-PR workflow uses Ollama to summarize; fallback is concatenated bodies. Prose paragraphs unwrapped via remark AST; lists and code blocks preserved.
 - **Breaking changes:** Truncated at 2000 chars.

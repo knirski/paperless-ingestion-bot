@@ -3,5 +3,5 @@
 
 [global]
 include = ["**/*.md"]
-exclude = ["**/node_modules/**", "**/result/**"]
+exclude = ["**/node_modules/**", "**/result/**", "CHANGELOG.md"]
 disable = ["MD013", "MD004", "MD012", "MD032", "MD038", "MD040", "MD041"]

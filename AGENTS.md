@@ -29,9 +29,11 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 
 | Command                    | Purpose                                                                                                                            |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run check`            | Full verification (test, lint, knip, typecheck). Warns when npmDepsHash is stale (package-lock.json changed); CI auto-updates on push. Run before committing. |
-| `npm run check:ci`         | Same as check plus actionlint and shellcheck (mirrors code CI locally). See [docs/CI.md](docs/CI.md). |
-| `npm run check:docs`       | rumdl (markdown lint), lychee (links), typos (spelling). Run before pushing docs-only changes. |
+| `npm run check`            | Full check: core, docs (rumdl, typos), actionlint, shellcheck. Lychee opt-in via `check:with-links`. Run before committing. |
+| `npm run check:with-links` | Same as check plus lychee (~10s). |
+| `npm run check:code`       | Code only: audit, test, lint, knip, typecheck. Faster than full check. |
+| `npm run check:just-links` | Links only: lychee. Quick link verification. |
+| `npm run check:docs`       | Docs only: rumdl, typos. Quick docs verification. |
 | `npm test`                 | Unit tests with coverage                                                                                                           |
 | `npm run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
 | `npm run lint`             | Lint (Biome)                                                                                                                       |
@@ -72,7 +74,7 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 | Domain type, error, MIME                              | `src/domain/`                                               |
 | Pipeline step, config, layer                          | `src/shell/`                                                |
 | Extending provider variants (e.g. new email provider) | Add to discriminated union in `domain/` + `Match.when` case |
-| GitHub CI scripts (workflow-only)                      | `.github/scripts/`                                          |
+| GitHub workflow scripts (auto-PR)                     | `scripts/` (auto-pr-get-commits.ts, auto-pr-ollama.ts, create-or-update-pr.ts); prompts in `scripts/auto-pr/prompts/` |
 | General-purpose scripts (build, lint, dev)             | `scripts/`                                                  |
 
 ## Key Rules
@@ -120,7 +122,7 @@ Use `ai/` prefix when pushing so the [auto-PR workflow](.github/workflows/auto-p
 
 - `ai/feature-name` or `ai/fix-bug-description`
 
-The workflow runs on push to `ai/**` branches and creates/updates the PR using `fill-pr-body.ts`.
+The workflow runs on push to `ai/**` branches and creates/updates the PR using `create-or-update-pr.ts` (which invokes `fill-pr-template.ts` and, for 2+ commits, `auto-pr-ollama.ts`).
 
 ## Pull Requests
 
@@ -157,7 +159,7 @@ Runs: `npm run test && npm run lint && npm run knip && npm run typecheck`. Cover
 - Focus a test: `npm test -- -t "pattern"`
 - Add or update tests for the code you change, even if nobody asked.
 - Before committing: run `npm run check`; ensure all tests pass.
-- **Use `check:ci` instead of `check`** when you edited `.github/workflows/`, `.github/actions/`, `.github/scripts/`, or `scripts/*.sh` — actionlint and shellcheck catch issues that CI would fail on.
+- **`check` runs everything** — Core, docs (rumdl, typos), actionlint, shellcheck. Use `check:with-links` to add lychee (~10s).
 
 ## Security
 
@@ -189,7 +191,6 @@ Credentials and config paths are sensitive; do not log or expose them.
 
 ```
 .github/
-  scripts/         — GitHub CI scripts (auto-PR workflow)
   workflows/       — GitHub Actions
 src/
   cli.ts           — CLI entry point
@@ -198,7 +199,7 @@ src/
   interfaces/      — Tagless Final service interfaces
   live/            — Live interpreters
   shell/           — Imperative shell (pipelines, config, layers)
-scripts/           — General-purpose scripts (fill-pr-body, check-nix-hash, etc.)
+scripts/           — General-purpose and auto-PR scripts (fill-pr-template, auto-pr-ollama, create-or-update-pr, check-nix-hash, etc.)
 test/
   fixtures/        — Config mocks, credentials, imap/signal mocks
   integration/     — Integration tests

@@ -14,7 +14,7 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through) |
 | [docker.yml](../.github/workflows/docker.yml) | release published, workflow_dispatch | — | build (GHCR), sign, sbom |
 
-**auto-pr.yml** runs on push to `ai/**` branches (non-forks). Creates or updates a PR with title from conventional commits (1 semantic commit → use subject; 2+ → Ollama). Uses scripts in `.github/scripts/`. See [GITHUB_APP_AUTO_PR_SETUP.md](GITHUB_APP_AUTO_PR_SETUP.md).
+**auto-pr.yml** runs on push to `ai/**` branches (non-forks). Creates or updates a PR with title from conventional commits (1 semantic commit → use subject; 2+ → Ollama). Uses scripts in `scripts/`. See [GITHUB_APP_AUTO_PR_SETUP.md](GITHUB_APP_AUTO_PR_SETUP.md).
 
 **docker.yml** builds and pushes images to GHCR on each release, with provenance and SBOM attestations, and [Sigstore/cosign keyless signing](https://docs.sigstore.dev/cosign/signing/signing_with_containers/) for release images. Also uploads npm SBOM to the release. Manual trigger via workflow_dispatch for testing.
 
@@ -50,8 +50,8 @@ All workflows declare explicit permissions. Use `permissions: {}` when no workfl
 
 ## Reusable Workflows
 
-- **check.yml** — test, lint, typecheck, SBOM, Codecov. Called by ci.yml.
-- **check-docs.yml** — rumdl (markdown lint), lychee (link check), typos (spell check). No npm ci. Config: `.rumdl.toml`, `_typos.toml`. Lychee respects `.gitignore`.
+- **check.yml** — test, lint, knip, typecheck, rumdl, typos, lychee, actionlint, shellcheck, SBOM, Codecov. Called by ci.yml.
+- **check-docs.yml** — rumdl (markdown lint), lychee (link check), typos (spell check). No npm ci. Config: `.rumdl.toml`, `_typos.toml`. Lychee respects `.gitignore`. Rumdl excludes `CHANGELOG.md` (auto-generated).
 - **nix.yml** — Nix build + npmDepsHash update. Called by ci-nix.yml and update-nix-hash.yml.
 
 ## Branch Protection
@@ -90,12 +90,15 @@ We use a **workflow_dispatch trigger** so that when ci-nix pushes an npmDepsHash
 | **Don't push on PRs** | No commit mismatch; simpler | Worse DX; contributors must run `nix run .#update-npm-deps-hash` locally |
 | **Documentation only** | Simple | No technical fix; still depends on timing |
 
-**GitHub App permission:** The App used for the push must have **Actions: Read and write** so it can trigger workflows via `gh workflow run`. If the trigger step fails, verify this permission in the App settings.
+**GitHub App permission:** The App used for the push must have **Actions: Read and write** so it can trigger workflows via `gh workflow run`. If you see "Failed to trigger ci.yml. Ensure App has Actions: Read and write permission.", see [GITHUB_APP_AUTO_PR_SETUP.md](GITHUB_APP_AUTO_PR_SETUP.md#troubleshooting).
 
 ## Local CI-like checks
 
-- **`npm run check:ci`** — Mirrors the code path (ci.yml → check.yml): `check` plus actionlint and shellcheck. Uses system binaries when available, otherwise Nix.
-- **`npm run check:docs`** — Mirrors the docs path (ci-docs.yml → check-docs.yml): rumdl, lychee, typos. All via `scripts/nix-run-if-missing.sh` (system binary or `nix run nixpkgs#<tool>`). Run before pushing docs-only changes.
+- **`npm run check`** — Full check: core (test, lint, knip, typecheck), docs (rumdl, typos), CI extras (actionlint, shellcheck). Lychee (link check) runs as a separate step in CI.
+- **`npm run check:with-links`** — Same as check plus lychee. Use before pushing when you want to verify links.
+- **`npm run check:code`** — Code only: audit, test, lint, knip, typecheck. Faster than full check.
+- **`npm run check:just-links`** — Links only: lychee. Quick link verification without core checks.
+- **`npm run check:docs`** — Docs only: rumdl, typos. Quick docs verification without core checks.
 
 ## Fork PRs
 
