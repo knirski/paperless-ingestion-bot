@@ -7,3 +7,6 @@ https?://localhost.*
 
 # GHCR packages page 404s until first image is published
 https://github\.com/knirski/paperless-ingestion-bot/pkgs/container/paperless-ingestion-bot
+
+# Contributor Covenant translations page — flaky in CI (connection reset by peer)
+https://www\.contributor-covenant\.org/translations/
