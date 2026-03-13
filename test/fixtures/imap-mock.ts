@@ -1,7 +1,8 @@
 import { Effect, Layer } from "effect";
 import type { ImapSearchQuery } from "../../src/core/search.js";
+import type { Account } from "../../src/domain/account.js";
 import { ImapConnectionError } from "../../src/domain/errors.js";
-import type { MessageUid } from "../../src/domain/types.js";
+import type { AppEffect, MessageUid } from "../../src/domain/types.js";
 import { redactEmail, redactedForLog, unknownToMessage } from "../../src/domain/utils.js";
 import type { EmailSession, RawAttachment } from "../../src/interfaces/email-client.js";
 import { EmailClient } from "../../src/live/imap-email-client.js";
@@ -35,8 +36,8 @@ export function createImapMockLayer(
 ): Layer.Layer<EmailClient> {
 	const spy = options?.spy;
 
-	return Layer.mock(EmailClient, {
-		withConnection: (account, fn) => {
+	return Layer.mock(EmailClient)({
+		withConnection: <A, R>(account: Account, fn: (session: EmailSession) => AppEffect<A, R>) => {
 			const toDomainError = (cause: unknown) =>
 				new ImapConnectionError({
 					email: redactedForLog(account.email, redactEmail),

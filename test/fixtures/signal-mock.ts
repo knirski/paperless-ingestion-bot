@@ -1,6 +1,6 @@
 import { Effect, Layer, Option } from "effect";
 import { ConfigValidationError } from "../../src/domain/errors.js";
-import type { SignalNumber } from "../../src/domain/signal-types.js";
+import type { AttachmentId, SignalNumber } from "../../src/domain/signal-types.js";
 import { SignalClient } from "../../src/live/signal-client.js";
 
 const DEFAULT_ACCOUNT = "+15550000001" as SignalNumber;
@@ -30,13 +30,13 @@ export function createSignalMockLayer(
 	const spy = options?.spy;
 	const defaultAccount = options?.defaultAccount ?? DEFAULT_ACCOUNT;
 
-	return Layer.mock(SignalClient, {
+	return Layer.mock(SignalClient)({
 		getAccount: () => {
 			if (spy) spy.getAccountCalls++;
 			const result = scenario.getAccountResult ?? Option.some(defaultAccount);
 			return Effect.succeed(result);
 		},
-		sendMessage: (account, recipient, message) => {
+		sendMessage: (account: SignalNumber, recipient: SignalNumber, message: string) => {
 			if (spy) spy.sendMessageCalls.push({ account, recipient, message });
 			if (scenario.sendMessageFail !== undefined)
 				return Effect.fail(
@@ -46,7 +46,7 @@ export function createSignalMockLayer(
 				);
 			return Effect.void;
 		},
-		fetchAttachment: (id) => {
+		fetchAttachment: (id: AttachmentId) => {
 			if (spy) spy.fetchAttachmentCalls.push(id);
 			if (scenario.fetchAttachmentFail !== undefined)
 				return Effect.fail(

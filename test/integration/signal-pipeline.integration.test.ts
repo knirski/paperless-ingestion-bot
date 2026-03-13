@@ -106,7 +106,7 @@ describe("signal-pipeline integration", () => {
 				const layer = buildTestLayer(
 					{ tmpDir, emailAccountsPath },
 					{},
-					{ signalClientLayer: Layer.mock(SignalClient, {}) },
+					{ signalClientLayer: Layer.mock(SignalClient)({}) },
 				);
 				await runWebhook(layer, {});
 			},

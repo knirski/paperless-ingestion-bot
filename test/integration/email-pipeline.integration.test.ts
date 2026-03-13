@@ -44,10 +44,10 @@ import {
 	TestBaseLayer,
 } from "../test-utils.js";
 
-const alwaysAcceptOllamaLayer = Layer.mock(OllamaClient, {
+const alwaysAcceptOllamaLayer = Layer.mock(OllamaClient)({
 	assess: () => Effect.succeed(true),
 });
-const rejectOllamaLayer = Layer.mock(OllamaClient, {
+const rejectOllamaLayer = Layer.mock(OllamaClient)({
 	assess: () => Effect.succeed(false),
 });
 
@@ -408,7 +408,7 @@ describe("email-pipeline integration", () => {
 						markProcessedLabel: "paperless" as EmailLabel,
 					}),
 					credentialsStoreTest({}),
-					Layer.mock(EmailClient, {}),
+					Layer.mock(EmailClient)({}),
 					alwaysAcceptOllamaLayer,
 				);
 				const result = await runPipeline(layer);
