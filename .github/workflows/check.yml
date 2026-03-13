@@ -1,4 +1,4 @@
-# Reusable workflow: run full check (test, lint, typecheck, SBOM, Codecov).
+# Reusable workflow: run full check (test, lint, typecheck, rumdl, typos, lychee, SBOM, Codecov).
 # Called by ci.yml (runs when non-.md files change).
 #
 # Uses GitHub-provided: setup-node (built-in npm cache), upload-artifact, GITHUB_TOKEN.
@@ -36,15 +36,6 @@ jobs:
           name: sbom
           path: sbom.json
 
-      - name: Audit dependencies
-        run: npm audit --audit-level=high
-
-      - name: Lint workflow files
-        uses: eifinger/actionlint-action@7802e0cc3ab3f81cbffb36fb0bf1a3621d994b89 # v1
-
-      - name: Shellcheck script files
-        run: find scripts -name '*.sh' -exec shellcheck {} +
-
       - name: Validate commit messages
         if: github.actor != 'dependabot[bot]'
         run: |
@@ -59,7 +50,10 @@ jobs:
             fi
           fi
 
-      - run: npm run check
+      - name: Check (test, lint, typecheck, rumdl, typos, lychee, actionlint, shellcheck)
+        env:
+          CHECK_LINKS: 1
+        run: npm run check
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5

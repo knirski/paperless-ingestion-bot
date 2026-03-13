@@ -7,4 +7,4 @@ globs: ["**/*.sh"]
 
 - **Lint:** Run `shellcheck` on all modified `.sh` files before finishing.
 - **Project command:** `npm run lint:scripts` (uses system shellcheck or `nix run nixpkgs#shellcheck`).
-- **Full CI simulation:** `npm run check:ci` (includes shellcheck).
+- **Full check:** `npm run check` (includes shellcheck). Use `check:with-links` to add lychee.

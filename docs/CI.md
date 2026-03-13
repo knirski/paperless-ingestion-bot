@@ -50,8 +50,8 @@ All workflows declare explicit permissions. Use `permissions: {}` when no workfl
 
 ## Reusable Workflows
 
-- **check.yml** — test, lint, typecheck, SBOM, Codecov. Called by ci.yml.
-- **check-docs.yml** — rumdl (markdown lint), lychee (link check), typos (spell check). No npm ci. Config: `.rumdl.toml`, `_typos.toml`. Lychee respects `.gitignore`.
+- **check.yml** — test, lint, knip, typecheck, rumdl, typos, lychee, actionlint, shellcheck, SBOM, Codecov. Called by ci.yml.
+- **check-docs.yml** — rumdl (markdown lint), lychee (link check), typos (spell check). No npm ci. Config: `.rumdl.toml`, `_typos.toml`. Lychee respects `.gitignore`. Rumdl excludes `CHANGELOG.md` (auto-generated).
 - **nix.yml** — Nix build + npmDepsHash update. Called by ci-nix.yml and update-nix-hash.yml.
 
 ## Branch Protection
@@ -90,12 +90,13 @@ We use a **workflow_dispatch trigger** so that when ci-nix pushes an npmDepsHash
 | **Don't push on PRs** | No commit mismatch; simpler | Worse DX; contributors must run `nix run .#update-npm-deps-hash` locally |
 | **Documentation only** | Simple | No technical fix; still depends on timing |
 
-**GitHub App permission:** The App used for the push must have **Actions: Read and write** so it can trigger workflows via `gh workflow run`. If the trigger step fails, verify this permission in the App settings.
+**GitHub App permission:** The App used for the push must have **Actions: Read and write** so it can trigger workflows via `gh workflow run`. If you see "Failed to trigger ci.yml. Ensure App has Actions: Read and write permission.", see [GITHUB_APP_AUTO_PR_SETUP.md](GITHUB_APP_AUTO_PR_SETUP.md#troubleshooting).
 
 ## Local CI-like checks
 
-- **`npm run check:ci`** — Mirrors the code path (ci.yml → check.yml): `check` plus actionlint and shellcheck. Uses system binaries when available, otherwise Nix.
-- **`npm run check:docs`** — Mirrors the docs path (ci-docs.yml → check-docs.yml): rumdl, lychee, typos. All via `scripts/nix-run-if-missing.sh` (system binary or `nix run nixpkgs#<tool>`). Run before pushing docs-only changes.
+- **`npm run check`** — Full check: core (test, lint, knip, typecheck), docs (rumdl, typos), CI extras (actionlint, shellcheck). Lychee (link check, ~10s) is opt-in locally: `npm run check:with-links` or `CHECK_LINKS=1 npm run check`. CI uses `CHECK_LINKS=1`.
+- **`npm run check:with-links`** — Same as check plus lychee. Use before pushing when you want to verify links.
+- **`npm run check:docs`** — Docs only: rumdl, typos. Quick docs verification without core checks.
 
 ## Fork PRs
 

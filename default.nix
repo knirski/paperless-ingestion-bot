@@ -24,30 +24,11 @@ pkgs.buildNpmPackage rec {
   npmBuildScript = "build";
   buildInputs = [ pkgs.libsecret ];
   nativeBuildInputs = [ pkgs.pkg-config ];
-  # Skip check: CI runs npm run check. Biome's platform binary fails in the Nix
-  # sandbox (expects /lib64/ld-linux-x86-64.so.2). Alternatives if you need
-  # check here:
-  #
-  # (1) autoPatchelf:
-  #   buildInputs = [ pkgs.libsecret pkgs.glibc ];
-  #   nativeBuildInputs = [ pkgs.pkg-config pkgs.autoPatchelfHook ];
-  #   doCheck = true;
-  #   checkPhase = ''
-  #     autoPatchelf node_modules/@biomejs/cli-linux-x64/
-  #     npm run check
-  #   '';
-  #
-  # (2) buildFHSEnv (add fhsCheckEnv to let block):
-  #   fhsCheckEnv = pkgs.buildFHSEnv {
-  #     name = "paperless-ingestion-bot-check";
-  #     targetPkgs = pkgs: with pkgs; [ nodejs_24 nodePackages.npm libsecret ];
-  #     runScript = "bash";
-  #   };
-  #   doCheck = true;
-  #   checkPhase = ''
-  #     ${fhsCheckEnv}/bin/paperless-ingestion-bot-check -c "npm run check"
-  #   '';
-  dontCheck = true;
+  doCheck = true;
+  checkPhase = ''
+    export PATH="${pkgs.biome}/bin:$PATH"
+    npm run check
+  '';
   installPhase = ''
     mkdir -p $out/lib/node_modules/paperless-ingestion-bot
     cp -r dist package.json package-lock.json node_modules $out/lib/node_modules/paperless-ingestion-bot/
