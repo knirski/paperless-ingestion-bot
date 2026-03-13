@@ -111,12 +111,6 @@ function typeFromString(s: string | null | undefined): TypeOfChange {
 
 const parser = new CommitParser();
 
-/** Parser with conventionalcommits preset options (supports feat!, etc.) for single-line validation. */
-const validationParser = new CommitParser({
-	headerPattern: /^(\w*)(?:\((.*)\))?!?: (.*)$/,
-	headerCorrespondence: ["type", "scope", "subject"],
-});
-
 function mapParsedToCommitInfo(block: string, parsed: Commit): CommitInfo {
 	const header = parsed.header ?? block.split("\n")[0] ?? "";
 	const bodyParts = [parsed.body, parsed.footer].filter(Boolean);
@@ -173,12 +167,13 @@ function getTitle(commits: readonly CommitInfo[]): string {
 	return first?.subject ?? "";
 }
 
+/** Conventional commit header: type(scope)?!?: subject. Explicit regex to avoid parser fallback behavior. */
+const CONVENTIONAL_HEADER_PATTERN = /^(\w+)(?:\([^)]*\))?!?: .+$/;
+
 export function isValidConventionalTitle(s: string): boolean {
 	const trimmed = s.trim();
 	if (trimmed.length === 0 || trimmed.length > 72) return false;
-	const parsed = validationParser.parse(trimmed);
-	const type = parsed.type;
-	return type != null && type.length > 0;
+	return CONVENTIONAL_HEADER_PATTERN.test(trimmed);
 }
 
 export function getDescription(first: CommitInfo): string {
