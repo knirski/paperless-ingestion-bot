@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: read
+  security-events: none
+  id-token: none
 
 jobs:
   analysis:
