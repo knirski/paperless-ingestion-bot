@@ -35,45 +35,41 @@ export function createImapMockLayer(
 ): Layer.Layer<EmailClient> {
 	const spy = options?.spy;
 
-	return Layer.succeed(EmailClient)(
-		EmailClient.of({
-			withConnection: (account, fn) => {
-				const toDomainError = (cause: unknown) =>
-					new ImapConnectionError({
-						email: redactedForLog(account.email, redactEmail),
-						message: unknownToMessage(cause),
-					});
-				if (scenario.connectFail !== undefined) {
-					return Effect.fail(toDomainError(scenario.connectFail));
-				}
-				const session: EmailSession = {
-					search: (query) => {
-						if (spy) spy.searchCalls.push(query);
-						if (scenario.searchFail !== undefined)
-							return Effect.fail(toDomainError(scenario.searchFail));
-						const uids = scenario.searchCb
-							? scenario.searchCb(query)
-							: (scenario.searchResult ?? []);
-						return Effect.succeed(uids as MessageUid[]);
-					},
-					fetchAttachmentsForUids: (uids, maxSize) => {
-						if (spy) spy.fetchCalls.push({ uids: [...uids], maxSize });
-						if (scenario.fetchFail !== undefined)
-							return Effect.fail(toDomainError(scenario.fetchFail));
-						const attachments = scenario.attachmentsCb
-							? scenario.attachmentsCb(uids)
-							: (scenario.attachments ?? []);
-						return Effect.succeed(attachments);
-					},
-					markProcessed: (uids, value) => {
-						if (spy) spy.markProcessedCalls.push({ uids: [...uids], value });
-						if (scenario.markProcessedFail !== undefined)
-							return Effect.fail(toDomainError(scenario.markProcessedFail));
-						return Effect.void;
-					},
-				};
-				return fn(session);
-			},
-		}),
-	);
+	return Layer.mock(EmailClient, {
+		withConnection: (account, fn) => {
+			const toDomainError = (cause: unknown) =>
+				new ImapConnectionError({
+					email: redactedForLog(account.email, redactEmail),
+					message: unknownToMessage(cause),
+				});
+			if (scenario.connectFail !== undefined) {
+				return Effect.fail(toDomainError(scenario.connectFail));
+			}
+			const session: EmailSession = {
+				search: (query) => {
+					if (spy) spy.searchCalls.push(query);
+					if (scenario.searchFail !== undefined)
+						return Effect.fail(toDomainError(scenario.searchFail));
+					const uids = scenario.searchCb ? scenario.searchCb(query) : (scenario.searchResult ?? []);
+					return Effect.succeed(uids as MessageUid[]);
+				},
+				fetchAttachmentsForUids: (uids, maxSize) => {
+					if (spy) spy.fetchCalls.push({ uids: [...uids], maxSize });
+					if (scenario.fetchFail !== undefined)
+						return Effect.fail(toDomainError(scenario.fetchFail));
+					const attachments = scenario.attachmentsCb
+						? scenario.attachmentsCb(uids)
+						: (scenario.attachments ?? []);
+					return Effect.succeed(attachments);
+				},
+				markProcessed: (uids, value) => {
+					if (spy) spy.markProcessedCalls.push({ uids: [...uids], value });
+					if (scenario.markProcessedFail !== undefined)
+						return Effect.fail(toDomainError(scenario.markProcessedFail));
+					return Effect.void;
+				},
+			};
+			return fn(session);
+		},
+	});
 }

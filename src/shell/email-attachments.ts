@@ -123,12 +123,17 @@ export const processRawAttachment = Effect.fn("processRawAttachment")(function* 
 		onSuccess: () =>
 			Effect.gen(function* () {
 				const data = raw.path
-					? yield* fs
-							.readFile(raw.path)
-							.pipe(
-								mapFsError(raw.path, "readFile"),
-								Effect.ensuring(fs.remove(raw.path).pipe(Effect.catch(() => Effect.void))),
-							)
+					? yield* fs.readFile(raw.path).pipe(
+							mapFsError(raw.path, "readFile"),
+							Effect.ensuring(
+								fs.remove(raw.path).pipe(
+									Effect.ignore({
+										log: "Warn",
+										message: "Temp file cleanup failed after read",
+									}),
+								),
+							),
+						)
 					: raw.data;
 				const ollamaReq = Option.getOrNull(
 					buildOllamaRequest(

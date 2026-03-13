@@ -10,6 +10,7 @@ import {
 	type EmailLabel,
 	type UserSlug,
 } from "../../src/domain/types.js";
+import { EmailClient } from "../../src/live/imap-email-client.js";
 import { OllamaClient } from "../../src/live/ollama-client.js";
 import type { EmailConfigService } from "../../src/shell/config.js";
 import {
@@ -43,16 +44,12 @@ import {
 	TestBaseLayer,
 } from "../test-utils.js";
 
-const alwaysAcceptOllamaLayer = Layer.succeed(OllamaClient)(
-	OllamaClient.of({
-		assess: () => Effect.succeed(true),
-	}),
-);
-const rejectOllamaLayer = Layer.succeed(OllamaClient)(
-	OllamaClient.of({
-		assess: () => Effect.succeed(false),
-	}),
-);
+const alwaysAcceptOllamaLayer = Layer.mock(OllamaClient, {
+	assess: () => Effect.succeed(true),
+});
+const rejectOllamaLayer = Layer.mock(OllamaClient, {
+	assess: () => Effect.succeed(false),
+});
 
 function accountSubdir(tmpDir: string, email = "test@example.com"): Promise<string> {
 	return joinPath(tmpDir, emailToSlug(email));
@@ -411,7 +408,7 @@ describe("email-pipeline integration", () => {
 						markProcessedLabel: "paperless" as EmailLabel,
 					}),
 					credentialsStoreTest({}),
-					createImapMockLayer({ searchResult: [1], attachments: [eligiblePdfAttachment(1)] }),
+					Layer.mock(EmailClient, {}),
 					alwaysAcceptOllamaLayer,
 				);
 				const result = await runPipeline(layer);
