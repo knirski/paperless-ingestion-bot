@@ -94,8 +94,10 @@ We use a **workflow_dispatch trigger** so that when ci-nix pushes an npmDepsHash
 
 ## Local CI-like checks
 
-- **`npm run check`** — Full check: core (test, lint, knip, typecheck), docs (rumdl, typos), CI extras (actionlint, shellcheck). Lychee (link check, ~10s) is opt-in locally: `npm run check:with-links` or `CHECK_LINKS=1 npm run check`. CI uses `CHECK_LINKS=1`.
+- **`npm run check`** — Full check: core (test, lint, knip, typecheck), docs (rumdl, typos), CI extras (actionlint, shellcheck). Lychee (link check) runs as a separate step in CI.
 - **`npm run check:with-links`** — Same as check plus lychee. Use before pushing when you want to verify links.
+- **`npm run check:code`** — Code only: audit, test, lint, knip, typecheck. Faster than full check.
+- **`npm run check:just-links`** — Links only: lychee. Quick link verification without core checks.
 - **`npm run check:docs`** — Docs only: rumdl, typos. Quick docs verification without core checks.
 
 ## Fork PRs

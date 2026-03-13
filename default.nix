@@ -24,7 +24,7 @@ pkgs.buildNpmPackage rec {
   npmBuildScript = "build";
   buildInputs = [ pkgs.libsecret ];
   nativeBuildInputs = [ pkgs.pkg-config ];
-  # Skip check: CI runs npm run check in check.yml. scripts/check.sh uses
+  # Skip check: CI runs npm run check in check.yml.
   # nix-run-if-missing for rumdl/typos/actionlint/shellcheck; Nix build sandbox
   # cannot run those. See docs/CI.md.
   dontCheck = true;

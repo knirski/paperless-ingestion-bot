@@ -1,4 +1,4 @@
-# Reusable workflow: run full check (test, lint, typecheck, rumdl, typos, lychee, SBOM, Codecov).
+# Reusable workflow: run full check (test, lint, typecheck, rumdl, typos, actionlint, shellcheck, lychee, SBOM, Codecov).
 # Called by ci.yml (runs when non-.md files change).
 #
 # Uses GitHub-provided: setup-node (built-in npm cache), upload-artifact, GITHUB_TOKEN.
@@ -53,10 +53,12 @@ jobs:
             fi
           fi
 
-      - name: Check (test, lint, typecheck, rumdl, typos, lychee, actionlint, shellcheck)
-        env:
-          CHECK_LINKS: 1
+      - name: Check (test, lint, typecheck, rumdl, typos, actionlint, shellcheck)
         run: npm run check
+
+      - name: Check links
+        continue-on-error: true
+        run: npm run check:just-links
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5

@@ -30,7 +30,9 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 | Command                    | Purpose                                                                                                                            |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run check`            | Full check: core, docs (rumdl, typos), actionlint, shellcheck. Lychee opt-in via `check:with-links`. Run before committing. |
-| `npm run check:with-links` | Same as check plus lychee (~10s). Or `CHECK_LINKS=1 npm run check`. |
+| `npm run check:with-links` | Same as check plus lychee (~10s). |
+| `npm run check:code`       | Code only: audit, test, lint, knip, typecheck. Faster than full check. |
+| `npm run check:just-links` | Links only: lychee. Quick link verification. |
 | `npm run check:docs`       | Docs only: rumdl, typos. Quick docs verification. |
 | `npm test`                 | Unit tests with coverage                                                                                                           |
 | `npm run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
@@ -157,7 +159,7 @@ Runs: `npm run test && npm run lint && npm run knip && npm run typecheck`. Cover
 - Focus a test: `npm test -- -t "pattern"`
 - Add or update tests for the code you change, even if nobody asked.
 - Before committing: run `npm run check`; ensure all tests pass.
-- **`check` runs everything** — Core, docs (rumdl, typos), actionlint, shellcheck. Use `check:with-links` to add lychee.
+- **`check` runs everything** — Core, docs (rumdl, typos), actionlint, shellcheck. Use `check:with-links` to add lychee (~10s).
 
 ## Security
 
