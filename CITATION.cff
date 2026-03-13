@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - name: "paperless-ingestion-bot contributors"
+    url: "https://github.com/knirski/paperless-ingestion-bot/graphs/contributors"
+title: "Paperless Ingestion Bot"
+version: 0.2.0
+date-released: 2025-03-12
+url: "https://github.com/knirski/paperless-ingestion-bot"
+repository-code: "https://github.com/knirski/paperless-ingestion-bot"
+license: Apache-2.0
+type: software

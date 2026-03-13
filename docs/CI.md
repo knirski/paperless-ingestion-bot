@@ -12,11 +12,27 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | [ci-nix.yml](../.github/workflows/ci-nix.yml) | push, pull_request → main | `paths: **/*.nix, package*.json, flake.lock` | nix |
 | [ci-release-please.yml](../.github/workflows/ci-release-please.yml) | pull_request → main | `paths: .release-please-manifest.json` | check |
 | [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through) |
-| [docker.yml](../.github/workflows/docker.yml) | release published, workflow_dispatch | — | build (GHCR), sbom |
+| [docker.yml](../.github/workflows/docker.yml) | release published, workflow_dispatch | — | build (GHCR), sign, sbom |
 
 **auto-pr.yml** runs on push to `ai/**` branches (non-forks). Creates or updates a PR with title from conventional commits (1 semantic commit → use subject; 2+ → Ollama). Uses scripts in `.github/scripts/`. See [GITHUB_APP_AUTO_PR_SETUP.md](GITHUB_APP_AUTO_PR_SETUP.md).
 
-**docker.yml** builds and pushes images to GHCR on each release, with provenance and SBOM attestations. Also uploads npm SBOM to the release. Manual trigger via workflow_dispatch for testing.
+**docker.yml** builds and pushes images to GHCR on each release, with provenance and SBOM attestations, and [Sigstore/cosign keyless signing](https://docs.sigstore.dev/cosign/signing/signing_with_containers/) for release images. Also uploads npm SBOM to the release. Manual trigger via workflow_dispatch for testing.
+
+**Verifying signed images:** Release images are signed with Sigstore keyless signing. To verify before pulling:
+
+```bash
+# Install cosign: https://docs.sigstore.dev/cosign/system_config/installation/
+cosign verify ghcr.io/knirski/paperless-ingestion-bot:v0.2.0
+```
+
+For digest-based verification (recommended for reproducibility), install [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane) (`go install github.com/google/go-containerregistry/cmd/crane@latest`), then:
+
+```bash
+IMAGE_DIGEST=$(crane digest ghcr.io/knirski/paperless-ingestion-bot:v0.2.0)
+cosign verify "ghcr.io/knirski/paperless-ingestion-bot@${IMAGE_DIGEST}"
+```
+
+Signatures are recorded in the [Rekor transparency log](https://search.sigstore.dev/).
 
 **ci.yml** runs when any non-.md file changes. Skips when only docs change.
 

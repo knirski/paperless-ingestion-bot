@@ -44,7 +44,7 @@ Might add: other email providers (Outlook, Proton), other IMs (Matrix, Telegram)
 | [Ollama](https://ollama.com/)                                            | No         | Optional AI eligibility assessment; also used for AI-generated PR titles in the auto-PR workflow (runs locally)                                    |
 | [paperless-ai](https://github.com/clusterzx/paperless-ai)               | No         | Optional AI post-processing (tags, titles, correspondents). This bot uses Ollama directly for pre-ingestion; paperless-ai augments after ingestion |
 | [signal-cli-rest-api](https://github.com/bbernhard/signal-cli-rest-api) | For Signal | Webhook server for Signal Messenger                                                                                                                |
-| Node.js ≥ 24                                                            | Yes        | Runtime                                                                                                                                            |
+| Node.js ≥ 24                                                            | Yes        | Runtime. See [Node support policy](#node-support-policy) below.                                                                                       |
 
 ## Quick Start
 
@@ -72,7 +72,7 @@ nix run .#default -- signal --config /path/to/config.json
 
 **Docker:**
 
-Images are published to [GHCR](https://github.com/knirski/paperless-ingestion-bot/pkgs/container/paperless-ingestion-bot) on each release. Use [Compose](deploy/compose/README.md) — minimal (Signal + ingestion bot) or full-stack (Paperless + Signal + Ollama) — or run standalone:
+Images are published to [GHCR](https://github.com/knirski/paperless-ingestion-bot/pkgs/container/paperless-ingestion-bot) on each release. Release images are signed with Sigstore keyless signing; see [docs/CI.md](docs/CI.md) for verification steps. Use [Compose](deploy/compose/README.md) — minimal (Signal + ingestion bot) or full-stack (Paperless + Signal + Ollama) — or run standalone:
 
 ```bash
 docker run --rm \
@@ -184,7 +184,7 @@ See [config.example.json](config.example.json) for a full example. A JSON Schema
 - **Credentials** — Stored only in the OS keychain (@napi-rs/keyring). No file fallback; fails clearly when keyring unavailable. Gmail app passwords and Signal API access never touch disk in plaintext.
 - **Webhook** — Token-bucket rate limiting (120/min); excess returns 429. Same-host deployment recommended: bind to `127.0.0.1` so only local processes (signal-cli-rest-api) can reach it. See [ADR 0002](docs/adr/0002-signal-webhook-security.md).
 - **PII in errors** — Paths, emails, phones, URLs are redacted in logs via Effect `Redacted`; raw values never appear in structured logs.
-- **Supply chain** — `npm audit --audit-level=high` in every check. CycloneDX SBOM generated in CI. Dependabot, CodeQL, OpenSSF Scorecard with least-privilege workflow permissions.
+- **Supply chain** — `npm audit --audit-level=high` in every check. CycloneDX SBOM generated in CI. Dependabot, CodeQL, OpenSSF Scorecard with least-privilege workflow permissions. Release images signed with Sigstore/cosign keyless signing.
 - **File permissions** — email-accounts metadata written with mode `0600`. Run as a dedicated user.
 
 **Trust model:** All family members in the config share the same Gmail account registry. Anyone can run `gmail status` to see all configured accounts and use pause/resume/remove on any of them. The design assumes a trusted group.
@@ -215,6 +215,10 @@ Runs tests, lint, and typecheck.
 ## Documentation
 
 TypeScript implementation using [Effect](https://effect.website/) and functional programming conventions. Bleeding edge: Effect v4 beta, [TypeScript Native](https://devblogs.microsoft.com/typescript/announcing-typescript-native-previews/) (`tsgo`) for build and typecheck (~10× faster than `tsc`).
+
+### Node support policy
+
+We target **Node.js 24+** (current) and Effect v4 beta. This is a deliberate choice for modern features; it may limit adoption on older LTS lines. We intend to support the current Node LTS line(s) that Effect v4 officially supports. Check [Effect compatibility](https://effect.website/) and our `engines` field in `package.json` for the minimum supported version. We do not commit to supporting older Node versions once we move to a newer LTS line.
 
 - [deploy/](deploy/): Deployment recipes — [Compose](deploy/compose/README.md) (Docker) and [systemd](deploy/systemd/README.md) (service units)
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md): Project structure and design

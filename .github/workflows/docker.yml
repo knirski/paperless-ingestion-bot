@@ -46,6 +46,7 @@ jobs:
             type=ref,event=tag
 
       - name: Build and push
+        id: build
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
@@ -57,6 +58,15 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: mode=max
           sbom: true
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # v4.1.0
+        if: github.event_name == 'release'
+
+      - name: Sign container image
+        if: github.event_name == 'release' && steps.build.outputs.digest != ''
+        run: |
+          cosign sign --yes "ghcr.io/${{ github.repository }}@${{ steps.build.outputs.digest }}"
 
   sbom:
     if: github.event_name == 'release'
