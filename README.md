@@ -91,8 +91,10 @@ Mount your config directory at `/etc/paperless-ingestion-bot` (must contain `con
 
 - `paperless-ingestion-bot signal`: Run Signal webhook server (validates `consume_dir` and `signal_api_url` at startup; use `--skip-reachability-check` to bypass API reachability check)
 - `paperless-ingestion-bot email`: Scan Gmail inboxes for attachments (one-shot; use with cron/systemd timer)
+- `paperless-ingestion-bot --help`: Show help
 - `paperless-ingestion-bot --version`: Show version
 - `paperless-ingestion-bot email --json`: Output `{ "saved": N }` to stdout for scripting
+- `paperless-ingestion-bot --completions <bash|zsh|fish>`: Print shell completion script (append to `~/.bashrc`, `~/.zshrc`, or `~/.config/fish/config.fish`)
 
 ## Setup
 

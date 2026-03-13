@@ -9,6 +9,7 @@ import {
 	type EmailLabel,
 	type UserSlug,
 } from "../../src/domain/types.js";
+import { SignalClient } from "../../src/live/signal-client.js";
 import type { SignalConfigService } from "../../src/shell/config.js";
 import {
 	MAX_ATTACHMENTS_PER_MESSAGE,
@@ -53,10 +54,17 @@ function buildTestLayer(
 		spy?: SignalMockSpy;
 		configOverrides?: Partial<SignalConfigService>;
 		credentialsStore?: Record<string, string>;
+		signalClientLayer?: Layer.Layer<SignalClient>;
 	},
 ): Layer.Layer<never> {
 	const { tmpDir, emailAccountsPath } = fixture;
 	const consumeDir = joinPathSync(tmpDir, "consume");
+	const signalLayer =
+		options?.signalClientLayer ??
+		createSignalMockLayer(scenario, {
+			...(options?.spy != null && { spy: options.spy }),
+			defaultAccount: AUTHORIZED_NUMBER,
+		});
 	return Layer.mergeAll(
 		TestBaseLayer,
 		Http.FetchHttpClient.layer,
@@ -68,10 +76,7 @@ function buildTestLayer(
 			...options?.configOverrides,
 		}),
 		credentialsStoreTest(options?.credentialsStore ?? { "test@example.com": "secret" }),
-		createSignalMockLayer(scenario, {
-			...(options?.spy != null && { spy: options.spy }),
-			defaultAccount: AUTHORIZED_NUMBER,
-		}),
+		signalLayer,
 	);
 }
 
@@ -97,10 +102,13 @@ describe("signal-pipeline integration", () => {
 		integrationTest(
 			"empty payload / no dataMessage — no reply, no error",
 			async ({ tmpDir, emailAccountsPath }) => {
-				const spy = createSpy();
-				const layer = buildTestLayer({ tmpDir, emailAccountsPath }, {}, { spy });
+				// Empty partial mock: any SignalClient call would throw UnimplementedError.
+				const layer = buildTestLayer(
+					{ tmpDir, emailAccountsPath },
+					{},
+					{ signalClientLayer: Layer.mock(SignalClient, {}) },
+				);
 				await runWebhook(layer, {});
-				expect(spy.sendMessageCalls).toHaveLength(0);
 			},
 		);
 

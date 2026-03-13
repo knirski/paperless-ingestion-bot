@@ -134,7 +134,13 @@ const fetchPart = Effect.fn("paperless-ingestion-bot/live/imap-email-client.fetc
 	const { path, size } = yield* streamToTempFile(account, downloadObj.content);
 	if (size > maxSize) {
 		yield* imap(account, () =>
-			Effect.runPromise(fs.remove(path).pipe(Effect.catch(() => Effect.void))),
+			Effect.runPromise(
+				fs
+					.remove(path)
+					.pipe(
+						Effect.ignore({ log: "Warn", message: "Temp file cleanup failed after size check" }),
+					),
+			),
 		);
 		return null;
 	}
@@ -237,7 +243,13 @@ function acquireConnection(account: Account) {
 			await c.connect();
 			return c;
 		}),
-		(client) => Effect.tryPromise(() => client.logout()).pipe(Effect.catch(() => Effect.void)),
+		(client) =>
+			Effect.tryPromise(() => client.logout()).pipe(
+				Effect.ignoreCause({
+					log: "Debug",
+					message: "IMAP logout failed (connection may already be closed)",
+				}),
+			),
 	);
 }
 

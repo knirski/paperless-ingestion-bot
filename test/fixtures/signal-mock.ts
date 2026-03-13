@@ -30,37 +30,33 @@ export function createSignalMockLayer(
 	const spy = options?.spy;
 	const defaultAccount = options?.defaultAccount ?? DEFAULT_ACCOUNT;
 
-	return Layer.succeed(SignalClient)(
-		SignalClient.of({
-			getAccount: () => {
-				if (spy) spy.getAccountCalls++;
-				const result = scenario.getAccountResult ?? Option.some(defaultAccount);
-				return Effect.succeed(result);
-			},
-			sendMessage: (account, recipient, message) => {
-				if (spy) spy.sendMessageCalls.push({ account, recipient, message });
-				if (scenario.sendMessageFail !== undefined)
-					return Effect.fail(
-						new ConfigValidationError({
-							message: String(scenario.sendMessageFail),
-						}),
-					);
-				return Effect.void;
-			},
-			fetchAttachment: (id) => {
-				if (spy) spy.fetchAttachmentCalls.push(id);
-				if (scenario.fetchAttachmentFail !== undefined)
-					return Effect.fail(
-						new ConfigValidationError({
-							message: String(scenario.fetchAttachmentFail),
-						}),
-					);
-				const data =
-					scenario.fetchAttachmentCb?.(id) ??
-					scenario.fetchAttachmentData?.[id] ??
-					new Uint8Array(0);
-				return Effect.succeed(data);
-			},
-		}),
-	);
+	return Layer.mock(SignalClient, {
+		getAccount: () => {
+			if (spy) spy.getAccountCalls++;
+			const result = scenario.getAccountResult ?? Option.some(defaultAccount);
+			return Effect.succeed(result);
+		},
+		sendMessage: (account, recipient, message) => {
+			if (spy) spy.sendMessageCalls.push({ account, recipient, message });
+			if (scenario.sendMessageFail !== undefined)
+				return Effect.fail(
+					new ConfigValidationError({
+						message: String(scenario.sendMessageFail),
+					}),
+				);
+			return Effect.void;
+		},
+		fetchAttachment: (id) => {
+			if (spy) spy.fetchAttachmentCalls.push(id);
+			if (scenario.fetchAttachmentFail !== undefined)
+				return Effect.fail(
+					new ConfigValidationError({
+						message: String(scenario.fetchAttachmentFail),
+					}),
+				);
+			const data =
+				scenario.fetchAttachmentCb?.(id) ?? scenario.fetchAttachmentData?.[id] ?? new Uint8Array(0);
+			return Effect.succeed(data);
+		},
+	});
 }
