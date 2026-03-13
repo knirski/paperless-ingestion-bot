@@ -731,7 +731,6 @@ layer(TestBaseLayer)("runFillBody", (it) => {
 			}).pipe(Effect.ensuring(tmp.remove()));
 		}),
 	);
-
 	it.effect("fails when no commits (empty title in title-body format)", () =>
 		Effect.gen(function* () {
 			const err = yield* runWithLogAndFilesEffect("", "", { format: "title-body" }).pipe(

@@ -10,12 +10,11 @@
  * or create-or-update-pr.ts generates these via git before invoking this script.
  */
 
-import * as path from "node:path";
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import type { Commit } from "conventional-commits-parser";
 import { CommitParser } from "conventional-commits-parser";
-import { Console, Effect, FileSystem, Layer, Logger, Option, pipe, Result } from "effect";
+import { Console, Effect, FileSystem, Layer, Logger, Option, Path, pipe, Result } from "effect";
 import * as Arr from "effect/Array";
 import { Command, Flag } from "effect/unstable/cli";
 import pkg from "../package.json" with { type: "json" };
@@ -359,13 +358,18 @@ function readTemplate(
 
 type OutputFormat = "body" | "title-body";
 
-function resolveTemplatePath(templatePath: string | undefined): string {
-	const cwd = process.cwd();
-	return templatePath
-		? path.isAbsolute(templatePath)
-			? templatePath
-			: path.resolve(cwd, templatePath)
-		: path.resolve(cwd, ".github/PULL_REQUEST_TEMPLATE.md");
+function resolveTemplatePath(
+	templatePath: string | undefined,
+): Effect.Effect<string, never, Path.Path> {
+	return Effect.gen(function* () {
+		const pathApi = yield* Path.Path;
+		const cwd = process.cwd();
+		return templatePath
+			? pathApi.isAbsolute(templatePath)
+				? templatePath
+				: pathApi.resolve(cwd, templatePath)
+			: pathApi.resolve(cwd, ".github/PULL_REQUEST_TEMPLATE.md");
+	});
 }
 
 function readLogAndFiles(
@@ -373,7 +377,7 @@ function readLogAndFiles(
 	filesFilePath: string,
 ): Effect.Effect<readonly [string, readonly string[]], FileSystemError, FileSystem.FileSystem> {
 	return Effect.gen(function* () {
-		const fs = yield* FileSystem.FileSystem.asEffect();
+		const fs = yield* FileSystem.FileSystem;
 		const [logContent, filesContent] = yield* Effect.all([
 			fs.readFileString(logFilePath).pipe(mapFsError(logFilePath, "readFileString")),
 			fs.readFileString(filesFilePath).pipe(mapFsError(filesFilePath, "readFileString")),
@@ -411,9 +415,13 @@ export function runFillBody(
 	templatePath: string | undefined,
 	format: OutputFormat = "body",
 	descriptionFilePath?: string,
-): Effect.Effect<string, ParseError | FileSystemError | PrTitleBlank, FileSystem.FileSystem> {
+): Effect.Effect<
+	string,
+	ParseError | FileSystemError | PrTitleBlank,
+	FileSystem.FileSystem | Path.Path
+> {
 	return Effect.gen(function* () {
-		const resolvedTemplatePath = resolveTemplatePath(templatePath);
+		const resolvedTemplatePath = yield* resolveTemplatePath(templatePath);
 
 		yield* Effect.log({
 			event: "fill_pr_template",
@@ -433,7 +441,7 @@ export function runFillBody(
 
 		let descriptionOverride: string | undefined;
 		if (descriptionFilePath) {
-			const fs = yield* FileSystem.FileSystem.asEffect();
+			const fs = yield* FileSystem.FileSystem;
 			descriptionOverride = yield* fs
 				.readFileString(descriptionFilePath)
 				.pipe(mapFsError(descriptionFilePath, "readFileString"));
