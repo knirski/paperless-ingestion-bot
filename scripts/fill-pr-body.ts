@@ -13,10 +13,13 @@
 import * as path from "node:path";
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
+import type { Commit } from "conventional-commits-parser";
 import { CommitParser } from "conventional-commits-parser";
 import { Console, Effect, FileSystem, Layer, Logger, Option, pipe, Result } from "effect";
+import * as Arr from "effect/Array";
 import { Command, Flag } from "effect/unstable/cli";
 import pkg from "../package.json" with { type: "json" };
+import { collapseProseParagraphs } from "./collapse-prose-paragraphs.js";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -50,6 +53,22 @@ const TYPE_OF_CHANGE = [
 ] as const;
 type TypeOfChange = (typeof TYPE_OF_CHANGE)[number];
 
+/** Conventional commit types we map to TypeOfChange. */
+const CONVENTIONAL_TYPES = [
+	"feat",
+	"fix",
+	"docs",
+	"chore",
+	"ci",
+	"build",
+	"refactor",
+	"style",
+	"test",
+	"perf",
+	"revert",
+] as const;
+type ConventionalType = (typeof CONVENTIONAL_TYPES)[number];
+
 /** Parse error for commit message parsing failures. */
 export class ParseError extends Error {
 	readonly _tag = "ParseError";
@@ -66,7 +85,7 @@ export class ParseError extends Error {
 
 const ISSUE_STARTS_PATTERN = /^(Closes|Fixes|Fix|Resolves|Resolve|Closed|Close) #\d+/i;
 
-const TYPE_MAP: Record<string, TypeOfChange> = {
+const TYPE_MAP: Record<ConventionalType, TypeOfChange> = {
 	feat: "New feature",
 	fix: "Bug fix",
 	docs: "Documentation update",
@@ -80,6 +99,16 @@ const TYPE_MAP: Record<string, TypeOfChange> = {
 	revert: "Chore",
 };
 
+function isConventionalType(s: string): s is ConventionalType {
+	return CONVENTIONAL_TYPES.some((t) => t === s);
+}
+
+function typeFromString(s: string | null | undefined): TypeOfChange {
+	if (!s) return "Chore";
+	const lower = s.toLowerCase();
+	return isConventionalType(lower) ? TYPE_MAP[lower] : "Chore";
+}
+
 const parser = new CommitParser();
 
 /** Parser with conventionalcommits preset options (supports feat!, etc.) for single-line validation. */
@@ -88,10 +117,7 @@ const validationParser = new CommitParser({
 	headerCorrespondence: ["type", "scope", "subject"],
 });
 
-function mapParsedToCommitInfo(
-	block: string,
-	parsed: ReturnType<CommitParser["parse"]>,
-): CommitInfo {
+function mapParsedToCommitInfo(block: string, parsed: Commit): CommitInfo {
 	const header = parsed.header ?? block.split("\n")[0] ?? "";
 	const bodyParts = [parsed.body, parsed.footer].filter(Boolean);
 	const body = bodyParts.join("\n\n").trim();
@@ -108,7 +134,7 @@ function mapParsedToCommitInfo(
 		subject: header,
 		body,
 		fullMessage: block,
-		type: (parsed as { type?: string }).type ?? null,
+		type: parsed.type ?? null,
 		references: refs,
 		breakingNote: breaking?.text ?? null,
 	};
@@ -121,12 +147,7 @@ export function parseCommits(logOutput: string): Result.Result<readonly CommitIn
 				.split("---COMMIT---")
 				.map((b) => b.trim())
 				.filter(Boolean);
-			const commits: CommitInfo[] = [];
-			for (const block of blocks) {
-				const parsed = parser.parse(block);
-				commits.push(mapParsedToCommitInfo(block, parsed));
-			}
-			return commits;
+			return blocks.map((block) => mapParsedToCommitInfo(block, parser.parse(block)));
 		},
 		catch: (e) =>
 			new ParseError("Failed to parse commits", e instanceof Error ? e : new Error(String(e))),
@@ -141,10 +162,10 @@ export function inferTypeOfChange(commits: readonly CommitInfo[]): TypeOfChange 
 	const sub = first.subject;
 	if (/^feat!|^feat\(.*\)!:|^BREAKING/.test(sub)) return "Breaking change";
 
-	const type = first.type?.toLowerCase();
-	if (type && TYPE_MAP[type]) return TYPE_MAP[type];
+	const fromType = typeFromString(first.type);
+	if (fromType !== "Chore") return fromType;
 	const prefix = sub.toLowerCase().split(":")[0] ?? "";
-	return TYPE_MAP[prefix] ?? "Chore";
+	return typeFromString(prefix);
 }
 
 function getTitle(commits: readonly CommitInfo[]): string {
@@ -156,7 +177,7 @@ export function isValidConventionalTitle(s: string): boolean {
 	const trimmed = s.trim();
 	if (trimmed.length === 0 || trimmed.length > 72) return false;
 	const parsed = validationParser.parse(trimmed);
-	const type = (parsed as { type?: string }).type;
+	const type = parsed.type;
 	return type != null && type.length > 0;
 }
 
@@ -164,7 +185,8 @@ export function getDescription(first: CommitInfo): string {
 	const body = first.body.trim();
 	const firstLine = body.split("\n")[0] ?? "";
 	if (body && !ISSUE_STARTS_PATTERN.test(firstLine)) {
-		return body.split("\n").slice(0, 20).join("\n");
+		const raw = body.split("\n").slice(0, 20).join("\n");
+		return collapseProseParagraphs(raw);
 	}
 	const match = /^[^:]+:\s*(.+)$/.exec(first.subject);
 	const captured = match?.[1];
@@ -206,18 +228,21 @@ export function filterMergeCommits(commits: readonly CommitInfo[]): readonly Com
 }
 
 export function getRelatedIssues(commits: readonly CommitInfo[]): readonly string[] {
-	const found = new Set<string>();
-	for (const c of commits) {
-		for (const r of c.references) found.add(r);
-	}
-	return [...found].toSorted();
+	return pipe(
+		commits,
+		(commits) => commits.flatMap((c) => c.references),
+		(refs) => [...new Set(refs)].toSorted(),
+	);
 }
 
 export function getBreakingChanges(commits: readonly CommitInfo[]): Option.Option<string> {
-	for (const c of commits) {
-		if (c.breakingNote) return Option.some(c.breakingNote.trim().slice(0, 2000));
-	}
-	return Option.none();
+	return pipe(
+		Arr.findFirst(
+			commits,
+			(c): c is CommitInfo & { breakingNote: string } => c.breakingNote != null,
+		),
+		Option.map((c) => c.breakingNote.trim().slice(0, 2000)),
+	);
 }
 
 export function fillTemplate(
@@ -259,8 +284,11 @@ const PLACEHOLDERS = [
 	"breakingChanges",
 	"placeholder", // Template comment "Replace each {{placeholder}} below"
 ] as const;
+type Placeholder = (typeof PLACEHOLDERS)[number];
 
-function buildSubstitutionMap(data: TemplateData): Record<string, string> {
+type SubstitutionMap = Record<Placeholder, string>;
+
+function buildSubstitutionMap(data: TemplateData): SubstitutionMap {
 	const conv = data.commitsConventional ? "x" : " ";
 	const docs = data.docsUpdated ? "x" : " ";
 	const tests = data.testsAdded ? "x" : " ";
@@ -293,13 +321,12 @@ function unescapeAfterSubstitution(s: string): string {
 /** Substitute {{placeholder}} in template with values from data. Values are escaped so literal {{ and }} in commit content are preserved. */
 export function renderFromTemplate(template: string, data: TemplateData): string {
 	const map = buildSubstitutionMap(data);
-	let out = template;
-	for (const key of PLACEHOLDERS) {
+	const substituted = PLACEHOLDERS.reduce((out, key) => {
 		const value = map[key];
-		const escaped = escapeForSubstitution(value ?? "");
-		out = out.replaceAll(`{{${key}}}`, escaped);
-	}
-	return unescapeAfterSubstitution(out);
+		const escaped = escapeForSubstitution(value);
+		return out.replaceAll(`{{${key}}}`, escaped);
+	}, template);
+	return unescapeAfterSubstitution(substituted);
 }
 
 // ─── Shell (Effect) ────────────────────────────────────────────────────────
