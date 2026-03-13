@@ -13,12 +13,12 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through) |
 | [docker.yml](../.github/workflows/docker.yml) | release published, workflow_dispatch | — | build (GHCR), sign, sbom |
 
-**docker.yml** builds and pushes images to GHCR on each release, with provenance and SBOM attestations, and [Sigstore/cosign keyless signing](https://docs.sigstore.dev/cosign/keyless/) for release images. Also uploads npm SBOM to the release. Manual trigger via workflow_dispatch for testing.
+**docker.yml** builds and pushes images to GHCR on each release, with provenance and SBOM attestations, and [Sigstore/cosign keyless signing](https://docs.sigstore.dev/cosign/signing/signing_with_containers/) for release images. Also uploads npm SBOM to the release. Manual trigger via workflow_dispatch for testing.
 
 **Verifying signed images:** Release images are signed with Sigstore keyless signing. To verify before pulling:
 
 ```bash
-# Install cosign: https://docs.sigstore.dev/cosign/installation/
+# Install cosign: https://docs.sigstore.dev/cosign/system_config/installation/
 cosign verify ghcr.io/knirski/paperless-ingestion-bot:v0.2.0
 ```
 
