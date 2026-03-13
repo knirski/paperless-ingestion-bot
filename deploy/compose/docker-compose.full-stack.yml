@@ -1,0 +1,115 @@
+# Full stack: Paperless-ngx + Signal + ingestion bot + Ollama
+# Single compose for document ingestion from Signal into Paperless.
+#
+# Prerequisites:
+# - Copy docker-compose.env.example to docker-compose.env and set PAPERLESS_SECRET_KEY
+# - Create config.json and users.json (see README)
+#
+# Setup:
+# 1. docker compose -f docker-compose.full-stack.yml up -d
+# 2. Link Signal: open http://localhost:8080/v1/qrcodelink
+# 3. Configure signal-cli-rest-api: RECEIVE_WEBHOOK_URL=http://ingestion-bot:8089/webhook
+# 4. Paperless UI: http://localhost:8000
+
+services:
+  broker:
+    image: docker.io/library/redis:8
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+
+  db:
+    image: docker.io/library/postgres:18
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: paperless
+
+  gotenberg:
+    image: docker.io/gotenberg/gotenberg:8.27
+    restart: unless-stopped
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=file:///tmp/.*"
+
+  tika:
+    image: docker.io/apache/tika:latest
+    restart: unless-stopped
+
+  webserver:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+      - broker
+      - gotenberg
+      - tika
+    ports:
+      - "8000:8000"
+    volumes:
+      - paperless-data:/usr/src/paperless/data
+      - paperless-media:/usr/src/paperless/media
+      - ./export:/usr/src/paperless/export
+      - consume:/usr/src/paperless/consume
+    env_file: docker-compose.env
+    environment:
+      PAPERLESS_REDIS: redis://broker:6379
+      PAPERLESS_DBHOST: db
+      PAPERLESS_DBENGINE: postgresql
+      PAPERLESS_TIKA_ENABLED: 1
+      PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
+      PAPERLESS_TIKA_ENDPOINT: http://tika:9998
+
+  signal-api:
+    image: docker.io/bbernhard/signal-cli-rest-api:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - signal-data:/home/.local/share/signal-cli
+    environment:
+      MODE: native
+      # Configure after first run: RECEIVE_WEBHOOK_URL=http://ingestion-bot:8089/webhook
+
+  ingestion-bot:
+    image: ghcr.io/knirski/paperless-ingestion-bot:latest
+    restart: unless-stopped
+    depends_on:
+      - signal-api
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./config.json:/etc/paperless-ingestion-bot/config.json:ro
+      - ./users.json:/var/lib/paperless-ingestion-bot/users.json:ro
+      - consume:/var/lib/paperless-ingestion-bot/consume
+    environment:
+      PAPERLESS_INGESTION_SIGNAL_API_URL: http://signal-api:8080
+      PAPERLESS_INGESTION_WEBHOOK_HOST: 0.0.0.0
+      PAPERLESS_INGESTION_WEBHOOK_PORT: "8089"
+      PAPERLESS_INGESTION_CONSUME_DIR: /var/lib/paperless-ingestion-bot/consume
+      PAPERLESS_INGESTION_OLLAMA_URL: http://ollama:11434
+    command: ["signal", "--config", "/etc/paperless-ingestion-bot/config.json", "--skip-reachability-check"]
+
+  ollama:
+    image: docker.io/ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    # Optional: for AI eligibility (email) and paperless-ai. Pull models after start:
+    # docker compose exec ollama ollama pull moondream
+    # docker compose exec ollama ollama pull llama3.2
+
+volumes:
+  paperless-data:
+  paperless-media:
+  pgdata:
+  redisdata:
+  signal-data:
+  consume:
+  ollama-data:

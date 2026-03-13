@@ -70,21 +70,22 @@ nix develop                  # Development shell
 nix run .#default -- signal --config /path/to/config.json
 ```
 
-**Docker (experimental, in progress):**
+**Docker:**
 
-A Dockerfile is available; image publishing to GHCR is not yet enabled. You can build locally:
+Images are published to [GHCR](https://github.com/knirski/paperless-ingestion-bot/pkgs/container/paperless-ingestion-bot) on each release. Use [Compose](deploy/compose/README.md) — minimal (Signal + ingestion bot) or full-stack (Paperless + Signal + Ollama) — or run standalone:
 
 ```bash
-docker build -t paperless-ingestion-bot .
 docker run --rm \
   -v /path/to/config:/etc/paperless-ingestion-bot:ro \
   -v /path/to/data:/var/lib/paperless-ingestion-bot \
-  paperless-ingestion-bot signal
+  ghcr.io/knirski/paperless-ingestion-bot:latest signal
 ```
 
-Mount your config directory at `/etc/paperless-ingestion-bot` (must contain `config.json`) and a data directory at `/var/lib/paperless-ingestion-bot` (for consume, email-accounts.json, users.json). Headless Linux requires a system credential store (libsecret/Secret Service); see [Troubleshooting](#troubleshooting).
+Mount your config directory at `/etc/paperless-ingestion-bot` (must contain `config.json`) and a data directory at `/var/lib/paperless-ingestion-bot` (for consume, email-accounts.json, users.json). For Gmail, headless Linux requires a system credential store (libsecret/Secret Service); see [Troubleshooting](#troubleshooting).
 
 **Env overrides:** Override file values with individual env vars (e.g. `-e PAPERLESS_INGESTION_SIGNAL_API_URL=http://signal:8080`). Use `--skip-reachability-check` when the Signal API starts after the bot (e.g. Docker Compose).
+
+**Deployment:** [deploy/](deploy/) — [Compose](deploy/compose/README.md) (minimal or full-stack) and [systemd](deploy/systemd/README.md) (service + timer units).
 
 ### Commands
 
@@ -213,6 +214,7 @@ Runs tests, lint, and typecheck.
 
 TypeScript implementation using [Effect](https://effect.website/) and functional programming conventions. Bleeding edge: uses the latest Effect version (v4 beta).
 
+- [deploy/](deploy/): Deployment recipes — [Compose](deploy/compose/README.md) (Docker) and [systemd](deploy/systemd/README.md) (service units)
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md): Project structure and design
 - [CONTRIBUTING.md](CONTRIBUTING.md): How to contribute
 - [docs/GITHUB_APP_AUTO_PR_SETUP.md](docs/GITHUB_APP_AUTO_PR_SETUP.md): Auto-PR workflow — push to `ai/**` branches to auto-create PRs with Ollama-generated titles (maintainer setup)

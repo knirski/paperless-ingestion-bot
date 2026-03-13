@@ -1,25 +1,25 @@
 name: Docker
 
-# Publishing disabled for now — uncomment to enable on release
-# on:
-#   release:
-#     types:
-#       - published
 on:
+  release:
+    types:
+      - published
   workflow_dispatch:
 
-# push: false — packages: read sufficient for ghcr.io login; id-token not needed (provenance disabled)
-permissions: {}
+# packages: write for push; id-token: write for provenance attestations
+permissions:
+  contents: read
+  packages: write
+  id-token: write
 
 jobs:
   build:
-    permissions:
-      contents: read
-      packages: read
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
@@ -41,18 +41,46 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=latest
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
             type=ref,event=tag
 
-      - name: Build (don't push for now)
+      - name: Build and push
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: false
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          # Re-enable when push: true (attestations require registry push)
-          provenance: false
-          sbom: false
+          provenance: mode=max
+          sbom: true
+
+  sbom:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Generate SBOM
+        run: npx @cyclonedx/cyclonedx-npm@4.2.0 --output-file sbom.json
+
+      - name: Upload SBOM to release
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: sbom.json
+          fail_on_unmatched_files: false
