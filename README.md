@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/knirski/paperless-ingestion-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/knirski/paperless-ingestion-bot/actions)
 [![Version](https://img.shields.io/github/package-json/v/knirski/paperless-ingestion-bot)](https://github.com/knirski/paperless-ingestion-bot/blob/main/package.json)
-[![Coverage](https://app.codecov.io/gh/knirski/paperless-ingestion-bot/graph/badge.svg)](https://app.codecov.io/gh/knirski/paperless-ingestion-bot)
+[![Coverage](https://codecov.io/gh/knirski/paperless-ingestion-bot/graph/badge.svg)](https://app.codecov.io/gh/knirski/paperless-ingestion-bot)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/knirski/paperless-ingestion-bot/badge)](https://scorecard.dev/viewer/?uri=github.com/knirski/paperless-ingestion-bot)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/license/Apache-2.0)
 [![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-Support-ea4aaa.svg)](https://github.com/sponsors/knirski)
