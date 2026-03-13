@@ -4,7 +4,7 @@
 
 pkgs.mkShell {
   buildInputs = [
-    pkgs.nodejs_25
+    pkgs.nodejs_24
     pkgs.nodePackages.npm
     pkgs.libsecret
   ];
