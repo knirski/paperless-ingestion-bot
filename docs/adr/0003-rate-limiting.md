@@ -19,6 +19,10 @@ Chosen option: **Token-bucket** via Effect's built-in `RateLimiter` from `effect
 - **Limit:** 120 requests per minute (~2/sec average). Suitable for document ingestion; protects against runaway senders without blocking normal use.
 - **Store:** `layerStoreMemory` (in-memory). For multi-instance deployments, `layerStoreRedis` is available.
 
+### Other uses
+
+Credential failure notifications (IMAP auth errors) also use the same `RateLimiter` with in-memory store: 1 notification per 24h per email address. Configurable via `credential_failure_throttle_hours` in email config.
+
 ### Consequences
 
 * Good, because Effect RateLimiter is built-in; no third-party package

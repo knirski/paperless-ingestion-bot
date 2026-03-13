@@ -18,6 +18,7 @@ import {
 	MAX_ATTACHMENT_SIZE,
 	runEmailPipeline,
 } from "../../src/shell/email-pipeline.js";
+import { RateLimiterMemoryLayer } from "../../src/shell/layers.js";
 import {
 	blockedIcsAttachment,
 	eligibleImageAttachment,
@@ -86,6 +87,7 @@ function buildTestLayer(
 	return Layer.mergeAll(
 		TestBaseLayer,
 		Http.FetchHttpClient.layer,
+		RateLimiterMemoryLayer,
 		emailConfigTest({
 			consumeDir: tmpDir,
 			emailAccountsPath,
