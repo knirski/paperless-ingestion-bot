@@ -37,7 +37,7 @@
 		"check:just-links": "scripts/nix-run-if-missing.sh lychee --timeout 30 --max-retries 10 --retry-wait-time 2 --no-progress .",
 		"lint": "biome check .",
 		"lint:fix": "biome check . --write --unsafe",
-		"lint:scripts": "find scripts .github/scripts -name '*.sh' -print0 | xargs -0 -r scripts/nix-run-if-missing.sh shellcheck",
+		"lint:scripts": "find scripts -name '*.sh' -print0 | xargs -0 -r scripts/nix-run-if-missing.sh shellcheck",
 		"lint:workflows": "scripts/nix-run-if-missing.sh actionlint",
 		"format": "biome format --write .",
 		"knip": "knip",
