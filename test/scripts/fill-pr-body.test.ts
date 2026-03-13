@@ -630,13 +630,18 @@ describe("runFillBody", () => {
 describe("--validate-title CLI", () => {
 	const runValidateTitle = (title: string): number => {
 		const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-		// Use --flag=value form to avoid CLI parsing ambiguity (e.g. "Add feature X" as separate args)
-		const result = childProcess.spawnSync(
-			"npx",
-			["tsx", "scripts/fill-pr-body.ts", `--validate-title=${title}`],
-			{ cwd: root, encoding: "utf8" },
-		);
-		return result.status ?? -1;
+		// Use execSync with shell so quoting is handled; spawnSync arg parsing can differ in CI
+		try {
+			const escaped = title.replace(/'/g, "'\\''");
+			childProcess.execSync(`npx tsx scripts/fill-pr-body.ts --validate-title='${escaped}'`, {
+				cwd: root,
+				encoding: "utf8",
+				stdio: "pipe",
+			});
+			return 0;
+		} catch (e) {
+			return (e as { status?: number }).status ?? 1;
+		}
 	};
 
 	test("valid conventional title exits 0", () => {
