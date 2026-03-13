@@ -63,5 +63,5 @@ With `--format title-body`, the script fails if there are no commits or the firs
 ## Implementation notes
 
 - **Git format:** Commit log uses `---COMMIT---` delimiter (`git log --format=---COMMIT---%n%s%n%b`). Changing this breaks parsing.
-- **Description:** First 20 lines of commit body. PR description is a summary.
+- **Description:** First 20 lines of commit body. PR description is a summary. Prose paragraphs (72-char line wraps) are unwrapped via remark AST; lists and code blocks are preserved.
 - **Breaking changes:** Truncated at 2000 chars.

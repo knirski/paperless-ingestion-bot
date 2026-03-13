@@ -189,9 +189,48 @@ describe("inferTypeOfChange", () => {
 });
 
 describe("getDescription", () => {
-	test("uses body when not Closes/Fixes", () => {
+	test("uses body when not Closes/Fixes, collapses newlines within paragraph for PR", () => {
 		const c = commit("feat: add x", "This adds the x feature.\nMore details.");
-		expect(getDescription(c)).toBe("This adds the x feature.\nMore details.");
+		expect(getDescription(c)).toBe("This adds the x feature. More details.");
+	});
+
+	test("preserves paragraph breaks (blank lines) in body", () => {
+		const c = commit(
+			"feat: add x",
+			"First paragraph line one.\nFirst paragraph line two.\n\nSecond paragraph.",
+		);
+		expect(getDescription(c)).toBe(
+			"First paragraph line one. First paragraph line two.\n\nSecond paragraph.",
+		);
+	});
+
+	test("preserves bullet lists (remark AST)", () => {
+		const c = commit(
+			"feat: add x",
+			"- Count only semantic commits\n- Move CI scripts to .github/scripts/\n- Sanitize GITHUB_OUTPUT",
+		);
+		const desc = getDescription(c);
+		expect(desc).toContain("Count only semantic commits");
+		expect(desc).toContain("Move CI scripts to .github/scripts/");
+		expect(desc).toContain("Sanitize GITHUB"); // remark may escape _ in OUTPUT
+	});
+
+	test("preserves code blocks (remark AST)", () => {
+		const c = commit("feat: add x", "Use:\n\n```\nPR_NUMBER=123 python script.py\n```");
+		expect(getDescription(c)).toContain("Use:");
+		expect(getDescription(c)).toContain("```");
+		expect(getDescription(c)).toContain("PR_NUMBER=123 python script.py");
+	});
+
+	test("collapses prose but preserves mixed content", () => {
+		const c = commit(
+			"feat: add x",
+			"Release Please force-pushes frequently, which was cancelling CI runs\nbefore they completed. Branch protection requires a successful check.\n\n- Set cancel-in-progress to false",
+		);
+		const desc = getDescription(c);
+		expect(desc).toContain("Release Please force-pushes frequently");
+		expect(desc).toContain("before they completed");
+		expect(desc).toContain("Set cancel-in-progress to false");
 	});
 
 	test("uses subject after colon when body starts with Closes", () => {
