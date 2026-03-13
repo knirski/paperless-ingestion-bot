@@ -5,17 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-
-* Configurable `credential_failure_throttle_hours` in email config (default 24)
-
-### Changed
-
-* Replace custom credential-failure throttle with Effect RateLimiter; remove `@js-temporal/polyfill` dependency
-* Consolidate rate limiting: `RateLimiterMemoryLayer` in `layers.ts` used by webhook and credential-failure
-
 ## [0.2.0](https://github.com/knirski/paperless-ingestion-bot/compare/paperless-ingestion-bot-v0.1.1...paperless-ingestion-bot-v0.2.0) (2026-03-12)
 
 
