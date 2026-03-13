@@ -3,15 +3,14 @@
  * Used when IMAP connection fails (e.g. bad app password).
  */
 
-import { Temporal } from "@js-temporal/polyfill";
-import { Effect, Option } from "effect";
+import { Duration, Effect, Option } from "effect";
 import * as Arr from "effect/Array";
-import { formatCredentialFailureMessage, isAuthFailure, shouldNotify } from "../core/index.js";
+import { RateLimiter } from "effect/unstable/persistence";
+import { formatCredentialFailureMessage, isAuthFailure } from "../core/index.js";
 import type { Account } from "../domain/account.js";
 import { formatErrorForStructuredLog, ImapConnectionError } from "../domain/errors.js";
 import { SignalClient } from "../live/signal-client.js";
 import { EmailConfig } from "./config.js";
-import { loadCredentialFailureThrottle, saveCredentialFailureThrottle } from "./runtime.js";
 
 const handleProcessAccountError = Effect.fn("onProcessAccountError")(function* (
 	acc: Account,
@@ -46,18 +45,22 @@ const notifyCredentialFailure = Effect.fn("notifyCredentialFailure")(function* (
 			onNone: () => Effect.void,
 			onSome: (found) =>
 				Effect.gen(function* () {
-					const lastNotifiedRaw = yield* loadCredentialFailureThrottle(
-						config.emailAccountsPath,
-						acc.email,
-					);
-					let lastNotified: Temporal.Instant | undefined;
-					try {
-						lastNotified = lastNotifiedRaw ? Temporal.Instant.from(lastNotifiedRaw) : undefined;
-					} catch {
-						lastNotified = undefined;
-					}
-					const now = Temporal.Now.instant();
-					if (!shouldNotify(lastNotified, now)) return;
+					const limiter = yield* RateLimiter.RateLimiter;
+					const hours = config.credentialFailureThrottleHours;
+					const rateLimitResult = yield* limiter
+						.consume({
+							key: acc.email,
+							limit: 1,
+							window: Duration.hours(hours),
+							onExceeded: "fail",
+						})
+						.pipe(
+							Effect.catchIf(
+								(e): e is RateLimiter.RateLimiterError => e instanceof RateLimiter.RateLimiterError,
+								() => Effect.succeed(null),
+							),
+						);
+					if (rateLimitResult === null) return;
 					const signalClient = yield* SignalClient;
 					const accountOpt = yield* signalClient.getAccount();
 					yield* Option.match(accountOpt, {
@@ -79,11 +82,6 @@ const notifyCredentialFailure = Effect.fn("notifyCredentialFailure")(function* (
 										}),
 									),
 									Effect.catch(() => Effect.void),
-								);
-								yield* saveCredentialFailureThrottle(
-									config.emailAccountsPath,
-									acc.email,
-									now.toString(), // ISO 8601 (Temporal.Instant.toString())
 								);
 								yield* Effect.log({
 									event: "credential_failure_notify",

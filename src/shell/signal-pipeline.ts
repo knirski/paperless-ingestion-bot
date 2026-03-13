@@ -65,7 +65,7 @@ import type { CredentialsStore } from "../live/credentials-store.js";
 import { SignalClient } from "../live/signal-client.js";
 import { SignalConfig, usersHint } from "./config.js";
 import { mapFsError, resolveOutputPath } from "./fs-utils.js";
-import type { SignalAppLayer } from "./layers.js";
+import { RateLimiterMemoryLayer, type SignalAppLayer } from "./layers.js";
 import { loadAllAccounts, saveAllAccounts } from "./runtime.js";
 
 export const MAX_ATTACHMENTS_PER_MESSAGE = 20;
@@ -262,8 +262,6 @@ const MAX_BODY_SIZE = FileSystem.Size(50 * 1024 * 1024);
 /** Max webhook requests per minute (fixed window). Protects against runaway senders. */
 const WEBHOOK_RATE_LIMIT_PER_MINUTE = 120;
 
-const WebhookRateLimiterLayer = RateLimiter.layer.pipe(Layer.provide(RateLimiter.layerStoreMemory));
-
 /**
  * Options for buildSignalServerLayer. Public API for consumers.
  * @lintignore
@@ -279,7 +277,7 @@ export function buildSignalServerLayer(
 ): Layer.Layer<never, ConfigValidationError | Layer.Error<SignalAppLayer>, never> {
 	const appWithMaxBody = appLayer.pipe(
 		Layer.provideMerge(Layer.succeed(Http.HttpIncomingMessage.MaxBodySize)(MAX_BODY_SIZE)),
-		Layer.provideMerge(WebhookRateLimiterLayer),
+		Layer.provideMerge(RateLimiterMemoryLayer),
 	);
 
 	const webhookRoutes = Http.HttpRouter.use(
