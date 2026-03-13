@@ -25,7 +25,7 @@
 	"type": "module",
 	"scripts": {
 		"start": "tsx --env-file .env src/cli.ts",
-		"build": "tsc -p tsconfig.build.json && tsx scripts/generate-schema.ts",
+		"build": "tsgo -p tsconfig.build.json && tsx scripts/generate-schema.ts",
 		"test": "vitest run --coverage --typecheck",
 		"test:unit": "vitest run --coverage=false --typecheck",
 		"test:integration": "vitest run test/integration --coverage=false",
@@ -39,7 +39,7 @@
 		"lint:workflows": "scripts/nix-run-if-missing.sh actionlint",
 		"format": "biome format --write .",
 		"knip": "knip",
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsgo --noEmit",
 		"prepare": "lefthook install",
 		"prepublishOnly": "npm run build",
 		"publint": "publint",
@@ -69,6 +69,7 @@
 		"knip": "^5.86.0",
 		"lint-staged": "^16.3.2",
 		"publint": "^0.3.18",
+		"@typescript/native-preview": "^7.0.0-dev",
 		"tsx": "^4.21.0",
 		"typescript": "^5.7.0",
 		"vitest": "^4.0.18"
