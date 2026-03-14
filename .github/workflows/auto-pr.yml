@@ -45,7 +45,7 @@ jobs:
 
       - name: Setup Ollama
         if: steps.commits.outputs.count != '1'
-        uses: ai-action/setup-ollama@71ea83e32be8721c648fa946c5da9853679a3803 # v2
+        uses: ai-action/setup-ollama@d53adfeb0c20dc103f2acb3ee3d47bbc955c2abc # v2
 
       - name: Pull model
         if: steps.commits.outputs.count != '1'
