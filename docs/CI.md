@@ -40,7 +40,7 @@ Signatures are recorded in the [Rekor transparency log](https://search.sigstore.
 
 **ci-docs.yml** is complementary: runs when only `*.md` files change. Reports a passing `check` job so branch protection allows merge. See [troubleshooting required status checks](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks).
 
-**ci-nix.yml** runs only when Nix or dependency files change. Runs Nix build and auto-updates `npmDepsHash` in `default.nix` for same-repo PRs and main. Uses the same GitHub App as auto-pr for the push so CI triggers on the new commit (GITHUB_TOKEN pushes do not trigger workflows). When ci-nix pushes an npmDepsHash update, it also triggers the check workflow via `workflow_dispatch` so the required status is reported on the new commit.
+**ci-nix.yml** runs only when Nix or dependency files change. Runs Nix build and auto-updates `bun.nix` for same-repo PRs and main. Uses the same GitHub App as auto-pr for the push so CI triggers on the new commit (GITHUB_TOKEN pushes do not trigger workflows). When ci-nix pushes a bun.nix update, it also triggers the check workflow via `workflow_dispatch` so the required status is reported on the new commit.
 
 **codeql-docs.yml** is complementary to codeql.yml: runs when only docs change. CodeQL skips for docs (paths-ignore); this reports passing status so code scanning allows merge.
 
@@ -52,7 +52,7 @@ All workflows declare explicit permissions. Use `permissions: {}` when no workfl
 
 - **check.yml** — test, lint, knip, typecheck, rumdl, typos, lychee, actionlint, shellcheck, SBOM, Codecov. Called by ci.yml.
 - **check-docs.yml** — rumdl (markdown lint), lychee (link check), typos (spell check). No npm ci. Config: `.rumdl.toml`, `_typos.toml`. Lychee respects `.gitignore`. Rumdl excludes `CHANGELOG.md` (auto-generated).
-- **nix.yml** — Nix build + npmDepsHash update. Called by ci-nix.yml and update-nix-hash.yml.
+- **nix.yml** — Nix build + bun.nix update. Called by ci-nix.yml and update-bun-nix.yml.
 
 ## Branch Protection
 
@@ -79,7 +79,7 @@ When ci-nix pushes an npmDepsHash update, the PR head changes to a new commit. T
 
 ## Design: ensuring check runs after ci-nix push
 
-We use a **workflow_dispatch trigger** so that when ci-nix pushes an npmDepsHash update, the check workflow is explicitly triggered on the new commit. This guarantees the required status is reported even if the push-triggered run is delayed or cancelled by concurrency.
+We use a **workflow_dispatch trigger** so that when ci-nix pushes a bun.nix update, the check workflow is explicitly triggered on the new commit. This guarantees the required status is reported even if the push-triggered run is delayed or cancelled by concurrency.
 
 **Alternatives considered:**
 
@@ -87,19 +87,19 @@ We use a **workflow_dispatch trigger** so that when ci-nix pushes an npmDepsHash
 |----------|------|------|
 | **workflow_dispatch trigger** (chosen) | Explicitly runs check on new commit; reliable safety net | Extra workflow run; requires App "Actions: write" permission |
 | **App token push only** | Push should trigger workflows; no extra step | Can be delayed or race with concurrency; we hit this in practice |
-| **Don't push on PRs** | No commit mismatch; simpler | Worse DX; contributors must run `nix run .#update-npm-deps-hash` locally |
+| **Don't push on PRs** | No commit mismatch; simpler | Worse DX; contributors must run `nix run .#update-bun-nix` locally |
 | **Documentation only** | Simple | No technical fix; still depends on timing |
 
 **GitHub App permission:** The App used for the push must have **Actions: Read and write** so it can trigger workflows via `gh workflow run`. If you see "Failed to trigger ci.yml. Ensure App has Actions: Read and write permission.", see [GITHUB_APP_AUTO_PR_SETUP.md](GITHUB_APP_AUTO_PR_SETUP.md#troubleshooting).
 
 ## Local CI-like checks
 
-- **`npm run check`** — Full check: core (test, lint, knip, typecheck), docs (rumdl, typos), CI extras (actionlint, shellcheck). Lychee (link check) runs as a separate step in CI.
-- **`npm run check:with-links`** — Same as check plus lychee. Use before pushing when you want to verify links.
-- **`npm run check:code`** — Code only: audit, test, lint, knip, typecheck. Faster than full check.
-- **`npm run check:just-links`** — Links only: lychee. Quick link verification without core checks.
-- **`npm run check:docs`** — Docs only: rumdl, typos. Quick docs verification without core checks.
+- **`bun run check`** — Full check: core (test, lint, knip, typecheck), docs (rumdl, typos), CI extras (actionlint, shellcheck). Lychee (link check) runs as a separate step in CI.
+- **`bun run check:with-links`** — Same as check plus lychee. Use before pushing when you want to verify links.
+- **`bun run check:code`** — Code only: audit, test, lint, knip, typecheck. Faster than full check.
+- **`bun run check:just-links`** — Links only: lychee. Quick link verification without core checks.
+- **`bun run check:docs`** — Docs only: rumdl, typos. Quick docs verification without core checks.
 
 ## Fork PRs
 
-CI cannot push to forks. If the nix job fails (ci-nix.yml), update locally: `nix run .#update-npm-deps-hash` (or `npm run update-nix-hash -- <hash>` using the hash from the failed job), then commit and push. See [CONTRIBUTING.md](../CONTRIBUTING.md).
+CI cannot push to forks. If the nix job fails (ci-nix.yml), update locally: `nix run .#update-bun-nix`, then commit and push. See [CONTRIBUTING.md](../CONTRIBUTING.md).

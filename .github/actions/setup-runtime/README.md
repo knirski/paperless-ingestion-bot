@@ -6,4 +6,4 @@ Composite action that sets up the JS/TS runtime matching the project's lockfile 
 
 **Outputs:** `runner` (npx|bunx), `cache-hit`.
 
-**Used by:** auto-pr-generate-reusable (when called from this repo).
+**Used by:** auto-pr-generate-reusable (when called from this repo), check.

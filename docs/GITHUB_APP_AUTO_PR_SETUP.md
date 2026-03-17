@@ -123,7 +123,7 @@ Or adjust the `branches` filter in the workflow to match your preferred prefix.
 | **fill-pr-template** | Base branch must exist | The workflow passes the default branch to `create-or-update-pr.ts`. If renamed, update the workflow. |
 | **Ollama model** | Overridable via repo var | Set repository variable `OLLAMA_MODEL` (e.g. `llama3.2`) to use a different model. Default: `llama3.1:8b`. |
 | **Ollama URL** | Overridable via repo var | Set repository variable `OLLAMA_URL` for remote Ollama. Default: `http://localhost:11434/api/generate` (setup-ollama runs server on localhost). |
-| **npmDepsHash** | CI cannot push to fork PRs | See [CONTRIBUTING](../CONTRIBUTING.md). Update locally: `nix run .#update-npm-deps-hash`. |
+| **bun.nix** | CI cannot push to fork PRs | See [CONTRIBUTING](../CONTRIBUTING.md). Update locally: `nix run .#update-bun-nix`. |
 
 ---
 

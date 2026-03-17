@@ -1,7 +1,6 @@
-import { assert, layer } from "@effect/vitest";
+import { describe, expect, test } from "bun:test";
 import { Effect, Exit, Layer, Option, Redacted } from "effect";
 import * as fc from "fast-check";
-import { describe, expect, test } from "vitest";
 import { collisionCandidateFilename, splitFilenameForCollision } from "../src/core/index.js";
 import { mapFsError, resolveOutputPath } from "../src/shell/fs-utils.js";
 import { PlatformServicesLayer } from "../src/shell/layers.js";
@@ -9,6 +8,7 @@ import {
 	createTestTempDir,
 	createTestTempDirEffect,
 	pathExists,
+	runWithLayer,
 	SilentLoggerLayer,
 } from "./test-utils.js";
 
@@ -31,18 +31,22 @@ describe("mapFsError", () => {
 });
 
 const ResolveOutputPathLayer = Layer.mergeAll(PlatformServicesLayer, SilentLoggerLayer);
+const run = runWithLayer(ResolveOutputPathLayer);
 
-layer(ResolveOutputPathLayer)("resolveOutputPath", (it) => {
-	it.effect.each([
+describe("resolveOutputPath", () => {
+	test.each([
 		{ baseFilename: "doc.pdf", existing: [] as string[], expectedSuffix: "" },
 		{ baseFilename: "doc.pdf", existing: ["doc.pdf"], expectedSuffix: "_1" },
 		{ baseFilename: "doc.pdf", existing: ["doc.pdf", "doc_1.pdf"], expectedSuffix: "_2" },
 		{ baseFilename: "image.png", existing: ["image.png", "image_1.png"], expectedSuffix: "_2" },
 		{ baseFilename: "noext", existing: ["noext"], expectedSuffix: "_1" },
 		{ baseFilename: "file.name.pdf", existing: ["file.name.pdf"], expectedSuffix: "_1" },
-	])(
-		"$baseFilename with existing $existing -> stem$expectedSuffix suffix",
-		({ baseFilename, existing, expectedSuffix }) =>
+	])("$baseFilename with existing $existing -> stem$expectedSuffix suffix", async ({
+		baseFilename,
+		existing,
+		expectedSuffix,
+	}) => {
+		await run(
 			Effect.gen(function* () {
 				const tmp = yield* createTestTempDirEffect();
 				for (const name of existing) {
@@ -53,36 +57,43 @@ layer(ResolveOutputPathLayer)("resolveOutputPath", (it) => {
 				const { stem, suffix } = splitFilenameForCollision(baseFilename);
 				const expectedName =
 					idx === 0 ? baseFilename : collisionCandidateFilename(stem, suffix, idx);
-				assert.strictEqual(result, tmp.join(expectedName));
+				expect(result).toBe(tmp.join(expectedName));
 				yield* tmp.remove();
 			}),
-	);
+		);
+	});
 
-	it.effect("PBT: path never collides with pre-existing files", () =>
-		Effect.gen(function* () {
-			const baseFilenameArb = fc
-				.stringMatching(/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,29}$/)
-				.filter((s) => s !== "." && s !== "..");
-			const countArb = fc.integer({ min: 0, max: 10 });
-			yield* Effect.promise(() =>
-				fc.assert(
-					fc.asyncProperty(baseFilenameArb, countArb, async (baseFilename, existingCount) => {
-						const tmp = await createTestTempDir();
-						const { stem, suffix } = splitFilenameForCollision(baseFilename);
-						for (let i = 0; i < existingCount; i++) {
-							const name = i === 0 ? baseFilename : collisionCandidateFilename(stem, suffix, i);
-							await tmp.writeFile(tmp.join(name), "");
-						}
-						const program = Effect.gen(function* () {
-							return yield* resolveOutputPath(tmp.path, baseFilename);
-						}).pipe(Effect.provide(ResolveOutputPathLayer)) as Effect.Effect<string, never, never>;
-						const result = await Effect.runPromise(program);
-						expect(await pathExists(result)).toBe(false);
-						expect(result).toContain(tmp.path);
-						await tmp.remove();
-					}),
-				),
-			);
-		}),
-	);
+	test("PBT: path never collides with pre-existing files", async () => {
+		await run(
+			Effect.gen(function* () {
+				const baseFilenameArb = fc
+					.stringMatching(/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,29}$/)
+					.filter((s) => s !== "." && s !== "..");
+				const countArb = fc.integer({ min: 0, max: 10 });
+				yield* Effect.promise(() =>
+					fc.assert(
+						fc.asyncProperty(baseFilenameArb, countArb, async (baseFilename, existingCount) => {
+							const tmp = await createTestTempDir();
+							const { stem, suffix } = splitFilenameForCollision(baseFilename);
+							for (let i = 0; i < existingCount; i++) {
+								const name = i === 0 ? baseFilename : collisionCandidateFilename(stem, suffix, i);
+								await tmp.writeFile(tmp.join(name), "");
+							}
+							const program = Effect.gen(function* () {
+								return yield* resolveOutputPath(tmp.path, baseFilename);
+							}).pipe(Effect.provide(ResolveOutputPathLayer)) as Effect.Effect<
+								string,
+								never,
+								never
+							>;
+							const result = await Effect.runPromise(program);
+							expect(await pathExists(result)).toBe(false);
+							expect(result).toContain(tmp.path);
+							await tmp.remove();
+						}),
+					),
+				);
+			}),
+		);
+	});
 });

@@ -11,8 +11,8 @@
  * fails if keyring is unavailable (e.g. headless Linux, CI without keychain).
  */
 
+import { describe, expect, it } from "bun:test";
 import { Effect, Exit, Layer, Option, pipe, Redacted } from "effect";
-import { describe, expect, it } from "vitest";
 import type { AccountEmail } from "../../src/domain/types.js";
 import { CredentialsStore } from "../../src/live/credentials-store.js";
 import { PlatformServicesLayer } from "../../src/shell/layers.js";

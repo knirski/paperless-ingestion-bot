@@ -2,7 +2,7 @@
 
 Paperless-ingestion-bot ingests documents from Signal and Gmail into Paperless-ngx. TypeScript, Effect v4 beta, Tagless Final, FC/IS.
 
-When editing this project, apply these rules. Workflow: apply rules → make changes → run `npm run check` → fix until pass.
+When editing this project, apply these rules. Workflow: apply rules → make changes → run `bun run check` → fix until pass.
 
 ## Research and Decision-Making
 
@@ -20,8 +20,8 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 
 ## Setup
 
-- Install: `npm install`
-- Verify: `npm run check` (test, lint, knip, typecheck)
+- Install: `bun install`
+- Verify: `bun run check` (test, lint, knip, typecheck)
 - **Build/typecheck:** Uses [TypeScript Native](https://devblogs.microsoft.com/typescript/announcing-typescript-native-previews/) (`tsgo`) for faster compile and typecheck. No declaration emit (standalone app).
 - CI: [docs/CI.md](docs/CI.md) — ci.yml (check, dependency-review), ci-docs.yml (markdown), ci-nix.yml (Nix build)
 
@@ -29,17 +29,17 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 
 | Command                    | Purpose                                                                                                                            |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run check`            | Full check: core, docs (rumdl, typos), actionlint, shellcheck. Lychee opt-in via `check:with-links`. Run before committing. |
-| `npm run check:with-links` | Same as check plus lychee (~10s). |
-| `npm run check:code`       | Code only: audit, test, lint, knip, typecheck. Faster than full check. |
-| `npm run check:just-links` | Links only: lychee. Quick link verification. |
-| `npm run check:docs`       | Docs only: rumdl, typos. Quick docs verification. |
-| `npm test`                 | Unit tests with coverage                                                                                                           |
-| `npm run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
-| `npm run lint`             | Lint (Biome)                                                                                                                       |
-| `npm run lint:fix`         | Lint and fix                                                                                                                       |
-| `npm run typecheck`        | TypeScript check                                                                                                                   |
-| `npm run knip`             | Unused code detection                                                                                                              |
+| `bun run check`            | Full check: core, docs (rumdl, typos), actionlint, shellcheck. Lychee opt-in via `check:with-links`. Run before committing. |
+| `bun run check:with-links` | Same as check plus lychee (~10s). |
+| `bun run check:code`       | Code only: audit, test, lint, knip, typecheck. Faster than full check. |
+| `bun run check:just-links` | Links only: lychee. Quick link verification. |
+| `bun run check:docs`       | Docs only: rumdl, typos. Quick docs verification. |
+| `bun test`                 | Unit tests with coverage                                                                                                           |
+| `bun run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
+| `bun run lint`             | Lint (Biome)                                                                                                                       |
+| `bun run lint:fix`         | Lint and fix                                                                                                                       |
+| `bun run typecheck`        | TypeScript check                                                                                                                   |
+| `bun run knip`             | Unused code detection                                                                                                              |
 
 ## Design Principles
 
@@ -150,15 +150,15 @@ When using `gh pr create` as fallback, write the body to a temp path (e.g. `/tmp
 ## Verification
 
 ```bash
-npm run check
+bun run check
 ```
 
-Runs: `npm run test && npm run lint && npm run knip && npm run typecheck`. Coverage: lines 90%, functions 90%. **Do not finish until all pass.**
+Runs: `bun run test && bun run lint && bun run knip && bun run typecheck`. Coverage: lines 90%, functions 90%. **Do not finish until all pass.**
 
 - Run full suite: `npm test`
 - Focus a test: `npm test -- -t "pattern"`
 - Add or update tests for the code you change, even if nobody asked.
-- Before committing: run `npm run check`; ensure all tests pass.
+- Before committing: run `bun run check`; ensure all tests pass.
 - **`check` runs everything** — Core, docs (rumdl, typos), actionlint, shellcheck. Use `check:with-links` to add lychee (~10s).
 
 ## Security
