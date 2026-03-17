@@ -1,78 +1,65 @@
+# Auto-PR — uses knirski/auto-pr reusable workflows. Push to ai/* to auto-create a PR.
+# See https://github.com/knirski/auto-pr/blob/main/docs/INTEGRATION.md
+#
+# Update @SHA refs when upgrading auto-pr (use SHA from auto-pr's main).
+
 name: Auto-PR
-
-on:
-  push:
-    branches:
-      - 'ai/**'
-
-concurrency:
-  group: auto-pr-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
   pull-requests: write
 
+on:
+  push:
+    branches:
+      - "ai/**"
+
+concurrency:
+  group: auto-pr-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  auto-pr:
+  check:
     if: github.event.repository.fork != true
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    env:
-      # Default matches DEFAULT_OLLAMA_MODEL in scripts/auto-pr/config.ts
-      OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL || 'llama3.1:8b' }}
-      OLLAMA_URL: ${{ vars.OLLAMA_URL || 'http://localhost:11434/api/generate' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        with:
-          node-version-file: ".nvmrc"
-          cache: "npm"
-      - run: npm ci
+      - name: Setup runtime
+        id: setup
+        uses: ./.github/actions/setup-runtime
 
-      - name: Fetch base branch
-        run: git fetch origin "${{ github.event.repository.default_branch }}"
-
-      - name: Get commit log and changed files
-        id: commits
+      - name: Install dependencies
         env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: npx tsx scripts/auto-pr-get-commits.ts
+          RUNNER: ${{ steps.setup.outputs.runner }}
+        run: |
+          if [ "$RUNNER" = "bunx" ]; then
+            bun install --frozen-lockfile
+          else
+            npm ci
+          fi
 
-      - name: Setup Ollama
-        if: steps.commits.outputs.count != '1'
-        uses: ai-action/setup-ollama@71ea83e32be8721c648fa946c5da9853679a3803 # v2
-
-      - name: Pull model
-        if: steps.commits.outputs.count != '1'
-        run: ollama pull ${{ env.OLLAMA_MODEL }}
-
-      # setup-ollama has no outputs; server runs on localhost:11434. Override via vars.OLLAMA_URL.
-      - name: Set PR title and description
-        id: ollama
-        if: steps.commits.outputs.count != '1'
+      - name: Check
         env:
-          COMMITS: ${{ steps.commits.outputs.commits }}
-        run: npx tsx scripts/auto-pr-ollama.ts
+          RUNNER: ${{ steps.setup.outputs.runner }}
+        run: |
+          if [ "$RUNNER" = "bunx" ]; then bun run check; else npm run check; fi
 
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@bf559f85448f9380bcfa2899dbdc01eb5b37be3a # v3.0.0-beta.2
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+  generate:
+    needs: check
+    if: github.event.repository.fork != true
+    uses: knirski/auto-pr/.github/workflows/auto-pr-generate-reusable.yml@f49b41fbdd1397689d6cafc1e579807447e1af04
+    with:
+      auto_pr_how_to_test: "1. Run `npm run check` or `bun run check`\n2. "
 
-      - name: Create or update PR
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          BRANCH: ${{ github.ref_name }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          COMMITS: ${{ steps.commits.outputs.commits }}
-          FILES: ${{ steps.commits.outputs.files }}
-          PR_TITLE: ${{ steps.ollama.outputs.title }}
-          DESCRIPTION_FILE: ${{ steps.ollama.outputs.description_file }}
-        run: npx tsx scripts/create-or-update-pr.ts
+  create:
+    needs: generate
+    if: github.event.repository.fork != true
+    uses: knirski/auto-pr/.github/workflows/auto-pr-create-reusable.yml@f49b41fbdd1397689d6cafc1e579807447e1af04
+    with:
+      auto_pr_pkg: ${{ needs.generate.outputs.auto_pr_pkg }}
+    secrets: inherit

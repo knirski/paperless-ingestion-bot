@@ -2,6 +2,8 @@
 
 This guide walks you through setting up a GitHub App so that when an AI agent (or any tool) pushes a branch with the `ai/` prefix, a workflow automatically creates or updates a pull request **opened by the bot**. PR titles are generated from conventional commits; for multi-commit PRs, local [Ollama](https://ollama.com/) summarizes commits into a conventional title and description (default model: `llama3.1:8b`, overridable via `OLLAMA_MODEL`). You can then approve the PR as the repo owner.
 
+**Workflow:** Uses [knirski/auto-pr](https://github.com/knirski/auto-pr) reusable workflows. See [auto-pr INTEGRATION.md](https://github.com/knirski/auto-pr/blob/main/docs/INTEGRATION.md) for the canonical setup guide.
+
 ## Overview
 
 1. **AI agent** (or terminal) pushes a branch (e.g. `ai/feature-x` or `ai/fix-y`)
@@ -73,21 +75,9 @@ Each script expects specific env vars. The workflow sets these automatically; fo
 
 ## Step 5: Add the Workflow File
 
-Copy from this repository: [.github/workflows/auto-pr.yml](../.github/workflows/auto-pr.yml), [scripts/auto-pr/prompts/](../scripts/auto-pr/prompts/) (pr-title.txt, pr-description.txt), [scripts/fill-pr-template.ts](../scripts/fill-pr-template.ts), [scripts/auto-pr-get-commits.ts](../scripts/auto-pr-get-commits.ts), [scripts/auto-pr-ollama.ts](../scripts/auto-pr-ollama.ts), and [scripts/create-or-update-pr.ts](../scripts/create-or-update-pr.ts). The workflow uses the PR template at [.github/PULL_REQUEST_TEMPLATE.md](../.github/PULL_REQUEST_TEMPLATE.md) (see [PR template](PR_TEMPLATE.md) for details).
+The workflow at [.github/workflows/auto-pr.yml](../.github/workflows/auto-pr.yml) uses [knirski/auto-pr](https://github.com/knirski/auto-pr) reusable workflows. It runs a check job first, then generate (commit parsing, Ollama for 2+ commits), then create (PR via GitHub App). The PR template is at [.github/PULL_REQUEST_TEMPLATE.md](../.github/PULL_REQUEST_TEMPLATE.md) (see [PR template](PR_TEMPLATE.md)).
 
----
-
-## Script reference
-
-Scripts used by the auto-PR workflow live in `scripts/`; prompts in `scripts/auto-pr/prompts/`. All run from the repository root (workspace).
-
-**Merge commit filter:** Lines matching `^Merge ` (case-insensitive) are excluded. Keep in sync: `scripts/auto-pr-get-commits.ts` (`filterSemanticSubjects`) and `scripts/fill-pr-template.ts` (`isMergeCommit`).
-
-| Script | Purpose | Used by |
-|--------|---------|---------|
-| **scripts/auto-pr-get-commits.ts** | Get commit log, filter semantic commits (exclude merge/blank), output paths and count | auto-pr.yml |
-| **scripts/auto-pr-ollama.ts** | Generate PR title and description via Ollama (2+ commits). Uses prompts from `scripts/auto-pr/prompts/`. Outputs `title` and `description_file`. Retries 3× each. `OLLAMA_MODEL` and `OLLAMA_URL` env overridable. | auto-pr.yml |
-| **scripts/create-or-update-pr.ts** | Create or update PR with fill-pr-template output. Uses `--description-file` when Ollama-generated description is available. | auto-pr.yml |
+**Local scripts** (`scripts/auto-pr-get-commits.ts`, `scripts/auto-pr-ollama.ts`, `scripts/create-or-update-pr.ts`, `scripts/fill-pr-template.ts`) remain for local runs and tests; the CI workflow uses the auto-pr package.
 
 ---
 

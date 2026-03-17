@@ -1,6 +1,6 @@
 <!--
   Creating manually? Replace each {{placeholder}} below with your content.
-  Using fill-pr-template? Run via create-or-update-pr.ts or: npx tsx scripts/fill-pr-template.ts --log-file <path> --files-file <path>
+  Using auto-pr? Push to ai/* branch — workflow fills this via knirski/auto-pr.
   See [docs/PR_TEMPLATE.md](docs/PR_TEMPLATE.md)
 -->
 
@@ -33,7 +33,7 @@
 <!-- For manual PRs: replace {{checklistConventional}}, {{checklistDocs}}, {{checklistTests}} with a space or x. The "npm run check" box has no placeholder—check it when done. -->
 
 - [{{checklistConventional}}] My commits follow [Conventional Commits](https://www.conventionalcommits.org/)
-- [ ] I have run `npm run check` and fixed any issues
+- [ ] I have run `npm run check` or `bun run check` and fixed any issues
 - [{{checklistDocs}}] I have updated the documentation if needed
 - [{{checklistTests}}] I have added or updated tests for my changes
 
