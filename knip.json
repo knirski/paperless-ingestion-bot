@@ -1,6 +1,7 @@
 {
 	"$schema": "https://unpkg.com/knip@5/schema.json",
 	"project": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"],
+	"entry": ["scripts/generate-schema.ts"],
 	"tags": ["-lintignore"],
-	"ignoreBinaries": ["scripts/nix-run-if-missing.sh"]
+	"ignoreBinaries": ["scripts/nix-run-if-missing.sh", "tsx"]
 }

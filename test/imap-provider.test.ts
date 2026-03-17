@@ -1,11 +1,12 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
+import { Schema } from "effect";
 import {
 	GENERIC_DEFAULT_EXCLUDE_LABELS,
 	GMAIL_DEFAULT_EXCLUDE_LABELS,
 	GMAIL_PRESET,
 	resolveImapConfig,
 } from "../src/domain/imap-provider.js";
-import type { EmailLabel } from "../src/domain/types.js";
+import { type EmailLabel, EmailLabelSchema } from "../src/domain/types.js";
 
 describe("resolveImapConfig", () => {
 	test("gmail preset returns Gmail config", () => {
@@ -37,8 +38,8 @@ describe("resolveImapConfig", () => {
 	});
 
 	test("generic with empty markProcessedLabel uses $Paperless", () => {
-		const config = resolveImapConfig("generic", "" as EmailLabel);
-		expect(config.markProcessedLabel).toBe("$Paperless");
+		const config = resolveImapConfig("generic", Schema.decodeSync(EmailLabelSchema)(""));
+		expect(config.markProcessedLabel).toBe("$Paperless" as unknown as EmailLabel);
 	});
 
 	test("generic accepts overrides", () => {

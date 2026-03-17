@@ -1,8 +1,8 @@
-# Updates npmDepsHash in default.nix. Manual fix when main is stale.
+# Updates bun.nix. Manual fix when main is stale.
 # ci-nix.yml handles updates on push and PR when nix/deps change.
 # Reuses the nix workflow (same-repo, push allowed).
 
-name: Update Nix hash
+name: Update bun.nix
 
 on:
   workflow_dispatch:
@@ -10,8 +10,7 @@ on:
 permissions: {}
 
 jobs:
-  update-hash:
-    # Push uses App token from nix.yml; GITHUB_TOKEN needs read only
+  update-bun-nix:
     permissions:
       contents: read
     uses: ./.github/workflows/nix.yml

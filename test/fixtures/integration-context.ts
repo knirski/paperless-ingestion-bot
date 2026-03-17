@@ -1,4 +1,4 @@
-import { test } from "vitest";
+import { test } from "bun:test";
 import { createTestTempDir, joinPath, writeTestFile } from "../test-utils.js";
 
 /** Account metadata for email-accounts.json. */
@@ -37,16 +37,19 @@ export interface IntegrationFixture {
 	emailAccountsPath: string;
 }
 
-export const integrationTest = test.extend<IntegrationFixture>({
-	// biome-ignore lint/correctness/noEmptyPattern: Vitest root fixture has no dependencies
-	tmpDir: async ({}, use) => {
+/** Bun-compatible replacement for Vitest test.extend. Sets up tmpDir and emailAccountsPath, runs fn, then cleans up. */
+export function integrationTest(
+	name: string,
+	fn: (fixture: IntegrationFixture) => Promise<void> | void,
+): void {
+	test(name, async () => {
 		const tmp = await createTestTempDir("ingestion-integration-");
-		await use(tmp.path);
-		await tmp.remove();
-	},
-	emailAccountsPath: async ({ tmpDir }, use) => {
-		const accountsPath = await joinPath(tmpDir, "email-accounts.json");
-		await writeTestFile(accountsPath, JSON.stringify([DEFAULT_ACCOUNT]));
-		await use(accountsPath);
-	},
-});
+		try {
+			const emailAccountsPath = await joinPath(tmp.path, "email-accounts.json");
+			await writeTestFile(emailAccountsPath, JSON.stringify([DEFAULT_ACCOUNT]));
+			await fn({ tmpDir: tmp.path, emailAccountsPath });
+		} finally {
+			await tmp.remove();
+		}
+	});
+}

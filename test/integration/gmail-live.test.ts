@@ -10,9 +10,9 @@
  * Requires a Gmail account with an app password (2FA must be enabled).
  */
 
+import { describe, expect, it } from "bun:test";
 import { Effect, FileSystem, Layer } from "effect";
 import * as Http from "effect/unstable/http";
-import { describe, expect, it } from "vitest";
 import type { EmailSession } from "../../src/interfaces/email-client.js";
 import { EmailClient, EmailClientLive } from "../../src/live/imap-email-client.js";
 import { OllamaClient } from "../../src/live/ollama-client.js";

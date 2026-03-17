@@ -1,39 +1,40 @@
 # Standalone Nix package for paperless-ingestion-bot.
 # Used by flake.nix when published independently.
+# Uses bun2nix for dependency fetching.
 
-{ pkgs }:
+{ pkgs, bun2nix }:
 
 let
   packageJson = builtins.fromJSON (builtins.readFile ./package.json);
   src = builtins.path {
     path = ./.;
     name = "paperless-ingestion-bot-src";
-    filter = path: type:
+    filter = path: _:
       builtins.baseNameOf path != "node_modules"
-      && builtins.baseNameOf path != "dist"
       && builtins.baseNameOf path != ".git"
-      && builtins.baseNameOf path != "result";
+      && builtins.baseNameOf path != "result"
+      && builtins.baseNameOf path != "coverage";
   };
-  npmDepsHash = "sha256-6JsYAwEXgQdDlRIhRE/3QueHVlJ5z5m6Ul0JKlsukbw=";
 in
-pkgs.buildNpmPackage rec {
+pkgs.stdenv.mkDerivation rec {
   pname = "paperless-ingestion-bot";
-  version = packageJson.version;
-  inherit src npmDepsHash;
-  nodejs = pkgs.nodejs_24;
-  npmBuildScript = "build";
+  inherit (packageJson) version;
+  inherit src;
+
+  nativeBuildInputs = [ bun2nix.hook pkgs.bun ];
+  bunDeps = bun2nix.fetchBunDeps { bunNix = ./bun.nix; };
   buildInputs = [ pkgs.libsecret ];
-  nativeBuildInputs = [ pkgs.pkg-config ];
-  # Skip check: CI runs npm run check in check.yml.
-  # nix-run-if-missing for rumdl/typos/actionlint/shellcheck; Nix build sandbox
-  # cannot run those. See docs/CI.md.
-  dontCheck = true;
+
+  dontUseBunBuild = true;
+
+  buildPhase = "bun run build";
+
   installPhase = ''
     mkdir -p $out/lib/node_modules/paperless-ingestion-bot
-    cp -r dist package.json package-lock.json node_modules $out/lib/node_modules/paperless-ingestion-bot/
+    cp -r package.json bun.lock node_modules dist config.example.json .nvmrc $out/lib/node_modules/paperless-ingestion-bot/
     mkdir -p $out/bin
     echo '#!${pkgs.runtimeShell}
-    exec ${pkgs.nodejs_24}/bin/node "${placeholder "out"}/lib/node_modules/paperless-ingestion-bot/dist/cli.js" "$@"' > $out/bin/paperless-ingestion-bot
+    exec ${pkgs.nodejs_24}/bin/node "$out/lib/node_modules/paperless-ingestion-bot/dist/cli.js" "$@"' > $out/bin/paperless-ingestion-bot
     chmod +x $out/bin/paperless-ingestion-bot
   '';
 }

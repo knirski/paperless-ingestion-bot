@@ -1,5 +1,5 @@
+import { describe, expect, test } from "bun:test";
 import { Result } from "effect";
-import { describe, expect, test } from "vitest";
 import {
 	buildDescriptionPrompt,
 	buildTitlePrompt,
@@ -114,24 +114,24 @@ describe("auto-pr core", () => {
 		test("succeeds for valid conventional", () => {
 			Result.match(validateTitleResponse("feat: add x", isValidConventionalTitle), {
 				onSuccess: (v) => expect(v).toBe("feat: add x"),
-				onFailure: () => expect.fail("expected success"),
+				onFailure: () => expect().fail("expected success"),
 			});
 		});
 		test("fails for empty", () => {
 			Result.match(validateTitleResponse("", isValidConventionalTitle), {
-				onSuccess: () => expect.fail("expected failure"),
+				onSuccess: () => expect().fail("expected failure"),
 				onFailure: () => {},
 			});
 		});
 		test("fails for 'null' string (Ollama fallback)", () => {
 			Result.match(validateTitleResponse("null", isValidConventionalTitle), {
-				onSuccess: () => expect.fail("expected failure"),
+				onSuccess: () => expect().fail("expected failure"),
 				onFailure: () => {},
 			});
 		});
 		test("fails for invalid format", () => {
 			Result.match(validateTitleResponse("not conventional", isValidConventionalTitle), {
-				onSuccess: () => expect.fail("expected failure"),
+				onSuccess: () => expect().fail("expected failure"),
 				onFailure: () => {},
 			});
 		});
@@ -141,16 +141,16 @@ describe("auto-pr core", () => {
 		test("succeeds for non-empty", () => {
 			Result.match(validateDescriptionResponse("some text"), {
 				onSuccess: (v) => expect(v).toBe("some text"),
-				onFailure: () => expect.fail("expected success"),
+				onFailure: () => expect().fail("expected success"),
 			});
 		});
 		test("fails for empty", () => {
 			Result.match(validateDescriptionResponse(""), {
-				onSuccess: () => expect.fail("expected failure"),
+				onSuccess: () => expect().fail("expected failure"),
 				onFailure: () => {},
 			});
 			Result.match(validateDescriptionResponse("null"), {
-				onSuccess: () => expect.fail("expected failure"),
+				onSuccess: () => expect().fail("expected failure"),
 				onFailure: () => {},
 			});
 		});

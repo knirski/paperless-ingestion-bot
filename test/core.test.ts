@@ -1,7 +1,7 @@
+import { describe, expect, test } from "bun:test";
 import { Option, Redacted, Result, Schema } from "effect";
 import * as FastCheck from "effect/testing/FastCheck";
 import * as fc from "fast-check";
-import { describe, expect, test } from "vitest";
 import {
 	attachmentBaseFilename,
 	authorizeSource,
@@ -65,6 +65,7 @@ import {
 	type ConsumeSubdir,
 	createUserRegistry,
 	type EmailLabel,
+	EmailLabelSchema,
 	type UserSlug,
 } from "../src/domain/types.js";
 import {
@@ -280,11 +281,11 @@ describe("core", () => {
 		}) => {
 			expect(
 				mergeExcludeLabels(
-					defaults as EmailLabel[],
-					account as EmailLabel[],
+					[...defaults] as EmailLabel[],
+					[...account] as EmailLabel[],
 					processed as EmailLabel,
 				),
-			).toEqual(expected);
+			).toEqual([...expected] as EmailLabel[]);
 		});
 
 		test("mergeExcludeLabels: output is deduplicated (PBT)", () => {
@@ -506,9 +507,9 @@ describe("core", () => {
 			expect(imgReq).toMatchObject({
 				model: "llava",
 				prompt: expect.stringContaining("document"),
-				images: expect.any(Array),
 				stream: false,
 			});
+			expect(Array.isArray(imgReq?.images)).toBe(true);
 			expect(imgReq?.images).toHaveLength(1);
 
 			const textContent = new TextEncoder().encode("invoice total: $100");
@@ -591,7 +592,9 @@ describe("core", () => {
 				expected: "+15550000001",
 			},
 		])("resolveSignalSource($data) -> $expected", ({ data, expected }) => {
-			expect(Option.getOrUndefined(resolveSignalSource(data))).toBe(expected);
+			expect(Option.getOrUndefined(resolveSignalSource(data))).toBe(
+				expected as SignalNumber | undefined,
+			);
 		});
 
 		test.each([
@@ -883,13 +886,20 @@ describe("core", () => {
 
 	describe("accounts", () => {
 		test("upsertAccount add and update", () => {
-			const email = Schema.decodeSync(AccountEmailSchema)("u@example.com");
-			const accounts = upsertAccount([], email, Redacted.make("a".repeat(16)), "user1" as UserSlug);
+			const email = Schema.decodeSync(AccountEmailSchema)(
+				"u@example.com",
+			) as unknown as AccountEmail;
+			const accounts = upsertAccount(
+				[],
+				email as unknown as AccountEmail,
+				Redacted.make("a".repeat(16)),
+				"user1" as UserSlug,
+			);
 			expect(accounts).toHaveLength(1);
-			expect(accounts[0]?.email).toBe("u@example.com");
+			expect(accounts[0]?.email).toBe("u@example.com" as AccountEmail);
 			const updated = upsertAccount(
 				accounts,
-				email,
+				email as unknown as AccountEmail,
 				Redacted.make("b".repeat(16)),
 				"user1" as UserSlug,
 			);
@@ -900,21 +910,26 @@ describe("core", () => {
 		});
 
 		test("upsertAccount preserves excludeLabels on update", () => {
-			const email = Schema.decodeSync(AccountEmailSchema)("u@example.com");
+			const email = Schema.decodeSync(AccountEmailSchema)(
+				"u@example.com",
+			) as unknown as AccountEmail;
 			const withLabels: Account[] = [
 				{
 					...baseAccount,
 					email,
-					excludeLabels: ["SPAM" as EmailLabel, "TRASH" as EmailLabel],
+					excludeLabels: Schema.decodeSync(Schema.Array(EmailLabelSchema))(["SPAM", "TRASH"]),
 				},
 			];
 			const updated = upsertAccount(
 				withLabels,
-				email,
+				email as unknown as AccountEmail,
 				Redacted.make("newpass".repeat(3)),
 				"user1" as UserSlug,
 			);
-			expect(updated[0]?.excludeLabels).toEqual(["SPAM", "TRASH"]);
+			expect(updated[0]?.excludeLabels).toEqual([
+				"SPAM",
+				"TRASH",
+			] as unknown as readonly EmailLabel[]);
 		});
 
 		test.each([

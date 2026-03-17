@@ -3,7 +3,7 @@
  * Types and state machine live in domain/account.ts.
  */
 
-import type { Redacted } from "effect";
+import { Option, type Redacted } from "effect";
 import * as Arr from "effect/Array";
 import type { Account } from "../domain/account.js";
 import { resolveImapConfig } from "../domain/imap-provider.js";
@@ -33,8 +33,8 @@ export function upsertAccount(
 	markProcessedLabel = "paperless" as EmailLabel,
 ): Account[] {
 	const found = Arr.findFirstWithIndex(accounts, (a) => a.email === email);
-	if (found) {
-		const [acc, idx] = found;
+	if (Option.isSome(found)) {
+		const [acc, idx] = found.value;
 		return accounts.with(idx, {
 			...acc,
 			appPassword,

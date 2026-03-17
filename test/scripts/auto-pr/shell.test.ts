@@ -1,38 +1,44 @@
-import { expect, layer } from "@effect/vitest";
+import { describe, expect, test } from "bun:test";
 import { Effect, FileSystem } from "effect";
 import { appendGhOutput } from "../../../scripts/auto-pr/index.js";
-import { createTestTempDirEffect, TestBaseLayer } from "../../test-utils.js";
+import { createTestTempDirEffect, runWithLayer, TestBaseLayer } from "../../test-utils.js";
 
-layer(TestBaseLayer)("appendGhOutput", (it) => {
-	it.effect("writes entries to file", () =>
-		Effect.gen(function* () {
-			const tmp = yield* createTestTempDirEffect("auto-pr-shell-");
-			const path = tmp.join("github_output.txt");
+const run = runWithLayer(TestBaseLayer);
 
-			yield* appendGhOutput(path, [
-				{ key: "a", value: "1" },
-				{ key: "b", value: "2" },
-			]);
+describe("appendGhOutput", () => {
+	test("writes entries to file", async () => {
+		await run(
+			Effect.gen(function* () {
+				const tmp = yield* createTestTempDirEffect("auto-pr-shell-");
+				const path = tmp.join("github_output.txt");
 
-			const fs = yield* FileSystem.FileSystem;
-			const content = yield* fs.readFileString(path);
-			expect(content).toContain("a=1");
-			expect(content).toContain("b=2");
-		}).pipe(Effect.scoped),
-	);
+				yield* appendGhOutput(path, [
+					{ key: "a", value: "1" },
+					{ key: "b", value: "2" },
+				]);
 
-	it.effect("appends to existing file", () =>
-		Effect.gen(function* () {
-			const tmp = yield* createTestTempDirEffect("auto-pr-shell-");
-			const path = tmp.join("github_output.txt");
-			const fs = yield* FileSystem.FileSystem;
-			yield* fs.writeFileString(path, "existing=line\n");
+				const fs = yield* FileSystem.FileSystem;
+				const content = yield* fs.readFileString(path);
+				expect(content).toContain("a=1");
+				expect(content).toContain("b=2");
+			}).pipe(Effect.scoped),
+		);
+	});
 
-			yield* appendGhOutput(path, [{ key: "new", value: "value" }]);
+	test("appends to existing file", async () => {
+		await run(
+			Effect.gen(function* () {
+				const tmp = yield* createTestTempDirEffect("auto-pr-shell-");
+				const path = tmp.join("github_output.txt");
+				const fs = yield* FileSystem.FileSystem;
+				yield* fs.writeFileString(path, "existing=line\n");
 
-			const content = yield* fs.readFileString(path);
-			expect(content).toContain("existing=line");
-			expect(content).toContain("new=value");
-		}).pipe(Effect.scoped),
-	);
+				yield* appendGhOutput(path, [{ key: "new", value: "value" }]);
+
+				const content = yield* fs.readFileString(path);
+				expect(content).toContain("existing=line");
+				expect(content).toContain("new=value");
+			}).pipe(Effect.scoped),
+		);
+	});
 });

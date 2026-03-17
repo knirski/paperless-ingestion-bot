@@ -1,9 +1,14 @@
-import { expect, layer } from "@effect/vitest";
+import { describe, expect, test } from "bun:test";
 import { Effect, FileSystem, Layer, Path, Ref } from "effect";
 import * as Http from "effect/unstable/http";
 import { DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_URL } from "../../scripts/auto-pr/index.js";
 import { runAutoPrOllama } from "../../scripts/auto-pr-ollama.js";
-import { createTestTempDirEffect, SilentLoggerLayer, TestBaseLayer } from "../test-utils.js";
+import {
+	createTestTempDirEffect,
+	runWithLayer,
+	SilentLoggerLayer,
+	TestBaseLayer,
+} from "../test-utils.js";
 
 /** Format commit blocks for parseCommits (---COMMIT--- separated). */
 function logContent(...blocks: Array<{ subject: string; body: string }>): string {
@@ -35,49 +40,51 @@ function createMockOllamaClientLayer(): Layer.Layer<Http.HttpClient.HttpClient> 
 }
 
 const TestLayer = Layer.mergeAll(TestBaseLayer, SilentLoggerLayer, createMockOllamaClientLayer());
+const run = runWithLayer(TestLayer);
 
-layer(TestLayer)("runAutoPrOllama", (it) => {
-	it.effect("writes title and description to GITHUB_OUTPUT", () =>
-		Effect.gen(function* () {
-			const tmp = yield* createTestTempDirEffect("auto-pr-ollama-");
-			const fs = yield* FileSystem.FileSystem;
-			const pathApi = yield* Path.Path;
+describe("runAutoPrOllama", () => {
+	test("writes title and description to GITHUB_OUTPUT", async () => {
+		await run(
+			Effect.gen(function* () {
+				const tmp = yield* createTestTempDirEffect("auto-pr-ollama-");
+				const fs = yield* FileSystem.FileSystem;
+				const pathApi = yield* Path.Path;
 
-			// Create workspace layout
-			const promptsDir = pathApi.join(tmp.path, "scripts", "auto-pr", "prompts");
-			yield* fs.makeDirectory(promptsDir, { recursive: true });
-			yield* fs.writeFileString(pathApi.join(promptsDir, "pr-title.txt"), "Generate a title.\n");
-			yield* fs.writeFileString(
-				pathApi.join(promptsDir, "pr-description.txt"),
-				"Generate a description.\n",
-			);
-			yield* fs.writeFileString(
-				pathApi.join(tmp.path, "semantic_subjects.txt"),
-				"feat: add x\nfix: y\n",
-			);
-			const commitsPath = pathApi.join(tmp.path, "commits.txt");
-			yield* fs.writeFileString(
-				commitsPath,
-				logContent({ subject: "feat: add x", body: "" }, { subject: "fix: y", body: "" }),
-			);
+				const promptsDir = pathApi.join(tmp.path, "scripts", "auto-pr", "prompts");
+				yield* fs.makeDirectory(promptsDir, { recursive: true });
+				yield* fs.writeFileString(pathApi.join(promptsDir, "pr-title.txt"), "Generate a title.\n");
+				yield* fs.writeFileString(
+					pathApi.join(promptsDir, "pr-description.txt"),
+					"Generate a description.\n",
+				);
+				yield* fs.writeFileString(
+					pathApi.join(tmp.path, "semantic_subjects.txt"),
+					"feat: add x\nfix: y\n",
+				);
+				const commitsPath = pathApi.join(tmp.path, "commits.txt");
+				yield* fs.writeFileString(
+					commitsPath,
+					logContent({ subject: "feat: add x", body: "" }, { subject: "fix: y", body: "" }),
+				);
 
-			const ghOutput = pathApi.join(tmp.path, "github_output.txt");
+				const ghOutput = pathApi.join(tmp.path, "github_output.txt");
 
-			yield* runAutoPrOllama(
-				commitsPath,
-				DEFAULT_OLLAMA_MODEL,
-				DEFAULT_OLLAMA_URL,
-				ghOutput,
-				tmp.path,
-			);
+				yield* runAutoPrOllama(
+					commitsPath,
+					DEFAULT_OLLAMA_MODEL,
+					DEFAULT_OLLAMA_URL,
+					ghOutput,
+					tmp.path,
+				);
 
-			const content = yield* fs.readFileString(ghOutput);
-			expect(content).toContain("title=");
-			expect(content).toContain("description_file=");
+				const content = yield* fs.readFileString(ghOutput);
+				expect(content).toContain("title=");
+				expect(content).toContain("description_file=");
 
-			const descPath = pathApi.join(tmp.path, "description.txt");
-			const descContent = yield* fs.readFileString(descPath);
-			expect(descContent).toContain("Test description paragraph");
-		}).pipe(Effect.scoped),
-	);
+				const descPath = pathApi.join(tmp.path, "description.txt");
+				const descContent = yield* fs.readFileString(descPath);
+				expect(descContent).toContain("Test description paragraph");
+			}).pipe(Effect.scoped),
+		);
+	});
 });
