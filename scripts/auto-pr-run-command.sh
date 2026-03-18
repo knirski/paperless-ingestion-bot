@@ -28,6 +28,11 @@ esac
 
 if [ "$USE_WORKSPACE" = "true" ]; then
 	bun run "$SCRIPT"
+elif [[ "$AUTO_PR_PKG" == github:* ]] && [[ "$RUNNER" == bunx ]]; then
+	# bunx -p fails with github: packages: Bun skips prepare for git deps (oven-sh/bun#6138),
+	# so dist/ is never built; bin points to missing file → "Package does not provide binary".
+	# npx runs prepare for git deps, so dist/ exists and the binary works.
+	npx -p "$AUTO_PR_PKG" "$BIN"
 else
 	$RUNNER -p "$AUTO_PR_PKG" "$BIN"
 fi
