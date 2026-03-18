@@ -31,7 +31,7 @@ jobs:
 
       - name: Setup runtime
         id: setup
-        uses: ./.github/actions/setup-runtime
+        uses: knirski/auto-pr/.github/actions/setup-runtime@28f9b0c664094b17c1c60837adb9e18cef1478ad
 
       - name: Install dependencies
         env:
@@ -52,14 +52,14 @@ jobs:
   generate:
     needs: check
     if: github.event.repository.fork != true
-    uses: knirski/auto-pr/.github/workflows/auto-pr-generate-reusable.yml@f49b41fbdd1397689d6cafc1e579807447e1af04
+    uses: knirski/auto-pr/.github/workflows/auto-pr-generate-reusable.yml@28f9b0c664094b17c1c60837adb9e18cef1478ad
     with:
       auto_pr_how_to_test: "1. Run `npm run check` or `bun run check`\n2. "
 
   create:
     needs: generate
     if: github.event.repository.fork != true
-    uses: knirski/auto-pr/.github/workflows/auto-pr-create-reusable.yml@f49b41fbdd1397689d6cafc1e579807447e1af04
+    uses: knirski/auto-pr/.github/workflows/auto-pr-create-reusable.yml@28f9b0c664094b17c1c60837adb9e18cef1478ad
     with:
       auto_pr_pkg: ${{ needs.generate.outputs.auto_pr_pkg }}
     secrets: inherit

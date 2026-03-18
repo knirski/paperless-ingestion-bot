@@ -23,7 +23,7 @@ jobs:
 
       - name: Setup runtime (Node or alternative) with cache
         id: setup
-        uses: ./.github/actions/setup-runtime
+        uses: knirski/auto-pr/.github/actions/setup-runtime@28f9b0c664094b17c1c60837adb9e18cef1478ad
 
       - name: Setup Node (for SBOM)
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
