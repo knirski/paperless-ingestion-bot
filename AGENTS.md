@@ -4,6 +4,21 @@ Paperless-ingestion-bot ingests documents from Signal and Gmail into Paperless-n
 
 When editing this project, apply these rules. Workflow: apply rules → make changes → run `bun run check` → fix until pass.
 
+## Skills
+
+**Use the ts-scripting skill** when analyzing or editing TypeScript code. It provides canonical patterns for Effect v4, FC/IS, Tagless Final, config, and testing. Compare against its checklist and apply applicable suggestions.
+
+**When to use which skill:**
+
+| Situation | Skill |
+|-----------|-------|
+| Editing TypeScript | ts-scripting |
+| New features, non-trivial changes | brainstorming — design before implementation |
+| Before claiming completion | verification-before-completion — run `bun run check`, show output |
+| Creating or editing rules | create-rule |
+
+**For new features or non-trivial changes:** Invoke the brainstorming skill before implementation. Present design and get approval before coding.
+
 ## Research and Decision-Making
 
 When unsure about how to implement something or when multiple approaches exist:
@@ -11,19 +26,22 @@ When unsure about how to implement something or when multiple approaches exist:
 **Use GitHub MCP (or other relevant MCP) first when available** — Prefer MCP tools over web search or manual lookup: `mcp_github_search_code`, `mcp_github_get_file_contents`, `mcp_context7_query-docs`, etc. Fall back to web fetch or CLI only when MCP has no matching capability.
 
 1. **Check official documentation first** — Use the primary source (library docs, GitHub Actions docs, etc.) to understand intended behavior and options.
-2. **When still uncertain, check popular and respectable public repos** — Look at how active, well-maintained projects handle the same problem (e.g. Next.js, React, GitHub’s own repos). This is mandatory when:
+2. **Effect sources** — For Effect, use the LLM-oriented docs at `https://github.com/Effect-TS/effect-smol/blob/effect%404.0.0-beta.XX/LLMS.md`. Replace the version segment (`effect%404.0.0-beta.XX`) with the `effect` version from `package.json` dependencies (e.g. `4.0.0-beta.33` → `effect%404.0.0-beta.33`).
+3. **When still uncertain, check popular and respectable public repos** — Look at how active, well-maintained projects handle the same problem (e.g. Next.js, React, GitHub’s own repos). This is mandatory when:
    - There are different valid options or paths.
    - There is no obvious solution.
    - You need to validate that an approach aligns with common practice.
 
 Docs give the “what” and “how”; real-world usage shows trade-offs and consensus.
 
+**Use the verification-before-completion skill** when about to commit, create a PR, or claim any task done.
+
 ## Setup
 
-- Install: `bun install`
+- Install: `bun install` then `bun x lefthook install` (Lefthook is a devDependency; the second step enables pre-commit/pre-push hooks)
 - Verify: `bun run check` (test, lint, knip, typecheck)
 - **Build/typecheck:** Uses [TypeScript Native](https://devblogs.microsoft.com/typescript/announcing-typescript-native-previews/) (`tsgo`) for faster compile and typecheck. No declaration emit (standalone app).
-- CI: [docs/CI.md](docs/CI.md) — ci.yml (check, dependency-review), ci-docs.yml (markdown), ci-nix.yml (Nix build)
+- CI: [docs/CI.md](docs/CI.md) — ci.yml (check, dependency-review), ci-workflows.yml (.github-only), ci-docs.yml (markdown), ci-nix.yml (Nix build)
 
 ## Commands
 
@@ -31,7 +49,8 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `bun run check`            | Full check: core, docs (rumdl, typos), actionlint, shellcheck. Lychee opt-in via `check:with-links`. Run before committing. |
 | `bun run check:with-links` | Same as check plus lychee (~10s). |
-| `bun run check:code`       | Code only: audit, test, lint, knip, typecheck. Faster than full check. |
+| `bun run check:code`       | Code only: audit, test, lint, knip, typecheck. Runs on pre-push. Faster than full check. |
+| `bun run check:ci`         | Full CI parity in Docker (`gh act` or `act`). **Prefer for local workflow testing** over pushing to trigger CI. |
 | `bun run check:just-links` | Links only: lychee. Quick link verification. |
 | `bun run check:docs`       | Docs only: rumdl, typos. Quick docs verification. |
 | `bun test`                 | Unit tests with coverage                                                                                                           |
@@ -139,7 +158,7 @@ When creating a PR (e.g. with GitHub MCP or `gh pr create`):
 2. **Type of change** — Check exactly one.
 3. **Changes made** — Specific bullet points (omit for trivial PRs).
 4. **How to test** — Step-by-step for reviewers; use "N/A" for docs-only.
-5. **Checklist** — Check all items (commits, `npm run check`, docs, tests).
+5. **Checklist** — Check all items (commits, `bun run check`, docs, tests).
 6. **Related issues** — Optional; use "Closes #123" to auto-close.
 7. **Breaking changes** — Only when applicable; describe impact and migration.
 
@@ -155,11 +174,13 @@ bun run check
 
 Runs: `bun run test && bun run lint && bun run knip && bun run typecheck`. Coverage: lines 90%, functions 90%. **Do not finish until all pass.**
 
-- Run full suite: `npm test`
-- Focus a test: `npm test -- -t "pattern"`
+- Run full suite: `bun test`
+- Focus a test: `bun test -- -t "pattern"`
 - Add or update tests for the code you change, even if nobody asked.
 - Before committing: run `bun run check`; ensure all tests pass.
 - **`check` runs everything** — Core, docs (rumdl, typos), actionlint, shellcheck. Use `check:with-links` to add lychee (~10s).
+- Pre-push runs `check:code` automatically (Lefthook). Run `bun x lefthook install` after cloning. Use `git push --no-verify` only when necessary.
+- For full CI parity locally (e.g. debugging CI): `bun run check:ci` (requires Docker + act or gh-act).
 
 ## Security
 
@@ -169,7 +190,7 @@ Credentials and config paths are sensitive; do not log or expose them.
 
 - [docs/EFFECT_UNSTABLE_PLAN.md](docs/EFFECT_UNSTABLE_PLAN.md) — Effect unstable adoption (observability, AI, persistence, process).
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Entry points, main flows, Gmail vs Generic IMAP (ADT + Match.exhaustive), error model.
-- [docs/adr/](docs/adr/) — Architecture Decision Records. See ADR workflow below.
+- [docs/adr/](docs/adr/) — Architecture Decision Records. See ADR workflow below. [ADR 0006](docs/adr/0006-bun-migration.md): Bun as sole package manager.
 
 ## ADR Workflow
 
