@@ -2,7 +2,22 @@
 
 Paperless-ingestion-bot ingests documents from Signal and Gmail into Paperless-ngx. TypeScript, Effect v4 beta, Tagless Final, FC/IS.
 
-When editing this project, apply these rules. Workflow: apply rules → make changes → run `npm run check` → fix until pass.
+When editing this project, apply these rules. Workflow: apply rules → make changes → run `bun run check` → fix until pass.
+
+## Skills
+
+**Use the ts-scripting skill** when analyzing or editing TypeScript code. It provides canonical patterns for Effect v4, FC/IS, Tagless Final, config, and testing. Compare against its checklist and apply applicable suggestions.
+
+**When to use which skill:**
+
+| Situation | Skill |
+|-----------|-------|
+| Editing TypeScript | ts-scripting |
+| New features, non-trivial changes | brainstorming — design before implementation |
+| Before claiming completion | verification-before-completion — run `bun run check`, show output |
+| Creating or editing rules | create-rule |
+
+**For new features or non-trivial changes:** Invoke the brainstorming skill before implementation. Present design and get approval before coding.
 
 ## Research and Decision-Making
 
@@ -11,35 +26,39 @@ When unsure about how to implement something or when multiple approaches exist:
 **Use GitHub MCP (or other relevant MCP) first when available** — Prefer MCP tools over web search or manual lookup: `mcp_github_search_code`, `mcp_github_get_file_contents`, `mcp_context7_query-docs`, etc. Fall back to web fetch or CLI only when MCP has no matching capability.
 
 1. **Check official documentation first** — Use the primary source (library docs, GitHub Actions docs, etc.) to understand intended behavior and options.
-2. **When still uncertain, check popular and respectable public repos** — Look at how active, well-maintained projects handle the same problem (e.g. Next.js, React, GitHub’s own repos). This is mandatory when:
+2. **Effect sources** — For Effect, use the LLM-oriented docs at `https://github.com/Effect-TS/effect-smol/blob/effect%404.0.0-beta.XX/LLMS.md`. Replace the version segment (`effect%404.0.0-beta.XX`) with the `effect` version from `package.json` dependencies (e.g. `4.0.0-beta.33` → `effect%404.0.0-beta.33`).
+3. **When still uncertain, check popular and respectable public repos** — Look at how active, well-maintained projects handle the same problem (e.g. Next.js, React, GitHub’s own repos). This is mandatory when:
    - There are different valid options or paths.
    - There is no obvious solution.
    - You need to validate that an approach aligns with common practice.
 
 Docs give the “what” and “how”; real-world usage shows trade-offs and consensus.
 
+**Use the verification-before-completion skill** when about to commit, create a PR, or claim any task done.
+
 ## Setup
 
-- Install: `npm install`
-- Verify: `npm run check` (test, lint, knip, typecheck)
+- Install: `bun install` then `bun x lefthook install` (Lefthook is a devDependency; the second step enables pre-commit/pre-push hooks)
+- Verify: `bun run check` (test, lint, knip, typecheck)
 - **Build/typecheck:** Uses [TypeScript Native](https://devblogs.microsoft.com/typescript/announcing-typescript-native-previews/) (`tsgo`) for faster compile and typecheck. No declaration emit (standalone app).
-- CI: [docs/CI.md](docs/CI.md) — ci.yml (check, dependency-review), ci-docs.yml (markdown), ci-nix.yml (Nix build)
+- CI: [docs/CI.md](docs/CI.md) — ci.yml (check, dependency-review), ci-workflows.yml (.github-only), ci-docs.yml (markdown), ci-nix.yml (Nix build)
 
 ## Commands
 
 | Command                    | Purpose                                                                                                                            |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run check`            | Full check: core, docs (rumdl, typos), actionlint, shellcheck. Lychee opt-in via `check:with-links`. Run before committing. |
-| `npm run check:with-links` | Same as check plus lychee (~10s). |
-| `npm run check:code`       | Code only: audit, test, lint, knip, typecheck. Faster than full check. |
-| `npm run check:just-links` | Links only: lychee. Quick link verification. |
-| `npm run check:docs`       | Docs only: rumdl, typos. Quick docs verification. |
-| `npm test`                 | Unit tests with coverage                                                                                                           |
-| `npm run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
-| `npm run lint`             | Lint (Biome)                                                                                                                       |
-| `npm run lint:fix`         | Lint and fix                                                                                                                       |
-| `npm run typecheck`        | TypeScript check                                                                                                                   |
-| `npm run knip`             | Unused code detection                                                                                                              |
+| `bun run check`            | Full check: core, docs (rumdl, typos), actionlint, shellcheck. Lychee opt-in via `check:with-links`. Run before committing. |
+| `bun run check:with-links` | Same as check plus lychee (~10s). |
+| `bun run check:code`       | Code only: audit, test, lint, knip, typecheck. Runs on pre-push. Faster than full check. |
+| `bun run check:ci`         | Full CI parity in Docker (`gh act` or `act`). **Prefer for local workflow testing** over pushing to trigger CI. |
+| `bun run check:just-links` | Links only: lychee. Quick link verification. |
+| `bun run check:docs`       | Docs only: rumdl, typos. Quick docs verification. |
+| `bun test`                 | Unit tests with coverage                                                                                                           |
+| `bun run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
+| `bun run lint`             | Lint (Biome)                                                                                                                       |
+| `bun run lint:fix`         | Lint and fix                                                                                                                       |
+| `bun run typecheck`        | TypeScript check                                                                                                                   |
+| `bun run knip`             | Unused code detection                                                                                                              |
 
 ## Design Principles
 
@@ -74,7 +93,6 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 | Domain type, error, MIME                              | `src/domain/`                                               |
 | Pipeline step, config, layer                          | `src/shell/`                                                |
 | Extending provider variants (e.g. new email provider) | Add to discriminated union in `domain/` + `Match.when` case |
-| GitHub workflow scripts (auto-PR)                     | `scripts/` (auto-pr-get-commits.ts, auto-pr-ollama.ts, create-or-update-pr.ts); prompts in `scripts/auto-pr/prompts/` |
 | General-purpose scripts (build, lint, dev)             | `scripts/`                                                  |
 
 ## Key Rules
@@ -116,20 +134,18 @@ Create small, focused commits. If changes span many files or concerns, propose s
 - Issues: `issue_write`, `add_issue_comment`, `issue_read`
 - Fallback to `gh` only when MCP has no matching tool.
 
-## Branch names (auto-PR workflow)
+## Branch names (auto-PR)
 
-Use `ai/` prefix when pushing so the [auto-PR workflow](.github/workflows/auto-pr.yml) auto-creates a PR with title and body from conventional commits:
+Use `ai/` prefix when pushing so the [auto-PR workflow](.github/workflows/auto-pr.yml) (via [knirski/auto-pr](https://github.com/knirski/auto-pr)) auto-creates a PR with title and body from conventional commits:
 
 - `ai/feature-name` or `ai/fix-bug-description`
-
-The workflow runs on push to `ai/**` branches and creates/updates the PR using `create-or-update-pr.ts` (which invokes `fill-pr-template.ts` and, for 2+ commits, `auto-pr-ollama.ts`).
 
 ## Pull Requests
 
 When creating a PR (e.g. with GitHub MCP or `gh pr create`):
 
 1. **Assess changes** — Inspect uncommitted and committed-but-not-pushed changes. Divide and group them logically (e.g. feature vs docs vs chore). Create separate branches and separate PRs for each logical group.
-2. Create branch (use `ai/` prefix), commit, push — see [Branch names (auto-PR workflow)](#branch-names-auto-pr-workflow).
+2. Create branch (use `ai/` prefix for auto-PR), commit, push.
 3. Create PR — follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md). See [docs/PR_TEMPLATE.md](docs/PR_TEMPLATE.md).
 4. **Checkout main and pull** — `git checkout main && git pull`. Do not finish until this is done; the workspace must be left on `main`.
 
@@ -139,7 +155,7 @@ When creating a PR (e.g. with GitHub MCP or `gh pr create`):
 2. **Type of change** — Check exactly one.
 3. **Changes made** — Specific bullet points (omit for trivial PRs).
 4. **How to test** — Step-by-step for reviewers; use "N/A" for docs-only.
-5. **Checklist** — Check all items (commits, `npm run check`, docs, tests).
+5. **Checklist** — Check all items (commits, `bun run check`, docs, tests).
 6. **Related issues** — Optional; use "Closes #123" to auto-close.
 7. **Breaking changes** — Only when applicable; describe impact and migration.
 
@@ -150,16 +166,18 @@ When using `gh pr create` as fallback, write the body to a temp path (e.g. `/tmp
 ## Verification
 
 ```bash
-npm run check
+bun run check
 ```
 
-Runs: `npm run test && npm run lint && npm run knip && npm run typecheck`. Coverage: lines 90%, functions 90%. **Do not finish until all pass.**
+Runs: check-nix-hash, check:nix, check:code (build, audit, lint, knip, typecheck, test), check:docs (rumdl, typos), lint:workflows, lint:scripts. Coverage: lines 90%, functions 90%. **Do not finish until all pass.**
 
-- Run full suite: `npm test`
-- Focus a test: `npm test -- -t "pattern"`
+- Run full suite: `bun test`
+- Focus a test: `bun test -- -t "pattern"`
 - Add or update tests for the code you change, even if nobody asked.
-- Before committing: run `npm run check`; ensure all tests pass.
+- Before committing: run `bun run check`; ensure all tests pass.
 - **`check` runs everything** — Core, docs (rumdl, typos), actionlint, shellcheck. Use `check:with-links` to add lychee (~10s).
+- Pre-push runs `check:code` automatically (Lefthook). Run `bun x lefthook install` after cloning. Use `git push --no-verify` only when necessary.
+- For full CI parity locally (e.g. debugging CI): `bun run check:ci` (requires Docker + act or gh-act).
 
 ## Security
 
@@ -169,7 +187,7 @@ Credentials and config paths are sensitive; do not log or expose them.
 
 - [docs/EFFECT_UNSTABLE_PLAN.md](docs/EFFECT_UNSTABLE_PLAN.md) — Effect unstable adoption (observability, AI, persistence, process).
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Entry points, main flows, Gmail vs Generic IMAP (ADT + Match.exhaustive), error model.
-- [docs/adr/](docs/adr/) — Architecture Decision Records. See ADR workflow below.
+- [docs/adr/](docs/adr/) — Architecture Decision Records. See ADR workflow below. [ADR 0006](docs/adr/0006-bun-migration.md): Bun as sole package manager.
 
 ## ADR Workflow
 
@@ -199,7 +217,7 @@ src/
   interfaces/      — Tagless Final service interfaces
   live/            — Live interpreters
   shell/           — Imperative shell (pipelines, config, layers)
-scripts/           — General-purpose and auto-PR scripts (fill-pr-template, auto-pr-ollama, create-or-update-pr, check-nix-hash, etc.)
+scripts/           — General-purpose scripts (build, check-nix-hash, etc.)
 test/
   fixtures/        — Config mocks, credentials, imap/signal mocks
   integration/     — Integration tests

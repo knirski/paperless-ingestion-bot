@@ -1,8 +1,9 @@
 # Complementary to codeql.yml: runs when only docs change.
 # CodeQL is skipped for docs (paths-ignore); this reports passing status so merge is allowed.
 # Same job names as codeql.yml so branch protection / code scanning is satisfied.
+# Distinct workflow name avoids conflict with codeql.yml in code scanning UI.
 
-name: CodeQL
+name: CodeQL (docs pass-through)
 
 on:
   pull_request:

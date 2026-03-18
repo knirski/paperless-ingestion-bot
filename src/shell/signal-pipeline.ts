@@ -634,9 +634,7 @@ function updateAccountStatus(
 ): AppEffect<boolean, FileSystem.FileSystem | Path.Path | CredentialsStore> {
 	return Effect.fn("updateAccountStatus")(function* () {
 		const accounts = yield* loadAllAccounts(emailAccountsPath, "paperless");
-		const found = Option.fromUndefinedOr(
-			Arr.findFirstWithIndex(accounts, (a) => a.email === targetEmail),
-		);
+		const found = Arr.findFirstWithIndex(accounts, (a) => a.email === targetEmail);
 		return yield* Option.match(found, {
 			onNone: () => Effect.succeed(false),
 			onSome: ([acc, idx]) =>

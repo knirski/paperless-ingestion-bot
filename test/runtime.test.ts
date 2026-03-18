@@ -1,6 +1,6 @@
+import { describe, expect, test } from "bun:test";
 import { Effect, Exit, Layer, Option, Redacted } from "effect";
 import * as fc from "fast-check";
-import { describe, expect, test } from "vitest";
 import type { Account } from "../src/domain/account.js";
 import { resolveImapConfig } from "../src/domain/imap-provider.js";
 import type { AccountEmail, EmailLabel, UserSlug } from "../src/domain/types.js";
@@ -252,7 +252,7 @@ describe("accountFromMetadata", () => {
 		).pipe(Effect.provide(SilentLoggerLayer));
 		const acc = await Effect.runPromise(program);
 		expect(acc._tag).toBe(expectedTag);
-		expect(acc.email).toBe(obj.email);
+		expect(acc.email).toBe(obj.email as import("../src/domain/types.js").AccountEmail);
 		expect(acc.excludeLabels).toEqual(obj.exclude_labels);
 		expect(acc.addedBy).toBe(obj.added_by);
 	});
@@ -585,9 +585,14 @@ describe("saveAllAccounts", () => {
 		expect(loaded).toHaveLength(1);
 		const acc = loaded[0];
 		expect(acc).toBeDefined();
-		expect(acc?.email).toBe("roundtrip@example.com");
+		expect(acc?.email).toBe(
+			"roundtrip@example.com" as import("../src/domain/types.js").AccountEmail,
+		);
 		if (acc) expect(Redacted.value(acc.appPassword)).toBe("roundtrip16chars!!");
-		expect(acc?.excludeLabels).toEqual(["SPAM", "Archived"]);
+		expect(acc?.excludeLabels).toEqual([
+			"SPAM",
+			"Archived",
+		] as unknown as readonly import("../src/domain/types.js").EmailLabel[]);
 		await tmp.remove();
 	});
 
@@ -631,7 +636,7 @@ describe("saveAllAccounts", () => {
 		expect(loaded).toHaveLength(1);
 		const acc = loaded[0];
 		expect(acc).toBeDefined();
-		expect(acc?.email).toBe("generic@example.com");
+		expect(acc?.email).toBe("generic@example.com" as import("../src/domain/types.js").AccountEmail);
 		if (acc) expect(Redacted.value(acc.appPassword)).toBe("roundtrip16chars!!");
 		expect(acc?.imapConfig.provider).toBe("generic");
 		expect(acc?.imapConfig.host).toBe("imap.example.com");

@@ -1,0 +1,14 @@
+---
+description: Run bun run check before claiming completion; evidence before assertions
+alwaysApply: true
+---
+
+# Verification Before Completion
+
+**Do not claim work is complete without verification evidence.**
+
+1. **Run** `bun run check` (full) or `bun run check:code` (code only)
+2. **Read** the output — confirm exit code 0, no failures
+3. **Then** claim completion — with evidence, not "should pass" or "looks good"
+
+Use the **verification-before-completion** skill when about to commit, create a PR, or claim any task done.
