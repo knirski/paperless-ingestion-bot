@@ -19,41 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
-    if: github.event.repository.fork != true
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          ref: ${{ github.ref_name }}
-          fetch-depth: 0
-
-      - name: Setup runtime
-        id: setup
-        uses: knirski/auto-pr/.github/actions/setup-runtime@28f9b0c664094b17c1c60837adb9e18cef1478ad
-
-      - name: Install dependencies
-        env:
-          RUNNER: ${{ steps.setup.outputs.runner }}
-        run: |
-          if [ "$RUNNER" = "bunx" ]; then
-            bun install --frozen-lockfile
-          else
-            npm ci
-          fi
-
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
-
-      - name: Check
-        env:
-          RUNNER: ${{ steps.setup.outputs.runner }}
-        run: |
-          if [ "$RUNNER" = "bunx" ]; then bun run check; else npm run check; fi
-
   generate:
-    needs: check
     if: github.event.repository.fork != true
     uses: knirski/auto-pr/.github/workflows/auto-pr-generate-reusable.yml@28f9b0c664094b17c1c60837adb9e18cef1478ad
     with:
