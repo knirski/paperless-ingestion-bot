@@ -21,26 +21,16 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup runtime (Node or alternative) with cache
-        id: setup
-        uses: knirski/auto-pr/.github/actions/setup-runtime@28f9b0c664094b17c1c60837adb9e18cef1478ad
-
-      - name: Setup Node (for SBOM)
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        with:
-          node-version: "lts/*"
-
-      - name: Generate SBOM
-        run: npm install && npm sbom --sbom-format cyclonedx > sbom.json
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Upload SBOM
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - name: Generate and upload SBOM
+        uses: ./.github/actions/generate-sbom
         with:
-          name: sbom
-          path: sbom.json
+          upload: artifact
 
       - name: Validate commit messages
         uses: wagoid/commitlint-github-action@b948419dd99f3fd78a6548d48f94e3df7f6bf3ed # v6.2.1
