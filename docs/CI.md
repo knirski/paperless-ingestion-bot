@@ -100,7 +100,7 @@ All workflows declare explicit permissions. Use `permissions: {}` when no workfl
 
 ## Reusable Workflows
 
-- **check.yml** — test, lint, knip, typecheck, rumdl, typos, lychee, actionlint, shellcheck, SBOM (npm sbom CycloneDX), Codecov. Called by ci.yml.
+- **check.yml** — test, lint, knip, typecheck, rumdl, typos, lychee, actionlint, shellcheck, SBOM (bunx cdxgen CycloneDX), Codecov. Called by ci.yml.
 - **check-workflows.yml** — actionlint on workflows. Called by ci-workflows.yml for .github-only changes.
 - **check-docs.yml** — rumdl (markdown lint), lychee (link check), typos (spell check). No bun install. Config: `.rumdl.toml`, `_typos.toml`. Lychee respects `.gitignore`. Rumdl excludes `CHANGELOG.md` (auto-generated).
 - **nix.yml** — Nix build + bun.nix update. Called by ci-nix.yml and update-bun-nix.yml.
