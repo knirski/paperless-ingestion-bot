@@ -65,7 +65,7 @@ jobs:
       - name: Format check scripts (shfmt)
         uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
       - name: Run shfmt
-        run: shfmt -d scripts .github/actions
+        run: shfmt -d scripts
 
       - name: Check links
         continue-on-error: true

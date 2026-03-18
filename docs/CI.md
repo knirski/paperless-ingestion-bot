@@ -1,6 +1,20 @@
 # CI Workflows
 
-This repo uses GitHub Actions with built-in path filters. No third-party path-filter actions.
+This repo uses GitHub Actions with built-in path filters. No third-party path-filter actions. Structure aligned with [knirski/auto-pr](https://github.com/knirski/auto-pr).
+
+## CI overview
+
+| When | What runs |
+|------|-----------|
+| Push to `ai/**` | auto-pr creates/updates PR |
+| PR to main (code changes) | ci → check, dependency-review |
+| PR to main (docs only) | ci-docs → check-docs |
+| PR to main (.github only) | ci-workflows → check (actionlint, shellcheck, shfmt) |
+| PR to main (nix/deps) | ci-nix → nix flake check + bun.nix update |
+| PR to main (release-please) | ci-release-please → check |
+| Push to main | release-please, scorecard (if configured) |
+| Manual | update-bun-nix, update-flake-lock |
+| Weekly | update-flake-lock (Sun), scorecard (Sat), stale (Mon) |
 
 ## Workflows
 
@@ -10,12 +24,12 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | [ci.yml](../.github/workflows/ci.yml) | push, pull_request → main | `paths-ignore: '**/*.md', '.github/**'` | check, dependency-review |
 | [ci-workflows.yml](../.github/workflows/ci-workflows.yml) | push, pull_request → main | `paths: '.github/**'` | check (minimal) |
 | [ci-docs.yml](../.github/workflows/ci-docs.yml) | push, pull_request → main | `paths: '**/*.md'` | check (pass-through) |
-| [ci-nix.yml](../.github/workflows/ci-nix.yml) | push, pull_request → main | `paths: **/*.nix, package*.json, flake.lock` | nix |
+| [ci-nix.yml](../.github/workflows/ci-nix.yml) | push, pull_request → main | `paths: **/*.nix, package*.json, bun.lock, flake.lock` | nix |
 | [ci-release-please.yml](../.github/workflows/ci-release-please.yml) | pull_request → main | `paths: .release-please-manifest.json` | check |
 | [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through) |
 | [docker.yml](../.github/workflows/docker.yml) | release published, workflow_dispatch | — | build (GHCR), sign, sbom |
 
-**auto-pr.yml** runs on push to `ai/**` branches (non-forks). Creates or updates a PR with title from conventional commits (1 semantic commit → use subject; 2+ → Ollama). Uses scripts in `scripts/`. See [GITHUB_APP_AUTO_PR_SETUP.md](GITHUB_APP_AUTO_PR_SETUP.md).
+**auto-pr.yml** runs on push to `ai/**` branches (non-forks, excludes default branch). Creates or updates a PR with title from conventional commits (1 semantic commit → use subject; 2+ → Ollama). Uses [knirski/auto-pr](https://github.com/knirski/auto-pr) reusable workflows. See [GITHUB_APP_AUTO_PR_SETUP.md](GITHUB_APP_AUTO_PR_SETUP.md).
 
 **docker.yml** builds and pushes images to GHCR on each release, with provenance and SBOM attestations, and [Sigstore/cosign keyless signing](https://docs.sigstore.dev/cosign/signing/signing_with_containers/) for release images. Also uploads npm SBOM to the release. Manual trigger via workflow_dispatch for testing.
 
@@ -60,15 +74,16 @@ All workflows declare explicit permissions. Use `permissions: {}` when no workfl
 
 ## Branch Protection
 
-Both ci.yml and ci-docs.yml call reusable workflows with job `check`, so both report **`check / check`**. Configure main branch protection to require:
+ci.yml, ci-docs.yml, and ci-workflows.yml report **`check / check`**. Configure main branch protection to require:
 
 - **Status checks that are required:** `check / check`
 
 This covers all PR types:
 - **Code PRs:** ci.yml runs → `check / check` ✓
 - **Docs-only PRs:** ci-docs.yml runs → `check / check` ✓ (markdownlint, links, spelling)
-- **Nix-only PRs:** ci.yml runs → `check / check` ✓
-- **Mixed PRs:** ci.yml runs → `check / check` ✓ (ci-docs also runs but same check name)
+- **.github-only PRs:** ci-workflows.yml runs → `check / check` ✓ (actionlint, shellcheck, shfmt)
+- **Nix-only PRs:** ci-nix runs; ci.yml may also run → `check / check` ✓
+- **Mixed PRs:** ci.yml runs → `check / check` ✓
 - **Release-please PRs:** ci-release-please.yml runs → `check / check` ✓
 
 Do not require `dependency-review` (PR-only) or `nix` (path-filtered); they would block when skipped.
