@@ -1,11 +1,11 @@
-import { assert, layer } from "@effect/vitest";
+import { describe, expect, test } from "bun:test";
 import { Effect, FileSystem, Layer } from "effect";
 import type { ImapFlow } from "imapflow";
 import type { MessageUid } from "../src/domain/types.js";
 import { fetchAttachmentsForUidsEffect } from "../src/live/imap-email-client.js";
 import { PlatformServicesLayer } from "../src/shell/layers.js";
 import { createTestAccount } from "./fixtures/account.js";
-import { readTestFile, SilentLoggerLayer } from "./test-utils.js";
+import { readTestFile, runWithLayer, SilentLoggerLayer } from "./test-utils.js";
 
 const ImapClientTestLayer = Layer.mergeAll(PlatformServicesLayer, SilentLoggerLayer);
 
@@ -44,73 +44,87 @@ function createMockClient(
 	} as unknown as ImapFlow;
 }
 
-layer(ImapClientTestLayer)("imap-email-client", (it) => {
-	it.effect("fetchAttachmentsForUidsEffect returns attachments streamed to temp files", () =>
-		Effect.gen(function* () {
-			const pdfData = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
-			const client = createMockClient([
-				{
-					partId: "1.1",
-					contentType: "application/pdf",
-					filename: "doc.pdf",
-					content: pdfData,
-				},
-			]);
-			const account = createTestAccount("test@example.com");
+const run = runWithLayer(ImapClientTestLayer);
 
-			const result = yield* fetchAttachmentsForUidsEffect(
-				account,
-				client,
-				[1] as MessageUid[],
-				10 * 1024 * 1024,
-			);
+describe("imap-email-client", () => {
+	test("fetchAttachmentsForUidsEffect returns attachments streamed to temp files", async () => {
+		await run(
+			Effect.gen(function* () {
+				const pdfData = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+				const client = createMockClient([
+					{
+						partId: "1.1",
+						contentType: "application/pdf",
+						filename: "doc.pdf",
+						content: pdfData,
+					},
+				]);
+				const account = createTestAccount("test@example.com");
 
-			const first = result[0];
-			assert.ok(first);
-			assert.strictEqual(result.length, 1);
-			assert.strictEqual(first.contentType, "application/pdf");
-			assert.strictEqual(first.filename, "doc.pdf");
-			assert.strictEqual(first.messageUid, 1);
-			assert.ok(first.path);
-			assert.strictEqual(first.data.length, 0);
+				const result = yield* fetchAttachmentsForUidsEffect(
+					account,
+					client,
+					[1] as MessageUid[],
+					10 * 1024 * 1024,
+				);
 
-			const path = first.path;
-			assert.ok(path);
-			const fileContent = yield* Effect.promise(() => readTestFile(path));
-			assert.deepStrictEqual(fileContent, pdfData);
+				const first = result[0];
+				expect(first).toBeDefined();
+				expect(result.length).toBe(1);
+				expect(first?.contentType).toBe("application/pdf");
+				expect(first?.filename).toBe("doc.pdf");
+				expect(first?.messageUid).toBe(1 as import("../src/domain/types.js").MessageUid);
+				expect(first?.path).toBeDefined();
+				expect(first?.data.length).toBe(0);
 
-			const fs = yield* FileSystem.FileSystem;
-			yield* fs.remove(path).pipe(Effect.catch(() => Effect.void));
-		}),
-	);
+				const path = first?.path;
+				expect(path).toBeDefined();
+				if (!path) throw new Error("path expected");
+				const fileContent = yield* Effect.promise(() => readTestFile(path));
+				expect(fileContent).toEqual(pdfData);
 
-	it.effect("fetchAttachmentsForUidsEffect skips attachments over maxSize", () =>
-		Effect.gen(function* () {
-			const largeData = new Uint8Array(100);
-			const client = createMockClient([
-				{
-					partId: "1.1",
-					contentType: "application/pdf",
-					filename: "big.pdf",
-					content: largeData,
-				},
-			]);
-			const account = createTestAccount("test@example.com");
+				const fs = yield* FileSystem.FileSystem;
+				yield* fs.remove(path).pipe(Effect.catch(() => Effect.void));
+			}),
+		);
+	});
 
-			const result = yield* fetchAttachmentsForUidsEffect(account, client, [1] as MessageUid[], 50);
+	test("fetchAttachmentsForUidsEffect skips attachments over maxSize", async () => {
+		await run(
+			Effect.gen(function* () {
+				const largeData = new Uint8Array(100);
+				const client = createMockClient([
+					{
+						partId: "1.1",
+						contentType: "application/pdf",
+						filename: "big.pdf",
+						content: largeData,
+					},
+				]);
+				const account = createTestAccount("test@example.com");
 
-			assert.strictEqual(result.length, 0);
-		}),
-	);
+				const result = yield* fetchAttachmentsForUidsEffect(
+					account,
+					client,
+					[1] as MessageUid[],
+					50,
+				);
 
-	it.effect("fetchAttachmentsForUidsEffect returns empty for empty uids", () =>
-		Effect.gen(function* () {
-			const client = createMockClient([]);
-			const account = createTestAccount("test@example.com");
+				expect(result.length).toBe(0);
+			}),
+		);
+	});
 
-			const result = yield* fetchAttachmentsForUidsEffect(account, client, [], 1024);
+	test("fetchAttachmentsForUidsEffect returns empty for empty uids", async () => {
+		await run(
+			Effect.gen(function* () {
+				const client = createMockClient([]);
+				const account = createTestAccount("test@example.com");
 
-			assert.strictEqual(result.length, 0);
-		}),
-	);
+				const result = yield* fetchAttachmentsForUidsEffect(account, client, [], 1024);
+
+				expect(result.length).toBe(0);
+			}),
+		);
+	});
 });

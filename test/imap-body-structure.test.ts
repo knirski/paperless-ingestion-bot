@@ -1,5 +1,5 @@
+import { describe, expect, test } from "bun:test";
 import * as fc from "fast-check";
-import { describe, expect, test } from "vitest";
 import {
 	collectAttachmentParts,
 	isMessageStructure,
@@ -158,7 +158,7 @@ describe("imap-body-structure", () => {
 				prefix === undefined
 					? collectAttachmentParts(structure)
 					: collectAttachmentParts(structure, prefix);
-			expect(result).toEqual(expected);
+			expect(result).toEqual([...expected]);
 		});
 
 		test("extracts nested attachments from childNodes", () => {

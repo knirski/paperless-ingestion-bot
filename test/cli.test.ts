@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import { ConfigValidationError, formatErrorForStructuredLog } from "../src/domain/errors.js";
 import { redactedForLog, redactPath } from "../src/domain/utils.js";
 

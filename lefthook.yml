@@ -2,9 +2,14 @@
 
 pre-commit:
   jobs:
-    - run: npx lint-staged
+    - run: bun x lint-staged
+    - glob: "*.nix"
+      run: bun run check:nix
 
 commit-msg:
   jobs:
-    - run: npx --no -- commitlint --edit {1}
-    - run: node scripts/commit-msg-hint.mjs {1}
+    - run: bun x --bun commitlint --edit {1}
+
+pre-push:
+  jobs:
+    - run: bun run check:code
