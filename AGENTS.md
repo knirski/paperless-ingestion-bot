@@ -134,12 +134,18 @@ Create small, focused commits. If changes span many files or concerns, propose s
 - Issues: `issue_write`, `add_issue_comment`, `issue_read`
 - Fallback to `gh` only when MCP has no matching tool.
 
+## Branch names (auto-PR)
+
+Use `ai/` prefix when pushing so the [auto-PR workflow](.github/workflows/auto-pr.yml) (via [knirski/auto-pr](https://github.com/knirski/auto-pr)) auto-creates a PR with title and body from conventional commits:
+
+- `ai/feature-name` or `ai/fix-bug-description`
+
 ## Pull Requests
 
 When creating a PR (e.g. with GitHub MCP or `gh pr create`):
 
 1. **Assess changes** — Inspect uncommitted and committed-but-not-pushed changes. Divide and group them logically (e.g. feature vs docs vs chore). Create separate branches and separate PRs for each logical group.
-2. Create branch, commit, push.
+2. Create branch (use `ai/` prefix for auto-PR), commit, push.
 3. Create PR — follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md). See [docs/PR_TEMPLATE.md](docs/PR_TEMPLATE.md).
 4. **Checkout main and pull** — `git checkout main && git pull`. Do not finish until this is done; the workspace must be left on `main`.
 

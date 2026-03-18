@@ -1,0 +1,33 @@
+# Auto-PR — uses knirski/auto-pr reusable workflows. Push to ai/* to auto-create a PR.
+# See https://github.com/knirski/auto-pr/blob/main/docs/INTEGRATION.md
+#
+# Update @SHA refs when upgrading (use SHA from knirski/auto-pr main).
+
+name: Auto-PR
+
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  push:
+    branches:
+      - "ai/**"
+
+concurrency:
+  group: auto-pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    if: github.event.repository.fork != true && github.ref_name != github.event.repository.default_branch
+    uses: knirski/auto-pr/.github/workflows/auto-pr-generate-reusable.yml@ac7350ac8c7b2fc604773049a9c3927587b209a8
+    with:
+      auto_pr_how_to_test: "1. Run `bun run check`\n2. "
+
+  create:
+    needs: generate
+    uses: knirski/auto-pr/.github/workflows/auto-pr-create-reusable.yml@ac7350ac8c7b2fc604773049a9c3927587b209a8
+    with:
+      auto_pr_pkg: ${{ needs.generate.outputs.auto_pr_pkg }}
+    secrets: inherit

@@ -1,10 +1,13 @@
 # PR Template
 
-A single template at [`.github/PULL_REQUEST_TEMPLATE.md`](../.github/PULL_REQUEST_TEMPLATE.md) is shown when creating a PR on GitHub.
+A single template at [`.github/PULL_REQUEST_TEMPLATE.md`](../.github/PULL_REQUEST_TEMPLATE.md) serves both manual and auto-PR creation.
 
 ## Usage
 
-Replace each `{{placeholder}}` with your content when creating a PR manually.
+| Mode | How |
+|------|-----|
+| **Manual** | Replace each `{{placeholder}}` when creating a PR on GitHub. |
+| **Auto-PR** | Push to `ai/*` branch — [knirski/auto-pr](https://github.com/knirski/auto-pr) fills placeholders from conventional commits (Ollama for 2+ commits). |
 
 ## Placeholders
 

@@ -40,6 +40,8 @@ Examples:
 
 ## Pull Requests
 
+Push to `ai/**` branches to auto-create PRs via [knirski/auto-pr](https://github.com/knirski/auto-pr). Otherwise create the PR manually.
+
 1. Run `bun run check` before submitting.
 2. Ensure your commits follow Conventional Commits (the PR template includes a checklist).
 3. Update documentation if your changes affect user-facing behavior.

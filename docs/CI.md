@@ -6,6 +6,7 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 
 | When | What runs |
 |------|-----------|
+| Push to `ai/**` | auto-pr creates/updates PR (via [knirski/auto-pr](https://github.com/knirski/auto-pr)) |
 | PR to main (code changes) | ci → check, dependency-review |
 | PR to main (docs only) | ci-docs → check-docs |
 | PR to main (.github only) | ci-workflows → check (actionlint, shellcheck, shfmt) |
@@ -19,6 +20,7 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 
 | Workflow | Trigger | Path filter | Jobs |
 |----------|---------|-------------|------|
+| [auto-pr.yml](../.github/workflows/auto-pr.yml) | push → `ai/**` | — | generate, create (PR from conventional commits) |
 | [ci.yml](../.github/workflows/ci.yml) | push, pull_request → main | `paths-ignore: '**/*.md', '.github/**'` | check, dependency-review |
 | [ci-workflows.yml](../.github/workflows/ci-workflows.yml) | push, pull_request → main | `paths: '.github/**'` | check (minimal) |
 | [ci-docs.yml](../.github/workflows/ci-docs.yml) | push, pull_request → main | `paths: '**/*.md'` | check (pass-through) |
@@ -32,6 +34,8 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | [update-flake-lock.yml](../.github/workflows/update-flake-lock.yml) | workflow_dispatch, schedule (Sun) | — | update flake.lock |
 | [scorecard.yml](../.github/workflows/scorecard.yml) | push → main, schedule (Sat) | — | OpenSSF Scorecard |
 | [stale.yml](../.github/workflows/stale.yml) | schedule (Mon), workflow_dispatch | — | Mark stale issues/PRs |
+
+**auto-pr.yml** runs on push to `ai/**` branches (non-forks, excludes default branch). Uses [knirski/auto-pr](https://github.com/knirski/auto-pr) reusable workflows to create or update a PR with title and body from conventional commits (1 commit → subject; 2+ → Ollama summary). Requires `APP_ID` and `APP_PRIVATE_KEY`. Update `knirski/auto-pr@SHA` refs in the workflow when upgrading.
 
 **docker.yml** builds and pushes images to GHCR on each release, with provenance and SBOM attestations, and [Sigstore/cosign keyless signing](https://docs.sigstore.dev/cosign/signing/signing_with_containers/) for release images. Also uploads CycloneDX SBOM to the release. Manual trigger via workflow_dispatch for testing.
 
@@ -55,11 +59,11 @@ Signatures are recorded in the [Rekor transparency log](https://search.sigstore.
 
 **ci-workflows.yml** runs when only `.github/**` changes. Minimal check: actionlint, shellcheck, shfmt on .github/actions. Reports `check / check` for branch protection.
 
-**ci-release-please.yml** runs when `.release-please-manifest.json` changes (only release-please touches this file). Release-please PRs often don't trigger ci.yml due to path-filter timing; this ensures `check / check` runs on the pull_request event so branch protection allows merge. Uses `cancel-in-progress: false` so Release Please's frequent force-pushes don't cancel runs before they complete. The release-please workflow uses the same GitHub App token (APP_ID, APP_PRIVATE_KEY) as nix so its pushes trigger workflows; GITHUB_TOKEN pushes do not.
+**ci-release-please.yml** runs when `.release-please-manifest.json` changes (only release-please touches this file). Release-please PRs often don't trigger ci.yml due to path-filter timing; this ensures `check / check` runs on the pull_request event so branch protection allows merge. Uses `cancel-in-progress: false` so Release Please's frequent force-pushes don't cancel runs before they complete. The release-please workflow uses the same GitHub App token (APP_ID, APP_PRIVATE_KEY) as auto-pr and nix so its pushes trigger workflows; GITHUB_TOKEN pushes do not.
 
 **ci-docs.yml** is complementary: runs when only `*.md` files change. Reports a passing `check` job so branch protection allows merge. See [troubleshooting required status checks](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks).
 
-**ci-nix.yml** runs only when Nix or dependency files change. Runs Nix build and auto-updates `bun.nix` for same-repo PRs and main. Uses the GitHub App for the push so CI triggers on the new commit (GITHUB_TOKEN pushes do not trigger workflows). When ci-nix pushes a bun.nix update, it also triggers the check workflow via `workflow_dispatch` so the required status is reported on the new commit.
+**ci-nix.yml** runs only when Nix or dependency files change. Runs Nix build and auto-updates `bun.nix` for same-repo PRs and main. Uses the same GitHub App as auto-pr for the push so CI triggers on the new commit (GITHUB_TOKEN pushes do not trigger workflows). When ci-nix pushes a bun.nix update, it also triggers the check workflow via `workflow_dispatch` so the required status is reported on the new commit.
 
 **codeql.yml** runs when non-docs code changes. Uses security-extended queries. Skips for docs-only (paths-ignore).
 
@@ -79,9 +83,16 @@ Signatures are recorded in the [Rekor transparency log](https://search.sigstore.
 
 Before CI can run fully:
 
-1. **GitHub App** — Create an app with Contents and Pull requests (Read and write). Add `APP_ID` and `APP_PRIVATE_KEY` to **Settings → Secrets and variables → Actions**. Required for release-please and ci-nix.
+1. **GitHub App** — Create an app with Contents and Pull requests (Read and write). Add `APP_ID` and `APP_PRIVATE_KEY` to **Settings → Secrets and variables → Actions**. Required for auto-pr, release-please, and ci-nix.
 2. **Codecov** (optional) — Add `CODECOV_TOKEN` for coverage badge. Without it, the upload step is skipped; CI still passes.
 3. **Branch protection** — Require `check / check` before merging to main.
+
+## Updating auto-pr refs
+
+Auto-pr pins live in [.github/workflows/auto-pr.yml](../.github/workflows/auto-pr.yml). To upgrade:
+
+1. Get the latest main SHA from [knirski/auto-pr](https://github.com/knirski/auto-pr).
+2. Update both `knirski/auto-pr/...@<SHA>` refs (generate and create workflows) to the same SHA.
 
 ## Permissions
 

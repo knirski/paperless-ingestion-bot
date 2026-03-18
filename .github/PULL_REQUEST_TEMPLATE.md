@@ -1,4 +1,8 @@
-<!-- Replace each {{placeholder}} below with your content. See [docs/PR_TEMPLATE.md](docs/PR_TEMPLATE.md) -->
+<!--
+  Manual PR? Replace each {{placeholder}} below.
+  Auto-PR? Push to ai/* branch — [knirski/auto-pr](https://github.com/knirski/auto-pr) fills this.
+  See [docs/PR_TEMPLATE.md](docs/PR_TEMPLATE.md)
+-->
 
 ## Description
 
