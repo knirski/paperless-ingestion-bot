@@ -4,7 +4,7 @@
 		"lib": ["ESNext", "DOM"],
 		"module": "NodeNext",
 		"moduleResolution": "NodeNext",
-		"types": ["node", "bun-types"],
+		"types": ["bun-types"],
 		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
