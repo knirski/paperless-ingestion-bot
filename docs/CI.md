@@ -27,7 +27,7 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | [ci-nix.yml](../.github/workflows/ci-nix.yml) | push, pull_request → main | `paths: **/*.nix, package*.json, bun.lock, flake.lock` | nix |
 | [ci-release-please.yml](../.github/workflows/ci-release-please.yml) | pull_request → main | `paths: .release-please-manifest.json` | check |
 | [codeql.yml](../.github/workflows/codeql.yml) | push, pull_request → main | `paths-ignore: **/*.md, docs/**` | analyze |
-| [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through) |
+| [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through, distinct name) |
 | [docker.yml](../.github/workflows/docker.yml) | release published, workflow_dispatch | — | build (GHCR), sign, sbom |
 | [release-please.yml](../.github/workflows/release-please.yml) | push → main | — | release-please (creates release PRs) |
 | [update-bun-nix.yml](../.github/workflows/update-bun-nix.yml) | workflow_dispatch | — | update bun.nix (manual) |
@@ -128,6 +128,14 @@ When ci-nix pushes a bun.nix update, the PR head changes to a new commit. The re
 1. **Wait 1–2 minutes** — The push triggers the check workflow; it may take a moment to start.
 2. **Re-run workflows** — If the check still hasn't run, use "Re-run all jobs" from the Actions tab.
 3. **Manual trigger** — Push an empty commit: `git commit --allow-empty -m "ci: trigger workflows" && git push`.
+
+## Troubleshooting: Code scanning / CodeQL
+
+If the [Security → Code scanning](https://docs.github.com/en/code-security/code-scanning) tab shows no results, errors, or your custom CodeQL workflow appears disabled:
+
+**Default setup conflicts with advanced setup.** This repo uses advanced setup (custom `codeql.yml`). If default setup is enabled in **Settings → Security → Code security and analysis → CodeQL analysis**, it disables custom workflows. Fix: Click "Switch to advanced" or "Disable CodeQL", then re-enable so only the custom workflows run. See [GitHub docs on default vs advanced setup](https://docs.github.com/en/code-security/code-scanning/enabling-code-scanning/configuring-default-setup-for-code-scanning).
+
+**No source code seen.** For JavaScript/TypeScript with `build-mode: none`, CodeQL analyzes without a build. If you see "No source code was seen", ensure the repo has analyzable `.ts`/`.js` files and the workflow `paths-ignore` does not exclude them.
 
 ## Design: ensuring check runs after ci-nix push
 
