@@ -150,7 +150,7 @@ We use a **workflow_dispatch trigger** so that when ci-nix pushes a bun.nix upda
 | **Don't push on PRs** | No commit mismatch; simpler | Worse DX; contributors must run `nix run .#update-bun-nix` locally |
 | **Documentation only** | Simple | No technical fix; still depends on timing |
 
-**GitHub App permission:** The App used for the push must have **Actions: Read and write** so it can trigger workflows via `gh workflow run`. If you see "Failed to trigger ci.yml. Ensure App has Actions: Read and write permission.", verify the App has Actions: Read and write in its permissions.
+**GitHub App permission:** The App used for the push must have **Actions: Read and write** so it can trigger workflows via `gh workflow run`. If you see "Failed to trigger ci.yml. Ensure App has Actions: Read and write permission.", go to [github.com/settings/apps](https://github.com/settings/apps) → your app → **Repository permissions** → set **Actions** to **Read and write**. If already set, go to **Install App** → **Configure** next to the repo → accept any pending permission changes.
 
 ## Local CI-like checks
 
