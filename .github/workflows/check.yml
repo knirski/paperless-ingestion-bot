@@ -68,7 +68,7 @@ jobs:
         timeout-minutes: 2
         uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2.8.0
         with:
-          args: --timeout 90 --max-retries 10 --retry-wait-time 2 --no-progress --accept 200,429 .
+          args: --timeout 90 --max-retries 20 --retry-wait-time 5 --no-progress --accept 200,429 .
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2

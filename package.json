@@ -36,7 +36,7 @@
 		"check:with-links": "bun run check && bun run check:just-links",
 		"check:nix": "scripts/nix-run-if-missing.sh statix check . && scripts/nix-run-if-missing.sh deadnix --exclude bun.nix .",
 		"check:docs": "bun x rumdl check . && scripts/nix-run-if-missing.sh typos",
-		"check:just-links": "scripts/nix-run-if-missing.sh lychee --timeout 30 --max-retries 10 --retry-wait-time 2 --no-progress --accept 200,429 .",
+		"check:just-links": "scripts/nix-run-if-missing.sh lychee --timeout 30 --max-retries 20 --retry-wait-time 5 --no-progress --accept 200,429 .",
 		"lint": "biome check .",
 		"lint:fix": "biome check . --write --unsafe",
 		"lint:scripts": "find scripts -name '*.sh' -print0 | xargs -0 -r scripts/nix-run-if-missing.sh shellcheck && scripts/nix-run-if-missing.sh shfmt -d scripts",
