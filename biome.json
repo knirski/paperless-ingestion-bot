@@ -6,7 +6,15 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["**/*.ts", "**/*.tsx", "!!**/dist", "!!**/node_modules", "!!**/coverage"]
+		"includes": [
+			"**/*.ts",
+			"**/*.tsx",
+			"**/*.json",
+			"!!**/dist",
+			"!!**/node_modules",
+			"!!**/coverage",
+			"!!bun.lock"
+		]
 	},
 	"formatter": {
 		"enabled": true,

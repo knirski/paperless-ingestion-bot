@@ -70,20 +70,28 @@
 		"typescript": "^5.7.0"
 	},
 	"lint-staged": {
-		"*.{ts,tsx}": [
+		"*.{ts,tsx,json}": [
 			"bun x biome check --write --unsafe --no-errors-on-unmatched --files-ignore-unknown=true"
 		],
+		"*.md": [
+			"bun x rumdl check --fix",
+			"scripts/nix-run-if-missing.sh typos -w"
+		],
 		"*.sh": [
-			"scripts/nix-run-if-missing.sh shfmt -w"
+			"scripts/nix-run-if-missing.sh shfmt -w",
+			"scripts/nix-run-if-missing.sh shellcheck"
+		],
+		".github/workflows/*.yml": [
+			"scripts/nix-run-if-missing.sh actionlint"
+		],
+		"*.nix": [
+			"scripts/nix-run-if-missing.sh statix fix"
 		]
 	},
 	"commitlint": {
 		"extends": [
 			"@commitlint/config-conventional"
 		]
-	},
-	"engines": {
-		"node": ">=24.0.0"
 	},
 	"packageManager": "bun@1.3.10"
 }
