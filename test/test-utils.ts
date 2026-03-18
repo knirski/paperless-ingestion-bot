@@ -1,16 +1,8 @@
-import { Effect, FileSystem, Layer, Logger, Path, Stream } from "effect";
-import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner";
+import { Effect, FileSystem, Layer, Logger, Path } from "effect";
 import { PlatformServicesLayer } from "../src/shell/layers.js";
 
 export const SilentLoggerLayer = Logger.layer([]);
 export const TestBaseLayer = Layer.mergeAll(SilentLoggerLayer, PlatformServicesLayer);
-
-/** Mock ChildProcessSpawner for tests. string() returns empty; stream methods return empty streams. */
-export const ChildProcessSpawnerTestMock = Layer.mock(ChildProcessSpawner)({
-	string: () => Effect.succeed(""),
-	streamString: () => Stream.empty,
-	streamLines: () => Stream.empty,
-});
 
 /** Effect-based temp dir for use with layer() / it.effect. */
 export const createTestTempDirEffect = (prefix = "ingestion-bot-") =>

@@ -1,8 +1,4 @@
-<!--
-  Creating manually? Replace each {{placeholder}} below with your content.
-  Using auto-pr? Push to ai/* branch — workflow fills this via knirski/auto-pr.
-  See [docs/PR_TEMPLATE.md](docs/PR_TEMPLATE.md)
--->
+<!-- Replace each {{placeholder}} below with your content. See [docs/PR_TEMPLATE.md](docs/PR_TEMPLATE.md) -->
 
 ## Description
 

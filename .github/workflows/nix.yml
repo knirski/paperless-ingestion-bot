@@ -2,7 +2,7 @@
 # Called by ci-nix.yml and update-bun-nix.yml.
 #
 # Uses GitHub App token when push_allowed so the push triggers CI on the new commit
-# (GITHUB_TOKEN pushes do not trigger workflows). Same App as auto-pr (APP_ID, APP_PRIVATE_KEY).
+# (GITHUB_TOKEN pushes do not trigger workflows). Uses APP_ID, APP_PRIVATE_KEY.
 #
 # Uses upstream Nix (cachix/install-nix-action).
 # Builds on x86_64-linux and aarch64-linux (arm64 runners).

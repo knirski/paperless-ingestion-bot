@@ -3,5 +3,5 @@
 	"project": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"],
 	"entry": ["scripts/generate-schema.ts"],
 	"tags": ["-lintignore"],
-	"ignoreBinaries": ["scripts/nix-run-if-missing.sh", "tsx"]
+	"ignoreBinaries": ["scripts/nix-run-if-missing.sh"]
 }

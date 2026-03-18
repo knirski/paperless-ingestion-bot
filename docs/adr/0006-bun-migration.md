@@ -27,10 +27,10 @@ Chosen option: **Full Bun migration**, because the project is already Bun-first 
 
 | Area | Change |
 |------|--------|
-| **Docs** | README, CONTRIBUTING, PR_TEMPLATE, GITHUB_APP_AUTO_PR_SETUP, PUBLICATION_CHECKLIST, CI, CII, BIOME_REVIEW, deploy/systemd — `npm` → `bun` |
+| **Docs** | README, CONTRIBUTING, PR_TEMPLATE, PUBLICATION_CHECKLIST, CI, CII, BIOME_REVIEW, deploy/systemd — `npm` → `bun` |
 | **Dockerfile** | `node:24-alpine` → `oven/bun:1-alpine`; `package-lock.json` → `bun.lock`; `npm ci` → `bun install --frozen-lockfile`; entrypoint `node` → `bun` |
 | **shell.nix** | `nodejs_24`, `nodePackages.npm` → `pkgs.bun`; `npm install` → `bun install` |
 | **package.json** | `pack:dry` → `bun pm pack --dry-run`; `check:code` → sequential `bun run lint && knip && typecheck` (removed npm-run-all); removed npm-run-all devDep |
-| **Scripts** | fill-pr-template.ts howToTest → `bun run check`; removed update-nix-hash.mjs, update-npm-deps-hash.sh, commit-msg-hint.mjs |
+| **Scripts** | Removed update-nix-hash.mjs, update-npm-deps-hash.sh, commit-msg-hint.mjs |
 | **Actions** | Removed nix-npm-deps-hash, nix-commit-npm-deps-hash, nix-fail-npm-deps-hash-fork |
 | **Biome** | Removed `**/*.mjs` from files.includes (no project-owned .mjs) |

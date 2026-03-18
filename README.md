@@ -28,7 +28,6 @@ Setup is a bit involved. Geeks will feel at home - determined non-geeks can get 
 - **Signal**: Webhook server for document attachments sent via Signal.
 - **Gmail**: IMAP-based crawl for email attachments. One-shot (runs once, exits). Schedule with cron or systemd timer.
 - **Ollama**: Optional AI eligibility filter for email attachments (images, plain text).
-- **AI-assisted development**: Push to `ai/**` branches to auto-create PRs with Ollama-generated titles from conventional commits. See [Auto-PR setup](docs/GITHUB_APP_AUTO_PR_SETUP.md).
 
 Supported file types: PDF, Word (.doc, .docx), RTF, Office formats, images (JPEG, PNG, etc.), plain text, HTML, CSV.
 
@@ -223,7 +222,6 @@ We target **Node.js 24+** (current) and Effect v4 beta. This is a deliberate cho
 - [deploy/](deploy/): Deployment recipes — [Compose](deploy/compose/README.md) (Docker) and [systemd](deploy/systemd/README.md) (service units)
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md): Project structure and design
 - [CONTRIBUTING.md](CONTRIBUTING.md): How to contribute
-- [docs/GITHUB_APP_AUTO_PR_SETUP.md](docs/GITHUB_APP_AUTO_PR_SETUP.md): Auto-PR workflow — push to `ai/**` branches to auto-create PRs with Ollama-generated titles (maintainer setup)
 - [docs/SCHEDULED_WORKFLOWS.md](docs/SCHEDULED_WORKFLOWS.md): Enable scheduled workflows (cron)
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): Community standards
 - [SECURITY.md](SECURITY.md): Vulnerability reporting

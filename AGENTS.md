@@ -93,7 +93,6 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 | Domain type, error, MIME                              | `src/domain/`                                               |
 | Pipeline step, config, layer                          | `src/shell/`                                                |
 | Extending provider variants (e.g. new email provider) | Add to discriminated union in `domain/` + `Match.when` case |
-| GitHub workflow scripts (auto-PR)                     | `scripts/` (auto-pr-get-commits.ts, auto-pr-ollama.ts, create-or-update-pr.ts); prompts in `scripts/auto-pr/prompts/` |
 | General-purpose scripts (build, lint, dev)             | `scripts/`                                                  |
 
 ## Key Rules
@@ -135,20 +134,12 @@ Create small, focused commits. If changes span many files or concerns, propose s
 - Issues: `issue_write`, `add_issue_comment`, `issue_read`
 - Fallback to `gh` only when MCP has no matching tool.
 
-## Branch names (auto-PR workflow)
-
-Use `ai/` prefix when pushing so the [auto-PR workflow](.github/workflows/auto-pr.yml) auto-creates a PR with title and body from conventional commits:
-
-- `ai/feature-name` or `ai/fix-bug-description`
-
-The workflow runs on push to `ai/**` branches and creates/updates the PR using `create-or-update-pr.ts` (which invokes `fill-pr-template.ts` and, for 2+ commits, `auto-pr-ollama.ts`).
-
 ## Pull Requests
 
 When creating a PR (e.g. with GitHub MCP or `gh pr create`):
 
 1. **Assess changes** — Inspect uncommitted and committed-but-not-pushed changes. Divide and group them logically (e.g. feature vs docs vs chore). Create separate branches and separate PRs for each logical group.
-2. Create branch (use `ai/` prefix), commit, push — see [Branch names (auto-PR workflow)](#branch-names-auto-pr-workflow).
+2. Create branch, commit, push.
 3. Create PR — follow the [PR template](.github/PULL_REQUEST_TEMPLATE.md). See [docs/PR_TEMPLATE.md](docs/PR_TEMPLATE.md).
 4. **Checkout main and pull** — `git checkout main && git pull`. Do not finish until this is done; the workspace must be left on `main`.
 
@@ -220,7 +211,7 @@ src/
   interfaces/      — Tagless Final service interfaces
   live/            — Live interpreters
   shell/           — Imperative shell (pipelines, config, layers)
-scripts/           — General-purpose and auto-PR scripts (fill-pr-template, auto-pr-ollama, create-or-update-pr, check-nix-hash, etc.)
+scripts/           — General-purpose scripts (build, check-nix-hash, etc.)
 test/
   fixtures/        — Config mocks, credentials, imap/signal mocks
   integration/     — Integration tests

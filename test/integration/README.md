@@ -77,7 +77,3 @@ For failure tests, pass `configOverrides: { imapRetrySchedule: imapRetrySchedule
 2. Build layer: `buildTestLayer({ tmpDir, emailAccountsPath }, scenario, options)`.
 3. Run: `await runWebhook(layer, payload)`.
 4. Assert on `spy.sendMessageCalls`, `spy.fetchAttachmentCalls`, or files in `join(tmpDir, "consume", "user1")`.
-
-### fill-pr-template script
-
-Tests live in `test/scripts/fill-pr-template.test.ts`. Uses string-based log/files (no git); writes to temp files and runs `runFillBody`.
