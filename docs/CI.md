@@ -7,7 +7,8 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | Workflow | Trigger | Path filter | Jobs |
 |----------|---------|-------------|------|
 | [auto-pr.yml](../.github/workflows/auto-pr.yml) | push → `ai/**` | — | auto-pr (creates/updates PR from conventional commits) |
-| [ci.yml](../.github/workflows/ci.yml) | push, pull_request → main | `paths-ignore: '**/*.md'` | check, dependency-review |
+| [ci.yml](../.github/workflows/ci.yml) | push, pull_request → main | `paths-ignore: '**/*.md', '.github/**'` | check, dependency-review |
+| [ci-workflows.yml](../.github/workflows/ci-workflows.yml) | push, pull_request → main | `paths: '.github/**'` | check (minimal) |
 | [ci-docs.yml](../.github/workflows/ci-docs.yml) | push, pull_request → main | `paths: '**/*.md'` | check (pass-through) |
 | [ci-nix.yml](../.github/workflows/ci-nix.yml) | push, pull_request → main | `paths: **/*.nix, package*.json, flake.lock` | nix |
 | [ci-release-please.yml](../.github/workflows/ci-release-please.yml) | pull_request → main | `paths: .release-please-manifest.json` | check |
@@ -34,7 +35,9 @@ cosign verify "ghcr.io/knirski/paperless-ingestion-bot@${IMAGE_DIGEST}"
 
 Signatures are recorded in the [Rekor transparency log](https://search.sigstore.dev/).
 
-**ci.yml** runs when any non-.md file changes. Skips when only docs change.
+**ci.yml** runs when any non-.md, non-.github file changes. Skips when only docs or only .github changes.
+
+**ci-workflows.yml** runs when only `.github/**` changes. Minimal check: actionlint, shellcheck, shfmt on .github/actions. Reports `check / check` for branch protection.
 
 **ci-release-please.yml** runs when `.release-please-manifest.json` changes (only release-please touches this file). Release-please PRs often don't trigger ci.yml due to path-filter timing; this ensures `check / check` runs on the pull_request event so branch protection allows merge. Uses `cancel-in-progress: false` so Release Please's frequent force-pushes don't cancel runs before they complete. The release-please workflow uses the same GitHub App token (APP_ID, APP_PRIVATE_KEY) as auto-pr and nix so its pushes trigger workflows; GITHUB_TOKEN pushes do not.
 
@@ -51,6 +54,7 @@ All workflows declare explicit permissions. Use `permissions: {}` when no workfl
 ## Reusable Workflows
 
 - **check.yml** — test, lint, knip, typecheck, rumdl, typos, lychee, actionlint, shellcheck, SBOM, Codecov. Called by ci.yml.
+- **check-workflows.yml** — actionlint, shellcheck, shfmt on .github/actions. Called by ci-workflows.yml for .github-only changes.
 - **check-docs.yml** — rumdl (markdown lint), lychee (link check), typos (spell check). No npm ci. Config: `.rumdl.toml`, `_typos.toml`. Lychee respects `.gitignore`. Rumdl excludes `CHANGELOG.md` (auto-generated).
 - **nix.yml** — Nix build + bun.nix update. Called by ci-nix.yml and update-bun-nix.yml.
 

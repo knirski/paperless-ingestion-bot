@@ -1,5 +1,6 @@
 # CI: check, dependency-review. Nix runs in ci-nix.yml when deps change.
-# Uses built-in paths-ignore: skip when only *.md changes.
+# Uses built-in paths-ignore: skip when only *.md or only .github/** changes.
+# .github-only changes run ci-workflows.yml (minimal check).
 
 name: CI
 
@@ -9,11 +10,13 @@ on:
       - main
     paths-ignore:
       - '**/*.md'
+      - '.github/**'
   pull_request:
     branches:
       - main
     paths-ignore:
       - '**/*.md'
+      - '.github/**'
   workflow_dispatch:
 
 concurrency:
