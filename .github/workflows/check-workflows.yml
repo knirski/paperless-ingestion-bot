@@ -1,5 +1,5 @@
 # Reusable workflow for .github-only changes.
-# Runs actionlint, shellcheck, shfmt on .github/actions. Reports "check / check" for branch protection.
+# Runs actionlint on workflows. Reports "check / check" for branch protection.
 # See docs/CI.md.
 
 name: Check
@@ -22,25 +22,3 @@ jobs:
 
       - name: Lint workflows
         uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2
-
-      - name: Check for shell scripts in .github/actions
-        id: has-sh
-        run: |
-          if [ -n "$(find .github/actions -name '*.sh' -print 2>/dev/null)" ]; then
-            echo "has_files=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_files=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Lint scripts (.github/actions)
-        if: steps.has-sh.outputs.has_files == 'true'
-        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # v2.0.0
-        with:
-          scandir: ./.github/actions
-
-      - name: Format check scripts (shfmt)
-        if: steps.has-sh.outputs.has_files == 'true'
-        uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
-      - name: Run shfmt
-        if: steps.has-sh.outputs.has_files == 'true'
-        run: shfmt -d .github/actions

@@ -9,7 +9,7 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | Push to `ai/**` | auto-pr creates/updates PR (via [knirski/auto-pr](https://github.com/knirski/auto-pr)) |
 | PR to main (code changes) | ci → check, dependency-review |
 | PR to main (docs only) | ci-docs → check-docs |
-| PR to main (.github only) | ci-workflows → check (actionlint, shellcheck, shfmt) |
+| PR to main (.github only) | ci-workflows → check (actionlint) |
 | PR to main (nix/deps) | ci-nix → nix flake check + bun.nix update |
 | PR to main (release-please) | ci-release-please → check |
 | Push to main | release-please, scorecard (if configured) |
@@ -57,7 +57,7 @@ Signatures are recorded in the [Rekor transparency log](https://search.sigstore.
 
 **ci.yml** runs when any non-.md, non-.github file changes. Skips when only docs or only .github changes.
 
-**ci-workflows.yml** runs when only `.github/**` changes. Minimal check: actionlint, shellcheck, shfmt on .github/actions. Reports `check / check` for branch protection.
+**ci-workflows.yml** runs when only `.github/**` changes. Minimal check: actionlint on workflows. Reports `check / check` for branch protection.
 
 **ci-release-please.yml** runs when `.release-please-manifest.json` changes (only release-please touches this file). Release-please PRs often don't trigger ci.yml due to path-filter timing; this ensures `check / check` runs on the pull_request event so branch protection allows merge. Uses `cancel-in-progress: false` so Release Please's frequent force-pushes don't cancel runs before they complete. The release-please workflow uses the same GitHub App token (APP_ID, APP_PRIVATE_KEY) as auto-pr and nix so its pushes trigger workflows; GITHUB_TOKEN pushes do not.
 
@@ -100,8 +100,8 @@ All workflows declare explicit permissions. Use `permissions: {}` when no workfl
 
 ## Reusable Workflows
 
-- **check.yml** — test, lint, knip, typecheck, rumdl, typos, lychee, actionlint, shellcheck, SBOM (via generate-sbom action), Codecov. Called by ci.yml.
-- **check-workflows.yml** — actionlint, shellcheck, shfmt on .github/actions. Called by ci-workflows.yml for .github-only changes. Shellcheck and shfmt run only when `.sh` files exist.
+- **check.yml** — test, lint, knip, typecheck, rumdl, typos, lychee, actionlint, shellcheck, SBOM (npm sbom CycloneDX), Codecov. Called by ci.yml.
+- **check-workflows.yml** — actionlint on workflows. Called by ci-workflows.yml for .github-only changes.
 - **check-docs.yml** — rumdl (markdown lint), lychee (link check), typos (spell check). No bun install. Config: `.rumdl.toml`, `_typos.toml`. Lychee respects `.gitignore`. Rumdl excludes `CHANGELOG.md` (auto-generated).
 - **nix.yml** — Nix build + bun.nix update. Called by ci-nix.yml and update-bun-nix.yml.
 
@@ -114,7 +114,7 @@ ci.yml, ci-docs.yml, and ci-workflows.yml report **`check / check`**. Configure 
 This covers all PR types:
 - **Code PRs:** ci.yml runs → `check / check` ✓
 - **Docs-only PRs:** ci-docs.yml runs → `check / check` ✓ (markdownlint, links, spelling)
-- **.github-only PRs:** ci-workflows.yml runs → `check / check` ✓ (actionlint, shellcheck, shfmt)
+- **.github-only PRs:** ci-workflows.yml runs → `check / check` ✓ (actionlint)
 - **Nix-only PRs:** ci-nix runs; ci.yml may also run → `check / check` ✓
 - **Mixed PRs:** ci.yml runs → `check / check` ✓
 - **Release-please PRs:** ci-release-please.yml runs → `check / check` ✓

@@ -1,5 +1,5 @@
 # Complementary to ci.yml: runs when only .github/** changes.
-# Minimal check: actionlint, shellcheck, shfmt on .github/actions.
+# Minimal check: actionlint on workflows.
 # See docs/CI.md.
 
 name: CI

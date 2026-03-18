@@ -169,7 +169,7 @@ When using `gh pr create` as fallback, write the body to a temp path (e.g. `/tmp
 bun run check
 ```
 
-Runs: `bun run test && bun run lint && bun run knip && bun run typecheck`. Coverage: lines 90%, functions 90%. **Do not finish until all pass.**
+Runs: check-nix-hash, check:nix, check:code (build, audit, lint, knip, typecheck, test), check:docs (rumdl, typos), lint:workflows, lint:scripts. Coverage: lines 90%, functions 90%. **Do not finish until all pass.**
 
 - Run full suite: `bun test`
 - Focus a test: `bun test -- -t "pattern"`
