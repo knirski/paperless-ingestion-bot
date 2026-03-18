@@ -1,6 +1,6 @@
+import { describe, expect } from "bun:test";
 import { Effect, Exit, Layer } from "effect";
 import * as Http from "effect/unstable/http";
-import { describe, expect } from "vitest";
 import { emailToSlug } from "../../src/core/search.js";
 import type { SignalNumber } from "../../src/domain/signal-types.js";
 import type { AppEffect } from "../../src/domain/types.js";
@@ -18,6 +18,7 @@ import {
 	MAX_ATTACHMENT_SIZE,
 	runEmailPipeline,
 } from "../../src/shell/email-pipeline.js";
+import { RateLimiterMemoryLayer } from "../../src/shell/layers.js";
 import {
 	blockedIcsAttachment,
 	eligibleImageAttachment,
@@ -86,6 +87,7 @@ function buildTestLayer(
 	return Layer.mergeAll(
 		TestBaseLayer,
 		Http.FetchHttpClient.layer,
+		RateLimiterMemoryLayer,
 		emailConfigTest({
 			consumeDir: tmpDir,
 			emailAccountsPath,

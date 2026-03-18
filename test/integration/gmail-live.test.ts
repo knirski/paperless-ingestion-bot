@@ -5,14 +5,14 @@
  * Logs each mocked write with a confidence level that it would succeed.
  *
  * Run with:
- *   GMAIL_TEST_EMAIL=your@gmail.com GMAIL_APP_PASSWORD=xxxx npm run test:integration
+ *   GMAIL_TEST_EMAIL=your@gmail.com GMAIL_APP_PASSWORD=xxxx bun run test:integration
  *
  * Requires a Gmail account with an app password (2FA must be enabled).
  */
 
+import { describe, expect, it } from "bun:test";
 import { Effect, FileSystem, Layer } from "effect";
 import * as Http from "effect/unstable/http";
-import { describe, expect, it } from "vitest";
 import type { EmailSession } from "../../src/interfaces/email-client.js";
 import { EmailClient, EmailClientLive } from "../../src/live/imap-email-client.js";
 import { OllamaClient } from "../../src/live/ollama-client.js";

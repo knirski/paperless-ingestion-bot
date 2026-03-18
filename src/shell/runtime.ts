@@ -9,7 +9,6 @@
 
 import { Effect, FileSystem, Option, Path, Redacted, Schema } from "effect";
 import * as Arr from "effect/Array";
-import { emailToSlug } from "../core/search.js";
 import {
 	type Account,
 	AccountMetadataSchema,
@@ -181,56 +180,4 @@ export const saveAllAccounts = Effect.fn("saveAllAccounts")(function* (
 			yield* fs.chmod(credentialsPath, SENSITIVE_FILE_MODE).pipe(Effect.catch(() => Effect.void));
 		}),
 	);
-});
-
-/** Path for per-account credential failure throttle file (ISO 8601 timestamp). */
-const credentialFailureThrottlePath = Effect.fn("credentialFailureThrottlePath")(function* (
-	credentialsPath: string,
-	email: string,
-) {
-	const pathApi = yield* Path.Path;
-	const dir = pathApi.dirname(credentialsPath);
-	const slug = emailToSlug(email);
-	return pathApi.join(dir, `.credential-failure-${slug}.json`);
-});
-
-const ThrottleFileSchema = Schema.Struct({
-	last_notified_at: Schema.optional(Schema.String),
-});
-
-/** Load last notified timestamp (ISO 8601) from throttle file. Returns undefined if missing/invalid. */
-export const loadCredentialFailureThrottle = Effect.fn("loadCredentialFailureThrottle")(function* (
-	credentialsPath: string,
-	email: string,
-) {
-	const fs = yield* FileSystem.FileSystem;
-	const throttlePath = yield* credentialFailureThrottlePath(credentialsPath, email);
-	const exists = yield* fs.exists(throttlePath).pipe(Effect.catch(() => Effect.succeed(false)));
-	if (!exists) return undefined;
-	const content = yield* fs
-		.readFileString(throttlePath)
-		.pipe(Effect.catch(() => Effect.succeed("")));
-	const trimmed = content.trim();
-	if (!trimmed) return undefined;
-	const decoded = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(ThrottleFileSchema))(
-		trimmed,
-	).pipe(
-		Effect.map((parsed) => parsed.last_notified_at),
-		Effect.catch(() => Effect.succeed(undefined)),
-	);
-	return decoded;
-});
-
-/** Save throttle timestamp (ISO 8601). */
-export const saveCredentialFailureThrottle = Effect.fn("saveCredentialFailureThrottle")(function* (
-	credentialsPath: string,
-	email: string,
-	timestamp: string,
-) {
-	const fs = yield* FileSystem.FileSystem;
-	const throttlePath = yield* credentialFailureThrottlePath(credentialsPath, email);
-	const dir = (yield* Path.Path).dirname(throttlePath);
-	yield* fs.makeDirectory(dir, { recursive: true }).pipe(mapFsError(dir, "makeDirectory"));
-	const data = { last_notified_at: timestamp };
-	yield* atomicWriteJson(throttlePath, data);
 });

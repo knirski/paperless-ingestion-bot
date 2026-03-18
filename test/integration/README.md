@@ -20,7 +20,7 @@ The test:
 **Confidence:** Each mocked write logs `confidence: "high"` with a reason (e.g. `fetch succeeded, session valid, path resolved`). The test maximizes confidence by exercising the real path up to the write boundary without changing state.
 
 ```bash
-GMAIL_TEST_EMAIL=your@gmail.com GMAIL_APP_PASSWORD=xxxx npm run test:integration
+GMAIL_TEST_EMAIL=your@gmail.com GMAIL_APP_PASSWORD=xxxx bun run test:integration
 ```
 
 Requires a Gmail account with 2FA enabled and an [app password](https://support.google.com/accounts/answer/185833). Skips when credentials are not set.
@@ -30,7 +30,7 @@ Requires a Gmail account with 2FA enabled and an [app password](https://support.
 Verifies that @napi-rs/keyring (system keychain) can be imported and performs a round-trip: `setPassword` → `getPassword` → `deletePassword`. Skips when `KEYRING_TEST` is not set (like the Gmail test). When set, runs the test; fails if keyring is unavailable (e.g. headless Linux, CI without keychain).
 
 ```bash
-KEYRING_TEST=1 npm run test:integration
+KEYRING_TEST=1 bun run test:integration
 ```
 
 Requires a system keychain (libsecret/Secret Service, e.g. gnome-keyring, kwallet). Skips when `KEYRING_TEST` is not set.
@@ -77,7 +77,3 @@ For failure tests, pass `configOverrides: { imapRetrySchedule: imapRetrySchedule
 2. Build layer: `buildTestLayer({ tmpDir, emailAccountsPath }, scenario, options)`.
 3. Run: `await runWebhook(layer, payload)`.
 4. Assert on `spy.sendMessageCalls`, `spy.fetchAttachmentCalls`, or files in `join(tmpDir, "consume", "user1")`.
-
-### fill-pr-body script
-
-Tests live in `test/scripts/fill-pr-body.test.ts`. Uses string-based log/files (no git); writes to temp files and runs `runFillBody`.

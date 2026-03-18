@@ -1,5 +1,5 @@
+import { describe, expect, test } from "bun:test";
 import { Redacted } from "effect";
-import { describe, expect, test } from "vitest";
 import {
 	ConfigParseError,
 	formatErrorForStructuredLog,

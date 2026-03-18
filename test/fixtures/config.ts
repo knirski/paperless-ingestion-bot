@@ -44,6 +44,7 @@ function minimalEmailConfig(overrides?: Partial<EmailConfigService>): EmailConfi
 		ollamaTextModel: "llama2",
 		markProcessedLabel: "paperless" as EmailLabel,
 		pageSize: 50,
+		credentialFailureThrottleHours: 24,
 		...overrides,
 	};
 }

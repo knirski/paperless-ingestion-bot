@@ -77,6 +77,8 @@ export interface EmailConfigService extends BaseConfig {
 	readonly ollamaVisionModel: string;
 	readonly ollamaTextModel: string;
 	readonly pageSize: number;
+	/** Hours between credential failure notifications per email (default 24). */
+	readonly credentialFailureThrottleHours: number;
 	readonly imapRetrySchedule?: Schedule.Schedule<unknown>;
 }
 
@@ -158,6 +160,10 @@ export const RawEmailConfigSchema = Schema.Struct({
 	ollama_text_model: Schema.String,
 	page_size: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)).pipe(
 		Schema.withDecodingDefault(() => 50),
+	),
+	credential_failure_throttle_hours: Schema.Int.pipe(
+		Schema.check(Schema.isGreaterThanOrEqualTo(1)),
+		Schema.withDecodingDefault(() => 24),
 	),
 });
 
@@ -410,6 +416,7 @@ const buildEmailConfigLayer = (
 				ollamaVisionModel: raw.ollama_vision_model,
 				ollamaTextModel: raw.ollama_text_model,
 				pageSize: raw.page_size,
+				credentialFailureThrottleHours: raw.credential_failure_throttle_hours,
 			};
 			yield* Effect.log({
 				event: "config_resolved",

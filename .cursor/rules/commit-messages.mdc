@@ -1,11 +1,11 @@
 ---
-description: Commit message format and issue references for fill-pr-body and auto-close
+description: Commit message format and issue references for auto-close
 alwaysApply: true
 ---
 
 # Commit Messages
 
-When a change addresses an issue, include `Closes #<issue>` in the commit body so fill-pr-body populates the PR's Related issues and GitHub auto-closes on merge.
+When a change addresses an issue, include `Closes #<issue>` in the commit body so the PR's Related issues section can reference it and GitHub auto-closes on merge.
 
 ## Format
 
@@ -17,7 +17,7 @@ When a change addresses an issue, include `Closes #<issue>` in the commit body s
 Closes #<issue>
 ```
 
-Use `Closes`, `Fixes`, or `Resolves` followed by ` #<number>`.
+Use `Closes`, `Fixes`, or `Resolves` followed by ` #<issue>`.
 
 ## Examples
 

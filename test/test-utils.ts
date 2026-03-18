@@ -125,5 +125,11 @@ export async function readTestFile(path: string, encoding?: "utf-8"): Promise<st
 	);
 }
 
+/** Run an Effect with the given layer. Use instead of @effect/vitest layer() helper. */
+export function runWithLayer<R>(layer: Layer.Layer<R>) {
+	return <E, A>(effect: Effect.Effect<A, E, R>): Promise<A> =>
+		Effect.runPromise(effect.pipe(Effect.provide(layer)));
+}
+
 export { emailConfigTest, signalConfigTest } from "./fixtures/config.js";
 export { credentialsStoreTest } from "./fixtures/credentials.js";

@@ -1,7 +1,6 @@
-# Reusable workflow: run full check (test, lint, typecheck, SBOM, Codecov).
+# Reusable workflow: run full check (test, lint, typecheck, rumdl, typos, actionlint, shellcheck, lychee, SBOM, Codecov).
 # Called by ci.yml (runs when non-.md files change).
-#
-# Uses GitHub-provided: setup-node (built-in npm cache), upload-artifact, GITHUB_TOKEN.
+# No Nix — uses GitHub Actions for rumdl/typos/lychee/actionlint/shellcheck.
 
 name: Check
 
@@ -13,22 +12,25 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        with:
-          node-version-file: ".nvmrc"
-          cache: "npm"
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
-      - run: npm ci
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
       - name: Generate SBOM
-        run: npx @cyclonedx/cyclonedx-npm --output-file sbom.json
+        run: |
+          npm install --package-lock-only
+          npm sbom --sbom-format=cyclonedx --package-lock-only > sbom.json
 
       - name: Upload SBOM
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -36,33 +38,40 @@ jobs:
           name: sbom
           path: sbom.json
 
-      - name: Audit dependencies
-        run: npm audit --audit-level=high
-
-      - name: Lint workflow files
-        uses: eifinger/actionlint-action@7802e0cc3ab3f81cbffb36fb0bf1a3621d994b89 # v1
-
-      - name: Shellcheck script files
-        run: find scripts -name '*.sh' -exec shellcheck {} +
-
       - name: Validate commit messages
-        if: github.actor != 'dependabot[bot]'
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            npx commitlint --from=origin/${{ github.event.repository.default_branch }} --to=HEAD
-          else
-            BEFORE="${{ github.event.before }}"
-            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-              echo "Skipping commitlint: initial push (no previous commit)"
-            else
-              npx commitlint --from="$BEFORE" --to="${{ github.sha }}"
-            fi
-          fi
+        uses: wagoid/commitlint-github-action@b948419dd99f3fd78a6548d48f94e3df7f6bf3ed # v6.2.1
 
-      - run: npm run check
+      - name: Check code (test, lint, typecheck)
+        run: bun run check:code
+
+      - name: Markdown lint
+        uses: rvben/rumdl@8c1798b13cf961c88a4c5d1136448f4f4391383d # v0.1.47
+
+      - name: Spell check
+        uses: crate-ci/typos@631208b7aac2daa8b707f55e7331f9112b0e062d # v1.44.0
+
+      - name: Lint workflows
+        uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2
+
+      - name: Lint scripts
+        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # v2.0.0
+        with:
+          scandir: ./scripts
+
+      - name: Format check scripts (shfmt)
+        uses: mfinelli/setup-shfmt@a25fda4c1fe115aec0f85e04126610841bc3141d # v4.0.1
+      - name: Run shfmt
+        run: shfmt -d scripts
+
+      - name: Check links
+        continue-on-error: true
+        timeout-minutes: 2
+        uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2.8.0
+        with:
+          args: --timeout 90 --max-retries 20 --retry-wait-time 5 --no-progress --accept 200,429 .
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/lcov.info
@@ -71,7 +80,7 @@ jobs:
           disable_search: true
 
       - name: Upload test results to Codecov
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./test-report.junit.xml
