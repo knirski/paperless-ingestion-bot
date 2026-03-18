@@ -6,5 +6,7 @@ globs: [".github/workflows/**/*.yml", ".github/actions/**/*.yml"]
 # GitHub Actions (workflows and composite actions)
 
 - **Lint:** Run `actionlint` on workflow and action files before finishing.
-- **Project command:** `npm run lint:workflows` (uses system actionlint or `nix run nixpkgs#actionlint`).
-- **Full check:** `npm run check` (includes actionlint). Use `check:with-links` to add lychee.
+- **Project command:** `bun run lint:workflows` (uses system actionlint or `nix run nixpkgs#actionlint`).
+- **Full check:** `bun run check` (includes actionlint). Use `check:with-links` to add lychee.
+- **Workflow testing:** Prefer `bun run check:ci` (act) for local testing over pushing to CI.
+- **Pins:** All actions are SHA-pinned. Auto-pr pins live only in `auto-pr.yml`; update `knirski/auto-pr@SHA` there when upgrading (use SHA from knirski/auto-pr main).

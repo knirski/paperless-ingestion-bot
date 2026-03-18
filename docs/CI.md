@@ -26,12 +26,18 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | [ci-docs.yml](../.github/workflows/ci-docs.yml) | push, pull_request → main | `paths: '**/*.md'` | check (pass-through) |
 | [ci-nix.yml](../.github/workflows/ci-nix.yml) | push, pull_request → main | `paths: **/*.nix, package*.json, bun.lock, flake.lock` | nix |
 | [ci-release-please.yml](../.github/workflows/ci-release-please.yml) | pull_request → main | `paths: .release-please-manifest.json` | check |
+| [codeql.yml](../.github/workflows/codeql.yml) | push, pull_request → main | `paths-ignore: **/*.md, docs/**` | analyze |
 | [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through) |
 | [docker.yml](../.github/workflows/docker.yml) | release published, workflow_dispatch | — | build (GHCR), sign, sbom |
+| [release-please.yml](../.github/workflows/release-please.yml) | push → main | — | release-please (creates release PRs) |
+| [update-bun-nix.yml](../.github/workflows/update-bun-nix.yml) | workflow_dispatch | — | update bun.nix (manual) |
+| [update-flake-lock.yml](../.github/workflows/update-flake-lock.yml) | workflow_dispatch, schedule (Sun) | — | update flake.lock |
+| [scorecard.yml](../.github/workflows/scorecard.yml) | push → main, schedule (Sat) | — | OpenSSF Scorecard |
+| [stale.yml](../.github/workflows/stale.yml) | schedule (Mon), workflow_dispatch | — | Mark stale issues/PRs |
 
 **auto-pr.yml** runs on push to `ai/**` branches (non-forks, excludes default branch). Creates or updates a PR with title from conventional commits (1 semantic commit → use subject; 2+ → Ollama). Uses [knirski/auto-pr](https://github.com/knirski/auto-pr) reusable workflows. See [GITHUB_APP_AUTO_PR_SETUP.md](GITHUB_APP_AUTO_PR_SETUP.md).
 
-**docker.yml** builds and pushes images to GHCR on each release, with provenance and SBOM attestations, and [Sigstore/cosign keyless signing](https://docs.sigstore.dev/cosign/signing/signing_with_containers/) for release images. Also uploads npm SBOM to the release. Manual trigger via workflow_dispatch for testing.
+**docker.yml** builds and pushes images to GHCR on each release, with provenance and SBOM attestations, and [Sigstore/cosign keyless signing](https://docs.sigstore.dev/cosign/signing/signing_with_containers/) for release images. Also uploads CycloneDX SBOM to the release. Manual trigger via workflow_dispatch for testing.
 
 **Verifying signed images:** Release images are signed with Sigstore keyless signing. To verify before pulling:
 
@@ -59,7 +65,35 @@ Signatures are recorded in the [Rekor transparency log](https://search.sigstore.
 
 **ci-nix.yml** runs only when Nix or dependency files change. Runs Nix build and auto-updates `bun.nix` for same-repo PRs and main. Uses the same GitHub App as auto-pr for the push so CI triggers on the new commit (GITHUB_TOKEN pushes do not trigger workflows). When ci-nix pushes a bun.nix update, it also triggers the check workflow via `workflow_dispatch` so the required status is reported on the new commit.
 
+**codeql.yml** runs when non-docs code changes. Uses security-extended queries. Skips for docs-only (paths-ignore).
+
 **codeql-docs.yml** is complementary to codeql.yml: runs when only docs change. CodeQL skips for docs (paths-ignore); this reports passing status so code scanning allows merge.
+
+**release-please.yml** runs on push to main. Creates release PRs from conventional commits; updates version and CHANGELOG. Requires `APP_ID` and `APP_PRIVATE_KEY` secrets.
+
+**update-bun-nix.yml** runs on manual trigger (workflow_dispatch). Use when main has a stale bun.nix (e.g. after merging a lockfile change from a fork). Runs on the default branch and pushes the updated bun.nix to main.
+
+**update-flake-lock.yml** runs weekly (Sunday 00:00 UTC) and on manual trigger. Updates flake.lock and opens a PR.
+
+**scorecard.yml** runs on push to main and weekly (Saturday). Publishes OpenSSF Scorecard results to code scanning.
+
+**stale.yml** runs weekly (Monday) and on manual trigger. Marks issues/PRs stale after 180 days, closes after 180 more.
+
+## First-time setup
+
+Before CI can run fully:
+
+1. **GitHub App** — Create an app with Contents and Pull requests (Read and write). Add `APP_ID` and `APP_PRIVATE_KEY` to **Settings → Secrets and variables → Actions**. Required for auto-pr and release-please. See [GITHUB_APP_AUTO_PR_SETUP.md](GITHUB_APP_AUTO_PR_SETUP.md).
+2. **Codecov** (optional) — Add `CODECOV_TOKEN` for coverage badge. Without it, the upload step is skipped; CI still passes.
+3. **Branch protection** — Require `check / check` before merging to main.
+
+## Updating auto-pr refs
+
+The only auto-pr pins in this repo are in [.github/workflows/auto-pr.yml](../.github/workflows/auto-pr.yml). Workflows reference `knirski/auto-pr` at pinned SHAs (e.g. `@28f9b0c`). To upgrade:
+
+1. Get the latest main SHA from [knirski/auto-pr](https://github.com/knirski/auto-pr).
+2. Update all `knirski/auto-pr/...@<SHA>` refs in `.github/workflows/auto-pr.yml`.
+3. Use the same SHA for both auto-pr-generate-reusable and auto-pr-create-reusable.
 
 ## Permissions
 
@@ -67,9 +101,9 @@ All workflows declare explicit permissions. Use `permissions: {}` when no workfl
 
 ## Reusable Workflows
 
-- **check.yml** — test, lint, knip, typecheck, rumdl, typos, lychee, actionlint, shellcheck, SBOM, Codecov. Called by ci.yml.
-- **check-workflows.yml** — actionlint, shellcheck, shfmt on .github/actions. Called by ci-workflows.yml for .github-only changes.
-- **check-docs.yml** — rumdl (markdown lint), lychee (link check), typos (spell check). No npm ci. Config: `.rumdl.toml`, `_typos.toml`. Lychee respects `.gitignore`. Rumdl excludes `CHANGELOG.md` (auto-generated).
+- **check.yml** — test, lint, knip, typecheck, rumdl, typos, lychee, actionlint, shellcheck, SBOM (via generate-sbom action), Codecov. Called by ci.yml.
+- **check-workflows.yml** — actionlint, shellcheck, shfmt on .github/actions. Called by ci-workflows.yml for .github-only changes. Shellcheck and shfmt run only when `.sh` files exist.
+- **check-docs.yml** — rumdl (markdown lint), lychee (link check), typos (spell check). No bun install. Config: `.rumdl.toml`, `_typos.toml`. Lychee respects `.gitignore`. Rumdl excludes `CHANGELOG.md` (auto-generated).
 - **nix.yml** — Nix build + bun.nix update. Called by ci-nix.yml and update-bun-nix.yml.
 
 ## Branch Protection
@@ -90,7 +124,7 @@ Do not require `dependency-review` (PR-only) or `nix` (path-filtered); they woul
 
 ## Troubleshooting: "check / check" waiting for status
 
-When ci-nix pushes an npmDepsHash update, the PR head changes to a new commit. The required check must run on that new commit. If you see "waiting for status to be reported":
+When ci-nix pushes a bun.nix update, the PR head changes to a new commit. The required check must run on that new commit. If you see "waiting for status to be reported":
 
 1. **Wait 1–2 minutes** — The push triggers the check workflow; it may take a moment to start.
 2. **Re-run workflows** — If the check still hasn't run, use "Re-run all jobs" from the Actions tab.
