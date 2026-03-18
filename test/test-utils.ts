@@ -1,16 +1,8 @@
-import { Effect, FileSystem, Layer, Logger, Path, Stream } from "effect";
-import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner";
+import { Effect, FileSystem, Layer, Logger, Path } from "effect";
 import { PlatformServicesLayer } from "../src/shell/layers.js";
 
 export const SilentLoggerLayer = Logger.layer([]);
 export const TestBaseLayer = Layer.mergeAll(SilentLoggerLayer, PlatformServicesLayer);
-
-/** Mock ChildProcessSpawner for tests. string() returns empty; stream methods return empty streams. */
-export const ChildProcessSpawnerTestMock = Layer.mock(ChildProcessSpawner)({
-	string: () => Effect.succeed(""),
-	streamString: () => Stream.empty,
-	streamLines: () => Stream.empty,
-});
 
 /** Effect-based temp dir for use with layer() / it.effect. */
 export const createTestTempDirEffect = (prefix = "ingestion-bot-") =>
@@ -131,6 +123,12 @@ export async function readTestFile(path: string, encoding?: "utf-8"): Promise<st
 			return yield* fs.readFile(path);
 		}).pipe(Effect.provide(PlatformServicesLayer)),
 	);
+}
+
+/** Run an Effect with the given layer. Use instead of @effect/vitest layer() helper. */
+export function runWithLayer<R>(layer: Layer.Layer<R>) {
+	return <E, A>(effect: Effect.Effect<A, E, R>): Promise<A> =>
+		Effect.runPromise(effect.pipe(Effect.provide(layer)));
 }
 
 export { emailConfigTest, signalConfigTest } from "./fixtures/config.js";

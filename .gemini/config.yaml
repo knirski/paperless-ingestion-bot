@@ -17,4 +17,3 @@ code_review:
 # 4. Ignore non-essential files to save processing time
 ignore_patterns:
   - "*.lock"
-  - "package-lock.json"

@@ -1,6 +1,6 @@
+import { describe, expect } from "bun:test";
 import { Effect, Exit, Layer, Option } from "effect";
 import * as Http from "effect/unstable/http";
-import { describe, expect } from "vitest";
 import type { SignalNumber } from "../../src/domain/signal-types.js";
 import type { AppEffect } from "../../src/domain/types.js";
 import {

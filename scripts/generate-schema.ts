@@ -1,6 +1,6 @@
 /**
  * Emit dist/config.schema.json from Effect Schema.
- * Run at build time: tsx scripts/generate-schema.ts
+ * Run at build time: bun run scripts/generate-schema.ts
  */
 
 import { mkdir, writeFile } from "node:fs/promises";
