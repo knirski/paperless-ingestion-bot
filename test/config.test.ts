@@ -1,5 +1,5 @@
+import { afterEach, describe, expect, test } from "bun:test";
 import { Effect } from "effect";
-import { afterEach, describe, expect, test } from "vitest";
 import type { SignalNumber } from "../src/domain/signal-types.js";
 import type { EmailLabel } from "../src/domain/types.js";
 import {

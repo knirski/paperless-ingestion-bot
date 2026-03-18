@@ -78,15 +78,14 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name }}
 
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        with:
-          node-version-file: ".nvmrc"
-          cache: "npm"
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
-      - run: npm ci
+      - run: bun install --frozen-lockfile
 
       - name: Generate SBOM
-        run: npx @cyclonedx/cyclonedx-npm --output-file sbom.json
+        run: |
+          npm install --package-lock-only
+          npm sbom --sbom-format=cyclonedx --package-lock-only > sbom.json
 
       - name: Upload SBOM to release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2

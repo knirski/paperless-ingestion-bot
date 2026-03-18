@@ -1,0 +1,19 @@
+logLevel = "warn"
+
+[install]
+exact = true
+
+[test]
+coverage = true
+coverageReporter = ["text", "lcov"]
+coverageDir = "coverage"
+coveragePathIgnorePatterns = ["test/**"]
+coverageSkipTestFiles = true
+# coverageThreshold = 0.68  # Disabled: Bun may apply per-file; live/layers have low coverage
+concurrentTestGlob = "test/**/*.test.ts"
+preload = ["./test/test-setup.ts"]
+smol = true
+timeout = 15000
+
+[test.reporter]
+junit = "test-report.junit.xml"

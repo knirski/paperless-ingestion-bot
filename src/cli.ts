@@ -1,4 +1,4 @@
-#!/usr/bin/env -S node --import tsx
+#!/usr/bin/env bun
 
 /**
  * paperless-ingestion-bot: Signal and Gmail document ingestion for Paperless-ngx.

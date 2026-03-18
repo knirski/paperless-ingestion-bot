@@ -1,8 +1,11 @@
-# Reusable workflow: Nix build with npmDepsHash auto-update.
-# Called by ci-nix.yml and update-nix-hash.yml.
+# Reusable workflow: Nix build with bun.nix auto-update.
+# Called by ci-nix.yml and update-bun-nix.yml.
 #
 # Uses GitHub App token when push_allowed so the push triggers CI on the new commit
 # (GITHUB_TOKEN pushes do not trigger workflows). Same App as auto-pr (APP_ID, APP_PRIVATE_KEY).
+#
+# Uses upstream Nix (cachix/install-nix-action).
+# Builds on x86_64-linux and aarch64-linux (arm64 runners).
 
 name: Nix
 
@@ -15,7 +18,7 @@ on:
         type: string
         default: ""
       push_allowed:
-        description: "Whether to commit and push npmDepsHash updates (false for fork PRs)"
+        description: "Whether to commit and push bun.nix updates (false for fork PRs)"
         required: false
         type: boolean
         default: true
@@ -23,55 +26,116 @@ on:
 permissions: {}
 
 jobs:
-  nix:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    # Push uses App token; job needs contents: write for git push (exit 128 fix)
+  bun-nix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: write
+    outputs:
+      bun_nix_changed: ${{ steps.bun-nix.outputs.changed != '' }}
     steps:
       - name: Generate GitHub App token
         if: inputs.push_allowed
         id: app-token
-        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3.0.0
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ inputs.ref || github.ref }}
           token: ${{ inputs.push_allowed && steps.app-token.outputs.token || github.token }}
-      - uses: ./.github/actions/nix-setup
+          fetch-depth: 1
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@6004951b182f8860210c8d6f0d808ec5b1a33d28 # v25
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          extra_nix_config: "experimental-features = nix-command flakes auto-allocate-uids"
 
-      - uses: DeterminateSystems/flake-checker-action@3164002371bc90729c68af0e24d5aacf20d7c9f6 # v12
-        with:
-          check-outdated: false
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
-      - uses: ./.github/actions/nix-npm-deps-hash
-        id: hash
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
-      - uses: ./.github/actions/nix-commit-npm-deps-hash
-        if: steps.hash.outputs.hash != '' && inputs.push_allowed
+      - name: Update bun.nix
+        id: bun-nix
+        run: |
+          cp bun.nix bun.nix.bak 2>/dev/null || true
+          nix run .#update-bun-nix
+          if ! diff -q bun.nix.bak bun.nix 2>/dev/null; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push bun.nix
+        if: steps.bun-nix.outputs.changed == 'true' && inputs.push_allowed
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bun.nix
+          git commit -m "fix(nix): update bun.nix for bun.lock"
+          if ! git push; then
+            echo "::error::git push failed (exit 128 often = permission denied; check App has Contents: Read and write)"
+            exit 1
+          fi
 
       - name: Trigger check on new commit
-        if: steps.hash.outputs.hash != '' && inputs.push_allowed
+        if: steps.bun-nix.outputs.changed == 'true' && inputs.push_allowed
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           REF: ${{ inputs.ref || github.ref }}
         run: |
-          # gh expects branch name; strip refs/heads/ if present
           BRANCH="${REF#refs/heads/}"
           if ! gh workflow run ci.yml --ref "$BRANCH"; then
             echo "::error::Failed to trigger ci.yml. Ensure App has Actions: Read and write permission."
             exit 1
           fi
 
-      - uses: ./.github/actions/nix-fail-npm-deps-hash-fork
-        if: steps.hash.outputs.hash != '' && !inputs.push_allowed
-        with:
-          hash: ${{ steps.hash.outputs.hash }}
+      - name: Fail on bun.nix mismatch (fork)
+        if: steps.bun-nix.outputs.changed == 'true' && !inputs.push_allowed
+        shell: bash
+        run: |
+          echo "::error::bun.nix is out of date. CI cannot push to fork PRs."
+          echo ""
+          echo "Update locally and commit:"
+          echo "  nix run .#update-bun-nix"
+          echo "  git add bun.nix && git commit -m 'fix(nix): update bun.nix for bun.lock'"
+          exit 1
 
-      - run: nix build .#default
+  build:
+    needs: bun-nix
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - system: x86_64-linux
+            runner: ubuntu-24.04
+          - system: aarch64-linux
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 1
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@6004951b182f8860210c8d6f0d808ec5b1a33d28 # v25
+        with:
+          extra_nix_config: "experimental-features = nix-command flakes auto-allocate-uids"
+
+      - name: Restore and save Nix store
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7
+        with:
+          primary-key: nix-${{ matrix.system }}-${{ hashFiles('**/*.nix', '**/bun.lock', '**/flake.lock') }}
+          restore-prefixes-first-match: nix-${{ matrix.system }}-
+
+      - name: Nix flake check
+        run: nix flake check -L --system ${{ matrix.system }}

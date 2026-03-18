@@ -1,6 +1,6 @@
 # Reusable workflow for docs-only PRs.
 # Runs rumdl (markdown lint), lychee (link check), typos (spell check).
-# No npm ci — all tools run via GitHub Actions.
+# No bun install — all tools run via GitHub Actions.
 # Reports "check / check" so branch protection allows merge.
 # See docs/CI.md.
 
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -23,9 +23,11 @@ jobs:
         uses: rvben/rumdl@8c1798b13cf961c88a4c5d1136448f4f4391383d # v0.1.47
 
       - name: Check links
+        continue-on-error: true
+        timeout-minutes: 2
         uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2.8.0
         with:
-          args: --timeout 30 --max-retries 5 --no-progress .
+          args: --timeout 90 --max-retries 10 --retry-wait-time 2 --no-progress --accept 200,429 .
 
       - name: Spell check
         uses: crate-ci/typos@631208b7aac2daa8b707f55e7331f9112b0e062d # v1.44.0

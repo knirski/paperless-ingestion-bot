@@ -10,4 +10,4 @@ globs: ["**/*.ts"]
 - **Tagless Final:** Services via Tag + Layer. Programs declare `R`; shell provides. Tests swap with mocks.
 - **Effect first:** Prefer `effect` and `@effect/*`. No `any`, `!`, `enum`, `console.log`. Use `Option<T>` for optional.
 - **Domain errors:** `Schema.TaggedErrorClass` in domain/errors.ts. Exhaustive handling with `Match.exhaustive`.
-- **Verification:** Run `npm run check` before finishing. See AGENTS.md for full rules.
+- **Verification:** Run `bun run check` before finishing. See AGENTS.md for full rules.

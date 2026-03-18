@@ -34,7 +34,7 @@ The units include optional `After=` for `signal-cli-rest-api.service` and `ollam
 
 2. **Install the bot**
 
-   Use npm, Nix, or your package manager. Ensure `paperless-ingestion-bot` is in PATH (e.g. `/usr/bin` or via `nix run`).
+   Use Bun, Nix, or your package manager. Ensure `paperless-ingestion-bot` is in PATH (e.g. `/usr/bin` or via `nix run`).
 
 3. **Copy units**
 
