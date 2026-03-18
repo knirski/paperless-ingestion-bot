@@ -1,25 +1,22 @@
 # Composite Actions
 
-Reusable actions for Nix-related CI workflows. Used by reusable workflows (check.yml, nix.yml) and standalone workflows (update-flake-lock.yml). See [docs/CI.md](../../docs/CI.md) for workflow structure.
+Reusable actions for CI workflows. Used by reusable workflows (check.yml) and docker.yml. See [docs/CI.md](../../docs/CI.md) for workflow structure.
 
 ## Structure
 
 | Action | Purpose | Used by |
 |--------|---------|---------|
-| **nix-setup** | Checkout, install Nix | nix workflow, update-flake-lock |
-| **nix-npm-deps-hash** | Run update-npm-deps-hash.sh, output hash when updated | nix workflow |
-| **nix-commit-npm-deps-hash** | Commit and push npmDepsHash update | nix workflow |
-| **nix-fail-npm-deps-hash-fork** | Fail with instructions for fork PRs | nix workflow |
+| **generate-sbom** | Trivy CycloneDX SBOM + optional upload (artifact or release). Requires checkout + bun install. Inputs: `upload`, `release_tag`, `artifact_name` | check.yml, docker.yml sbom job |
 
 ## Reusable Workflows
 
 | Workflow | Purpose | Called by |
 |----------|---------|-----------|
 | **check.yml** | Full check (test, lint, SBOM, Codecov) | ci.yml |
-| **nix.yml** | Nix build + npmDepsHash update | ci-nix.yml, update-nix-hash.yml |
+| **nix.yml** | Nix build + bun.nix update | ci-nix.yml, update-bun-nix.yml |
 
 ## GitHub-provided features used
 
-- `actions/checkout`, `actions/setup-node` (built-in npm cache), `actions/upload-artifact` (all SHA-pinned)
+- `actions/checkout`, `oven-sh/setup-bun` (Bun runtime), `actions/upload-artifact` (all SHA-pinned)
 - `secrets: inherit` for reusable workflows
 - `workflow_call` for reusable workflows
