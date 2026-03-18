@@ -21,7 +21,7 @@ Use this checklist when preparing paperless-ingestion-bot for independent public
 - [x] SECURITY.md
 - [x] Issue templates (bug report, feature request)
 - [x] package.json `files` field
-- [x] Pre-publish scripts (`npm run publint`, `npm run pack:dry`)
+- [x] Pre-publish scripts (`bun run publint`, `bun run pack:dry`)
 
 ## Before Publishing
 
@@ -51,16 +51,16 @@ nix build .#default
 ./result/bin/paperless-ingestion-bot --help
 ```
 
-If `npmDepsHash` is wrong, CI will auto-update on push. For fork PRs or manual fix: `nix run .#update-npm-deps-hash` or `npm run update-nix-hash -- <hash>` (hash from the failed CI step).
+If `bun.nix` is stale, CI will auto-update on push. For fork PRs or manual fix: `nix run .#update-bun-nix`.
 
 ### 4. npm publish (optional)
 
 If publishing to npm:
 
 - [ ] Add `publishConfig` if using a scoped package
-- [ ] Run `npm run pack:dry` to verify included files
-- [ ] Run `npm run publint` to validate package structure
-- [ ] Run `npm publish --dry-run` before publishing
+- [ ] Run `bun run pack:dry` to verify included files
+- [ ] Run `bun run publint` to validate package structure
+- [ ] Run `bun publish --dry-run` before publishing
 
 ### 5. Branch protection (GitHub Settings)
 
@@ -120,7 +120,7 @@ New public repos often have these on by default.
 **Settings → Branches → Add rule** for `main`:
 
 - [ ] Require a pull request before merging
-- [ ] Require status checks to pass (`check`, `nix`, `dependency-review`) — `nix` ensures npmDepsHash stays in sync
+- [ ] Require status checks to pass (`check`, `nix`, `dependency-review`) — `nix` ensures bun.nix stays in sync
 - [ ] Do not allow bypassing the above settings
 
 ### 5. GitHub Discussions (optional)

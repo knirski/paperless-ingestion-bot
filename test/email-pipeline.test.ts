@@ -1,4 +1,4 @@
-import { assert, describe, expect, it, test } from "@effect/vitest";
+import { describe, expect, it, test } from "bun:test";
 import { Effect, FileSystem, Layer } from "effect";
 import * as Http from "effect/unstable/http";
 import type { ImapSearchQuery } from "../src/core/search.js";
@@ -197,84 +197,84 @@ describe("saveEligibleAttachments", () => {
 	const mockOllamaLayer = (mockOllama: OllamaClientService) =>
 		Layer.succeed(OllamaClient)(mockOllama);
 
-	it.effect("empty toSave returns saved: 0, labeledUids: []", () =>
-		Effect.gen(function* () {
-			const mockFs = {
-				writeFile: () => Effect.void,
-			} as unknown as FileSystem.FileSystem;
-			const mockOllama = {
-				assess: () => Effect.succeed(true),
-			} as unknown as OllamaClientService;
-			const result = yield* saveEligibleAttachments([]).pipe(
+	test("empty toSave returns saved: 0, labeledUids: []", async () => {
+		const mockFs = {
+			writeFile: () => Effect.void,
+		} as unknown as FileSystem.FileSystem;
+		const mockOllama = {
+			assess: () => Effect.succeed(true),
+		} as unknown as OllamaClientService;
+		const result = await Effect.runPromise(
+			saveEligibleAttachments([]).pipe(
 				Effect.provide(mockFsLayer(mockFs)),
 				Effect.provide(mockOllamaLayer(mockOllama)),
-			);
-			assert.deepStrictEqual(result, { saved: 0, labeledUids: [] });
-		}),
-	);
+			),
+		);
+		expect(result).toEqual({ saved: 0, labeledUids: [] });
+	});
 
-	it.effect("item with ollamaReq: false rejects, not saved", () =>
-		Effect.gen(function* () {
-			const mockFs = {
-				writeFile: () => Effect.void,
-			} as unknown as FileSystem.FileSystem;
-			const assessCalls: unknown[] = [];
-			const mockOllama = {
-				assess: (req: unknown) => {
-					assessCalls.push(req);
-					return Effect.succeed(false);
-				},
-			} as unknown as OllamaClientService;
-			const toSave: AttachmentToSave[] = [
-				{
-					path: "/tmp/out.pdf",
-					data: new Uint8Array([1, 2, 3]),
-					ollamaReq: { model: "x", prompt: "y", stream: false },
-					messageUid: 42 as MessageUid,
-				},
-			];
-			const result = yield* saveEligibleAttachments(toSave).pipe(
+	test("item with ollamaReq: false rejects, not saved", async () => {
+		const mockFs = {
+			writeFile: () => Effect.void,
+		} as unknown as FileSystem.FileSystem;
+		const assessCalls: unknown[] = [];
+		const mockOllama = {
+			assess: (req: unknown) => {
+				assessCalls.push(req);
+				return Effect.succeed(false);
+			},
+		} as unknown as OllamaClientService;
+		const toSave: AttachmentToSave[] = [
+			{
+				path: "/tmp/out.pdf",
+				data: new Uint8Array([1, 2, 3]),
+				ollamaReq: { model: "x", prompt: "y", stream: false },
+				messageUid: 42 as MessageUid,
+			},
+		];
+		const result = await Effect.runPromise(
+			saveEligibleAttachments(toSave).pipe(
 				Effect.provide(mockFsLayer(mockFs)),
 				Effect.provide(mockOllamaLayer(mockOllama)),
-			);
-			assert.strictEqual(result.saved, 0);
-			assert.deepStrictEqual(result.labeledUids, []);
-			assert.strictEqual(assessCalls.length, 1);
-		}),
-	);
+			),
+		);
+		expect(result.saved).toBe(0);
+		expect(result.labeledUids).toEqual([]);
+		expect(assessCalls.length).toBe(1);
+	});
 
-	it.effect("item with ollamaReq: true accepts, saved", () =>
-		Effect.gen(function* () {
-			let writtenPath: string | undefined;
-			let writtenData: Uint8Array | undefined;
-			const mockFs = {
-				writeFile: (path: string, data: Uint8Array) => {
-					writtenPath = path;
-					writtenData = data;
-					return Effect.void;
-				},
-			} as unknown as FileSystem.FileSystem;
-			const mockOllama = {
-				assess: () => Effect.succeed(true),
-			} as unknown as OllamaClientService;
-			const toSave: AttachmentToSave[] = [
-				{
-					path: "/tmp/out.pdf",
-					data: new Uint8Array([1, 2, 3]),
-					ollamaReq: { model: "x", prompt: "y", stream: false },
-					messageUid: 42 as MessageUid,
-				},
-			];
-			const result = yield* saveEligibleAttachments(toSave).pipe(
+	test("item with ollamaReq: true accepts, saved", async () => {
+		let writtenPath: string | undefined;
+		let writtenData: Uint8Array | undefined;
+		const mockFs = {
+			writeFile: (path: string, data: Uint8Array) => {
+				writtenPath = path;
+				writtenData = data;
+				return Effect.void;
+			},
+		} as unknown as FileSystem.FileSystem;
+		const mockOllama = {
+			assess: () => Effect.succeed(true),
+		} as unknown as OllamaClientService;
+		const toSave: AttachmentToSave[] = [
+			{
+				path: "/tmp/out.pdf",
+				data: new Uint8Array([1, 2, 3]),
+				ollamaReq: { model: "x", prompt: "y", stream: false },
+				messageUid: 42 as MessageUid,
+			},
+		];
+		const result = await Effect.runPromise(
+			saveEligibleAttachments(toSave).pipe(
 				Effect.provide(mockFsLayer(mockFs)),
 				Effect.provide(mockOllamaLayer(mockOllama)),
-			);
-			assert.strictEqual(result.saved, 1);
-			assert.deepStrictEqual(result.labeledUids, [42]);
-			assert.strictEqual(writtenPath, "/tmp/out.pdf");
-			assert.deepStrictEqual(writtenData, new Uint8Array([1, 2, 3]));
-		}),
-	);
+			),
+		);
+		expect(result.saved).toBe(1);
+		expect(result.labeledUids).toEqual([42 as MessageUid]);
+		expect(writtenPath).toBe("/tmp/out.pdf");
+		expect(writtenData).toEqual(new Uint8Array([1, 2, 3]));
+	});
 });
 
 describe("processRawAttachment", () => {
@@ -303,12 +303,12 @@ describe("processRawAttachment", () => {
 			processRawAttachment(raw, 0, emailSubdir).pipe(Effect.provide(layer)),
 		);
 
-		assert.notStrictEqual(result, null);
-		assert.deepStrictEqual(result?.data, pdfBytes);
-		assert.ok(result?.path.startsWith(tmp.path));
+		expect(result).not.toBe(null);
+		expect(result?.data).toEqual(pdfBytes);
+		expect(result?.path.startsWith(tmp.path)).toBe(true);
 
 		const tempExists = await pathExists(tempPath);
-		assert.strictEqual(tempExists, false, "temp file should be removed");
+		expect(tempExists).toBe(false);
 
 		await tmp.remove();
 	});

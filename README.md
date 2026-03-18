@@ -28,7 +28,7 @@ Setup is a bit involved. Geeks will feel at home - determined non-geeks can get 
 - **Signal**: Webhook server for document attachments sent via Signal.
 - **Gmail**: IMAP-based crawl for email attachments. One-shot (runs once, exits). Schedule with cron or systemd timer.
 - **Ollama**: Optional AI eligibility filter for email attachments (images, plain text).
-- **AI-assisted development**: Push to `ai/**` branches to auto-create PRs with Ollama-generated titles from conventional commits. See [Auto-PR setup](docs/GITHUB_APP_AUTO_PR_SETUP.md).
+- **Auto-PR**: Push to `ai/**` branches to auto-create PRs with titles from conventional commits via [knirski/auto-pr](https://github.com/knirski/auto-pr).
 
 Supported file types: PDF, Word (.doc, .docx), RTF, Office formats, images (JPEG, PNG, etc.), plain text, HTML, CSV.
 
@@ -44,7 +44,7 @@ Might add: other email providers (Outlook, Proton), other IMs (Matrix, Telegram)
 | [Ollama](https://ollama.com/)                                            | No         | Optional AI eligibility assessment; also used for AI-generated PR titles in the auto-PR workflow (runs locally)                                    |
 | [paperless-ai](https://github.com/clusterzx/paperless-ai)               | No         | Optional AI post-processing (tags, titles, correspondents). This bot uses Ollama directly for pre-ingestion; paperless-ai augments after ingestion |
 | [signal-cli-rest-api](https://github.com/bbernhard/signal-cli-rest-api) | For Signal | Webhook server for Signal Messenger                                                                                                                |
-| Node.js ≥ 24                                                            | Yes        | Runtime. See [Node support policy](#node-support-policy) below.                                                                                       |
+| Bun ≥ 1.3                                                              | Yes        | Runtime. See [Bun support policy](#bun-support-policy) below.                                                                                         |
 
 ## Quick Start
 
@@ -52,14 +52,14 @@ Install below, then follow [Setup](#setup) (Signal or Gmail) before running comm
 
 ### Installation
 
-**npm or Nix:**
+**Bun or Nix:**
 
-**npm (from source):**
+**Bun (from source):**
 
 ```bash
 git clone https://github.com/knirski/paperless-ingestion-bot.git
 cd paperless-ingestion-bot
-npm install && npm run build
+bun install && bun run build
 ```
 
 **Nix:**
@@ -184,7 +184,7 @@ See [config.example.json](config.example.json) for a full example. A JSON Schema
 - **Credentials** — Stored only in the OS keychain (@napi-rs/keyring). No file fallback; fails clearly when keyring unavailable. Gmail app passwords and Signal API access never touch disk in plaintext.
 - **Webhook** — Token-bucket rate limiting (120/min); excess returns 429. Same-host deployment recommended: bind to `127.0.0.1` so only local processes (signal-cli-rest-api) can reach it. See [ADR 0002](docs/adr/0002-signal-webhook-security.md).
 - **PII in errors** — Paths, emails, phones, URLs are redacted in logs via Effect `Redacted`; raw values never appear in structured logs.
-- **Supply chain** — `npm audit --audit-level=high` in every check. CycloneDX SBOM generated in CI. Dependabot, CodeQL, OpenSSF Scorecard with least-privilege workflow permissions. Release images signed with Sigstore/cosign keyless signing.
+- **Supply chain** — `bun audit --audit-level=high` in every check. CycloneDX SBOM generated in CI. Dependabot, CodeQL, OpenSSF Scorecard with least-privilege workflow permissions. Release images signed with Sigstore/cosign keyless signing.
 - **File permissions** — email-accounts metadata written with mode `0600`. Run as a dedicated user.
 
 **Trust model:** All family members in the config share the same Gmail account registry. Anyone can run `gmail status` to see all configured accounts and use pause/resume/remove on any of them. The design assumes a trusted group.
@@ -205,25 +205,25 @@ See [config.example.json](config.example.json) for a full example. A JSON Schema
 ## Verification
 
 ```bash
-npm run check
+bun run check
 ```
 
 Runs tests, lint, and typecheck.
 
-**CI:** GitHub Actions runs `npm run check` on push and PR. Commits must follow [Conventional Commits](https://www.conventionalcommits.org/) (enforced by commitlint). A CycloneDX SBOM is generated and uploaded as a workflow artifact.
+**CI:** GitHub Actions runs `bun run check` on push and PR. Commits must follow [Conventional Commits](https://www.conventionalcommits.org/) (enforced by commitlint). A CycloneDX SBOM is generated and uploaded as a workflow artifact.
 
 ## Documentation
 
 TypeScript implementation using [Effect](https://effect.website/) and functional programming conventions. Bleeding edge: Effect v4 beta, [TypeScript Native](https://devblogs.microsoft.com/typescript/announcing-typescript-native-previews/) (`tsgo`) for build and typecheck (~10× faster than `tsc`).
 
-### Node support policy
+### Bun support policy
 
-We target **Node.js 24+** (current) and Effect v4 beta. This is a deliberate choice for modern features; it may limit adoption on older LTS lines. We intend to support the current Node LTS line(s) that Effect v4 officially supports. Check [Effect compatibility](https://effect.website/) and our `engines` field in `package.json` for the minimum supported version. We do not commit to supporting older Node versions once we move to a newer LTS line.
+We target **Bun 1.3+** and Effect v4 beta. This is a deliberate choice for modern features. We intend to support the Bun version that Effect v4 officially supports. Check [Effect compatibility](https://effect.website/) and our `packageManager` field in `package.json` for the minimum supported version.
 
 - [deploy/](deploy/): Deployment recipes — [Compose](deploy/compose/README.md) (Docker) and [systemd](deploy/systemd/README.md) (service units)
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md): Project structure and design
 - [CONTRIBUTING.md](CONTRIBUTING.md): How to contribute
-- [docs/GITHUB_APP_AUTO_PR_SETUP.md](docs/GITHUB_APP_AUTO_PR_SETUP.md): Auto-PR workflow — push to `ai/**` branches to auto-create PRs with Ollama-generated titles (maintainer setup)
+- [knirski/auto-pr](https://github.com/knirski/auto-pr): Auto-PR workflow (push to `ai/*` branches)
 - [docs/SCHEDULED_WORKFLOWS.md](docs/SCHEDULED_WORKFLOWS.md): Enable scheduled workflows (cron)
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): Community standards
 - [SECURITY.md](SECURITY.md): Vulnerability reporting

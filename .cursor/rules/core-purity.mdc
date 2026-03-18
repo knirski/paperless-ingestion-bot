@@ -1,0 +1,13 @@
+---
+description: FC/IS core purity — no Effect, no I/O in src/core/
+globs: ["src/core/**/*.ts"]
+---
+
+# Core Purity (FC/IS)
+
+These files are the **functional core**. They must stay pure.
+
+- **No Effect** — no `Effect.gen`, `Effect.run*`, `Effect.log`, or any Effect API
+- **No I/O** — no fetch, fs, process, or external calls
+- **Return** — `Result` for sync validation; plain values otherwise
+- **Shell boundary** — Shell in `src/shell/*.ts` uses `Effect.fromResult` when calling core

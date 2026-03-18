@@ -1,5 +1,5 @@
+import { describe, expect, test } from "bun:test";
 import { Effect } from "effect";
-import { describe, expect, test } from "vitest";
 import type { AccountEmail } from "../src/domain/types.js";
 import { PlatformServicesLayer } from "../src/shell/layers.js";
 import {
@@ -50,7 +50,8 @@ describe("signal-pipeline", () => {
 			},
 			{ input: [{ id: "att1" }], expected: [{ id: "att1" }] },
 		])("filters invalid refs", ({ input, expected }) => {
-			expect(collectValidAttachmentRefs(input)).toEqual(expected);
+			const result = collectValidAttachmentRefs(input as unknown as readonly unknown[]);
+			expect(result).toEqual(expected as unknown as typeof result);
 		});
 	});
 

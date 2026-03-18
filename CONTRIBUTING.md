@@ -7,18 +7,19 @@ Thanks for your interest in contributing to Paperless Ingestion Bot.
 ```bash
 git clone https://github.com/knirski/paperless-ingestion-bot.git
 cd paperless-ingestion-bot
-npm install && npm run build
+bun install && bun run build
+bun x lefthook install   # optional: install git hooks for commitlint
 ```
 
-If you change `package-lock.json` (e.g. add a dependency), the Nix hash must be updated:
+If you change `bun.lock` (e.g. add a dependency), the Nix hash must be updated:
 
-**CI handles it:** Push your branch. CI will update `default.nix` automatically for same-repo PRs and main. No need to commit the hash change yourself.
+**CI handles it:** Push your branch. CI will update `bun.nix` automatically for same-repo PRs and main. No need to commit the hash change yourself.
 
-**Local warning:** `npm run check` warns when the hash is stale. You can ignore it — CI will fix it when you push.
+**Local warning:** `bun run check` warns when the hash is stale. You can ignore it — CI will fix it when you push.
 
-**If CI pushes an npmDepsHash update:** The PR head will change. Wait 1–2 minutes for the new check to complete before merging. See [docs/CI.md](docs/CI.md#troubleshooting-check--check-waiting-for-status) if the required check stays "waiting for status".
+**If CI pushes a bun.nix update:** The PR head will change. Wait 1–2 minutes for the new check to complete before merging. See [docs/CI.md](docs/CI.md#troubleshooting-check--check-waiting-for-status) if the required check stays "waiting for status".
 
-**Fork PRs:** CI cannot push to forks. If the nix job fails (ci-nix.yml), update locally: `nix run .#update-npm-deps-hash` (or `npm run update-nix-hash -- <hash>` using the hash from the failed job), then commit and push. See [docs/CI.md](docs/CI.md).
+**Fork PRs:** CI cannot push to forks. If the nix job fails (ci-nix.yml), update locally: `nix run .#update-bun-nix`, then commit and push. See [docs/CI.md](docs/CI.md).
 
 See [README.md](README.md) for runtime requirements and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for project structure.
 
@@ -39,9 +40,9 @@ Examples:
 
 ## Pull Requests
 
-For AI-assisted development: push to `ai/**` branches to auto-create PRs with title and body from conventional commits. See [docs/GITHUB_APP_AUTO_PR_SETUP.md](docs/GITHUB_APP_AUTO_PR_SETUP.md) for maintainer setup.
+Push to `ai/**` branches to auto-create PRs via [knirski/auto-pr](https://github.com/knirski/auto-pr). Otherwise create the PR manually.
 
-1. Run `npm run check` before submitting.
+1. Run `bun run check` before submitting.
 2. Ensure your commits follow Conventional Commits (the PR template includes a checklist).
 3. Update documentation if your changes affect user-facing behavior.
 
@@ -58,4 +59,4 @@ Issues labeled `good first issue` are suitable for newcomers: they have clear sc
 
 ## Code Style
 
-The project uses [Biome](https://biomejs.dev/) for linting and formatting. Run `npm run lint:fix` to auto-fix issues.
+The project uses [Biome](https://github.com/biomejs/biome) for linting and formatting. Run `bun run lint:fix` to auto-fix issues.
