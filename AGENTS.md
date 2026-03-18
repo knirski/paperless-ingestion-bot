@@ -26,7 +26,7 @@ When unsure about how to implement something or when multiple approaches exist:
 **Use GitHub MCP (or other relevant MCP) first when available** — Prefer MCP tools over web search or manual lookup: `mcp_github_search_code`, `mcp_github_get_file_contents`, `mcp_context7_query-docs`, etc. Fall back to web fetch or CLI only when MCP has no matching capability.
 
 1. **Check official documentation first** — Use the primary source (library docs, GitHub Actions docs, etc.) to understand intended behavior and options.
-2. **Effect sources** — For Effect, use the LLM-oriented docs at `https://github.com/Effect-TS/effect-smol/blob/effect%404.0.0-beta.XX/LLMS.md`. Replace the version segment (`effect%404.0.0-beta.XX`) with the `effect` version from `package.json` dependencies (e.g. `4.0.0-beta.33` → `effect%404.0.0-beta.33`).
+2. **Effect sources** — For Effect, use the LLM-oriented docs at `https://github.com/Effect-TS/effect-smol/blob/effect%404.0.0-beta.XX/LLMS.md`. Replace the version segment (`effect%404.0.0-beta.XX`) with the `effect` version from `package.json` dependencies (e.g. `4.0.0-beta.35` → `effect%404.0.0-beta.35`).
 3. **When still uncertain, check popular and respectable public repos** — Look at how active, well-maintained projects handle the same problem (e.g. Next.js, React, GitHub’s own repos). This is mandatory when:
    - There are different valid options or paths.
    - There is no obvious solution.
@@ -78,7 +78,7 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 - `src/cli.ts` — Thin CLI. Uses `effect/unstable/cli`. Delegates to pipelines.
 
 - Config — JSON (Nix-generated). Resolution: `--config` or `PAPERLESS_INGESTION_CONFIG` or default. 12-factor: individual values and paths override via env.
-  `loadConfiguration(schema, configPath)` loads from file and applies env overrides (12-factor: individual vars like `PAPERLESS_INGESTION_SIGNAL_API_URL`). Pipelines `yield* SignalConfig` / `yield* EmailConfig`.
+  Config layers load from file and apply env overrides (12-factor: individual vars like `PAPERLESS_INGESTION_SIGNAL_API_URL`). Pipelines `yield* SignalConfig` / `yield* EmailConfig`.
   JSON Schema: `dist/config.schema.json` (build time). Startup validation: consume_dir, signal_api_url; `--skip-reachability-check` bypasses API check.
 
 - Services: `SignalClient`, `EmailClient`, `OllamaClient`, `CredentialsStore`, `SignalConfig`, `EmailConfig`.

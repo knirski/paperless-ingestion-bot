@@ -625,6 +625,17 @@ describe("core", () => {
 				expect(payload).toHaveProperty(k);
 			}
 		});
+
+		test("decodeWebhookPayload normalizes single attachment to array (Schema.ArrayEnsure)", () => {
+			const payload = decodeWebhookPayload({
+				dataMessage: { attachments: { id: "att1", contentType: "application/pdf" } },
+			});
+			const dm = getDataMessage(payload);
+			expect(Option.isSome(dm)).toBe(true);
+			expect(Option.getOrNull(dm)?.attachments).toEqual([
+				{ id: "att1", contentType: "application/pdf" },
+			]);
+		});
 	});
 
 	describe("authorization", () => {

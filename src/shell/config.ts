@@ -94,20 +94,26 @@ export const DEFAULT_CONFIG_PATH = "/etc/paperless-ingestion-bot/config.json";
 export const DEFAULT_USERS_PATH = "/var/lib/paperless-ingestion-bot/users.json";
 export const DEFAULT_EMAIL_ACCOUNTS_PATH = "/var/lib/paperless-ingestion-bot/email-accounts.json";
 
+function resolvePath(cliPath: string | undefined, envKey: string, defaultPath: string): string {
+	return cliPath ?? process.env[envKey] ?? defaultPath;
+}
+
 /** Resolve config path: --config or env or default. */
 export function resolveConfigPath(cliPath: string | undefined): string {
-	return cliPath ?? process.env.PAPERLESS_INGESTION_CONFIG ?? DEFAULT_CONFIG_PATH;
+	return resolvePath(cliPath, "PAPERLESS_INGESTION_CONFIG", DEFAULT_CONFIG_PATH);
 }
 
 /** Resolve users path: --users or env or default. */
 export function resolveUsersPath(cliPath: string | undefined): string {
-	return cliPath ?? process.env.PAPERLESS_INGESTION_USERS_PATH ?? DEFAULT_USERS_PATH;
+	return resolvePath(cliPath, "PAPERLESS_INGESTION_USERS_PATH", DEFAULT_USERS_PATH);
 }
 
 /** Resolve email accounts path: --email-accounts or env or default. */
 export function resolveEmailAccountsPath(cliPath: string | undefined): string {
-	return (
-		cliPath ?? process.env.PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH ?? DEFAULT_EMAIL_ACCOUNTS_PATH
+	return resolvePath(
+		cliPath,
+		"PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH",
+		DEFAULT_EMAIL_ACCOUNTS_PATH,
 	);
 }
 
@@ -130,6 +136,31 @@ function parseUserRegistry(users: readonly RawUser[]): readonly User[] {
 		displayName: u.display_name,
 		tagName: u.tag_name,
 	}));
+}
+
+/** Raw shape shared by both config schemas (snake_case from JSON). */
+interface RawBaseConfig {
+	readonly consume_dir: string;
+	readonly signal_api_url: string;
+	readonly log_level: LogLevel;
+	readonly mark_processed_label: EmailLabel;
+}
+
+function toBaseConfig(
+	raw: RawBaseConfig,
+	registry: UserRegistry,
+	usersPath: string,
+	emailAccountsPath: string,
+): BaseConfig {
+	return {
+		consumeDir: raw.consume_dir,
+		emailAccountsPath,
+		usersPath,
+		signalApiUrl: raw.signal_api_url,
+		registry,
+		logLevel: raw.log_level,
+		markProcessedLabel: raw.mark_processed_label,
+	};
 }
 
 /** Infra config base. */
@@ -177,7 +208,7 @@ const UsersJsonSchema = Schema.fromJsonString(UsersArraySchema);
 const CONFIG_SCHEMA_FIX =
 	"Ensure config has required fields: consume_dir, signal_api_url, etc. See README.";
 const CONFIG_PARSE_FIX = "Check config file format and required fields. See README.";
-const CONFIG_SOURCE_FIX = "Pass --config /path. Default: /etc/paperless-ingestion-bot/config.json";
+const CONFIG_SOURCE_FIX = `Pass --config /path. Default: ${DEFAULT_CONFIG_PATH}`;
 
 function envProvider(): ConfigProvider.ConfigProvider {
 	const withTransform = ConfigProvider.fromEnv().pipe(
@@ -223,18 +254,15 @@ function makeConfigProvider(
 		const content = yield* fs
 			.readFileString(configPath)
 			.pipe(mapFsError(configPath, "readFileString"));
-		let parsed: unknown;
-		try {
-			parsed = JSON.parse(content);
-		} catch (e) {
-			return yield* Effect.fail(
+		const parsed = yield* Effect.try({
+			try: () => JSON.parse(content) as unknown,
+			catch: (e) =>
 				new ConfigParseError({
 					path: redactedForLog(configPath, redactPath),
 					message: `Invalid JSON: ${unknownToMessage(e)}`,
 					fix: CONFIG_SCHEMA_FIX,
 				}),
-			);
-		}
+		});
 		const fileProvider = ConfigProvider.fromUnknown(
 			typeof parsed === "object" && parsed !== null ? parsed : {},
 		);
@@ -294,42 +322,20 @@ function handleConfigParseError(
 	);
 }
 
-/** Load config: file + env overlay, decode with schema. @lintignore Public API. */
-export function loadConfiguration<A>(
-	schema: Schema.Schema<A>,
-	configPath?: string,
-): Effect.Effect<
-	{ raw: A; source: string },
-	ConfigParseError | FileSystemError,
-	FileSystem.FileSystem
-> {
-	const path = resolveConfigPath(configPath);
-	return Effect.gen(function* () {
-		const provider = yield* makeConfigProvider(path);
-		const config = Config.schema(schema as Parameters<typeof Config.schema>[0]);
-		const raw = yield* config
-			.parse(provider)
-			.pipe(Effect.mapError((e) => configErrorToParseError(path, e)));
-		return { raw: raw as A, source: path };
-	}).pipe(Effect.catch((e: unknown) => handleConfigParseError(path, e)));
-}
-
 function readAndParseConfig<A>(
-	configPath: string | undefined,
+	configPath: string,
 	usersPath: string,
-	schema: Schema.Schema<A>,
+	config: Config.Config<A>,
 ): Effect.Effect<
-	{ raw: A; registry: UserRegistry; usersPath: string; configSource: string },
+	{ raw: A; registry: UserRegistry },
 	ConfigParseError | FileSystemError,
 	FileSystem.FileSystem
 > {
-	const path = resolveConfigPath(configPath);
 	return Effect.gen(function* () {
-		const provider = yield* makeConfigProvider(path);
-		const config = Config.schema(schema as Parameters<typeof Config.schema>[0]);
+		const provider = yield* makeConfigProvider(configPath);
 		const raw = yield* config
 			.parse(provider)
-			.pipe(Effect.mapError((e) => configErrorToParseError(path, e)));
+			.pipe(Effect.mapError((e) => configErrorToParseError(configPath, e)));
 		const users = yield* loadUsers(usersPath);
 		const registry = yield* Effect.try({
 			try: () => createUserRegistry(parseUserRegistry(users)),
@@ -340,46 +346,35 @@ function readAndParseConfig<A>(
 					fix: usersHint(usersPath),
 				}),
 		});
-		return {
-			raw: raw as A,
-			registry,
-			usersPath,
-			configSource: path,
-		};
-	}).pipe(Effect.catch((e: unknown) => handleConfigParseError(path, e)));
+		return { raw, registry };
+	}).pipe(Effect.catch((e: unknown) => handleConfigParseError(configPath, e)));
 }
 
 const buildSignalConfigLayer = (
-	configPath: string | undefined,
+	configPath: string,
 	usersPath: string,
 	emailAccountsPath: string,
 ): Layer.Layer<SignalConfig, FileSystemError | ConfigParseError, FileSystem.FileSystem> =>
 	Layer.unwrap(
 		Effect.fn("paperless-ingestion-bot/shell/config.buildSignalConfigLayer")(function* (
-			cfgPath?: string,
-			users?: string,
-			emailAccts?: string,
+			cfgPath: string,
+			users: string,
+			emailAccts: string,
 		) {
-			const {
-				raw,
-				registry,
-				usersPath: up,
-				configSource,
-			} = yield* readAndParseConfig(cfgPath, users ?? usersPath, RawSignalConfigSchema);
+			const { raw, registry } = yield* readAndParseConfig(
+				cfgPath,
+				users,
+				Config.schema(RawSignalConfigSchema),
+			);
+			const base = toBaseConfig(raw, registry, users, emailAccts);
 			const config: SignalConfigService = {
-				consumeDir: raw.consume_dir,
-				emailAccountsPath: emailAccts ?? emailAccountsPath,
-				usersPath: up,
-				signalApiUrl: raw.signal_api_url,
-				registry,
-				logLevel: raw.log_level,
-				markProcessedLabel: raw.mark_processed_label,
+				...base,
 				host: raw.webhook_host,
 				port: raw.webhook_port,
 			};
 			yield* Effect.log({
 				event: "config_resolved",
-				configPath: configSource,
+				configPath: cfgPath,
 				users: config.registry.users.length,
 				consumeDir: config.consumeDir,
 			});
@@ -388,30 +383,24 @@ const buildSignalConfigLayer = (
 	);
 
 const buildEmailConfigLayer = (
-	configPath: string | undefined,
+	configPath: string,
 	usersPath: string,
 	emailAccountsPath: string,
 ): Layer.Layer<EmailConfig, FileSystemError | ConfigParseError, FileSystem.FileSystem> =>
 	Layer.unwrap(
 		Effect.fn("paperless-ingestion-bot/shell/config.buildEmailConfigLayer")(function* (
-			cfgPath?: string,
-			users?: string,
-			emailAccts?: string,
+			cfgPath: string,
+			users: string,
+			emailAccts: string,
 		) {
-			const {
-				raw,
-				registry,
-				usersPath: up,
-				configSource,
-			} = yield* readAndParseConfig(cfgPath, users ?? usersPath, RawEmailConfigSchema);
+			const { raw, registry } = yield* readAndParseConfig(
+				cfgPath,
+				users,
+				Config.schema(RawEmailConfigSchema),
+			);
+			const base = toBaseConfig(raw, registry, users, emailAccts);
 			const config: EmailConfigService = {
-				consumeDir: raw.consume_dir,
-				emailAccountsPath: emailAccts ?? emailAccountsPath,
-				usersPath: up,
-				signalApiUrl: raw.signal_api_url,
-				registry,
-				logLevel: raw.log_level,
-				markProcessedLabel: raw.mark_processed_label,
+				...base,
 				ollamaUrl: raw.ollama_url,
 				ollamaVisionModel: raw.ollama_vision_model,
 				ollamaTextModel: raw.ollama_text_model,
@@ -420,7 +409,7 @@ const buildEmailConfigLayer = (
 			};
 			yield* Effect.log({
 				event: "config_resolved",
-				configPath: configSource,
+				configPath: cfgPath,
 				users: config.registry.users.length,
 				consumeDir: config.consumeDir,
 			});

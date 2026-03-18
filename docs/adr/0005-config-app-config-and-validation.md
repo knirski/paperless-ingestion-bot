@@ -1,4 +1,4 @@
-# Config: env overrides, JSON Schema, loadConfiguration, and startup validation
+# Config: env overrides, JSON Schema, and startup validation
 
 ## Context and Problem Statement
 
@@ -8,7 +8,7 @@ The config system needed to align with common deployment patterns (12-factor, co
 
 * **A)** Keep file-only config — status quo; no env-based overrides for containers
 * **B)** Add APP_CONFIG env (full JSON blob) — single env var; rejected: 12-factor favors granular env vars; JSON in env has escaping/size issues; not aligned with Paperless-ngx, Grafana, etc.
-* **C)** Individual env var overrides (12-factor style) — file as base; env vars override specific keys; JSON Schema, loadConfiguration, split config (users.json, email-accounts.json), startup validation
+* **C)** Individual env var overrides (12-factor style) — file as base; env vars override specific keys; JSON Schema, config layers, split config (users.json, email-accounts.json), startup validation
 
 ## Decision Outcome
 
@@ -16,7 +16,7 @@ Chosen option: **C**, because it aligns with 12-factor ("env vars are granular c
 
 ### Consequences
 
-* Good, because: granular env vars are 12-factor compliant; no JSON escaping in env; aligns with reputable OSS projects; JSON Schema supports tooling; loadConfiguration centralizes loading; split config (users.json) keeps concerns separate; startup validation fails fast; --skip-reachability-check allows flexible startup order
+* Good, because: granular env vars are 12-factor compliant; no JSON escaping in env; aligns with reputable OSS projects; JSON Schema supports tooling; config layers centralize loading; split config (users.json) keeps concerns separate; startup validation fails fast; --skip-reachability-check allows flexible startup order
 * Bad, because: more env var names to document; users.json is a separate file to maintain
 
 ### Implementation
