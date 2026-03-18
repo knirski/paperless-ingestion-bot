@@ -133,13 +133,13 @@
     url = "https://registry.npmjs.org/@conventional-changelog/git-client/-/git-client-2.6.0.tgz";
     hash = "sha512-T+uPDciKf0/ioNNDpMGc8FDsehJClZP0yR3Q5MN6wE/Y/1QZ7F+80OgznnTCOlMEG4AV0LvH2UJi3C/nBnaBUg==";
   };
-  "@effect/platform-node-shared@4.0.0-beta.33" = fetchurl {
-    url = "https://registry.npmjs.org/@effect/platform-node-shared/-/platform-node-shared-4.0.0-beta.33.tgz";
-    hash = "sha512-jaJnvYz1IiPZyN//fCJsvwnmujJS5KD8noCVVLhb4ZGCWKhQpt0x2iuax6HFzMlPEQSfl04GLU+PVKh0nkzPyA==";
+  "@effect/platform-node-shared@4.0.0-beta.35" = fetchurl {
+    url = "https://registry.npmjs.org/@effect/platform-node-shared/-/platform-node-shared-4.0.0-beta.35.tgz";
+    hash = "sha512-9bPqNV988itKJ7MQoJuzmR014DB9EZRDOnhJt/+iJlb8qLoR9HnCzNJb9gfBdYhFmVYc8DMsQxG81rdJzpv9tg==";
   };
-  "@effect/platform-node@4.0.0-beta.33" = fetchurl {
-    url = "https://registry.npmjs.org/@effect/platform-node/-/platform-node-4.0.0-beta.33.tgz";
-    hash = "sha512-mw/zCuq4bSRP5nm3hPlfjX+veKlG6kC3NleuMhRuVSa8NzlHF08rXptd6S9ks9JuDz5F6dgzIf/beaGAYF8TmA==";
+  "@effect/platform-node@4.0.0-beta.35" = fetchurl {
+    url = "https://registry.npmjs.org/@effect/platform-node/-/platform-node-4.0.0-beta.35.tgz";
+    hash = "sha512-HPc2xZASl9F9y/xJ01bQgFD6Jf9XP4Fcv/BlVTvG0Yr/uN63lwKZYr/VXor5K5krHfBDeCBD8y7/SICPYZoq3A==";
   };
   "@emnapi/core@1.9.0" = fetchurl {
     url = "https://registry.npmjs.org/@emnapi/core/-/core-1.9.0.tgz";
@@ -521,9 +521,9 @@
     url = "https://registry.npmjs.org/dot-prop/-/dot-prop-5.3.0.tgz";
     hash = "sha512-QM8q3zDe58hqUqjraQOmzZ1LIH9SWQJTlEKCH4kJ2oQvLZk7RbQXvtDM2XEq3fwkV9CCvvH4LA0AV+ogFsBM2Q==";
   };
-  "effect@4.0.0-beta.33" = fetchurl {
-    url = "https://registry.npmjs.org/effect/-/effect-4.0.0-beta.33.tgz";
-    hash = "sha512-ln9emWPd1SemokSdOV43r2CbH1j8GTe9qbPvttmh9/j2OR0WNmj7UpjbN34llQgF9QV4IdcN6QdV2w8G7B7RyQ==";
+  "effect@4.0.0-beta.35" = fetchurl {
+    url = "https://registry.npmjs.org/effect/-/effect-4.0.0-beta.35.tgz";
+    hash = "sha512-64j8dgJmoEMeq6Y3WLYcZIRqPZ5E/lqnULCf6QW5te3hQ/sa13UodWLGwBEviEqBoq72U8lArhVX+T7ntzhJGQ==";
   };
   "emoji-regex@10.6.0" = fetchurl {
     url = "https://registry.npmjs.org/emoji-regex/-/emoji-regex-10.6.0.tgz";
