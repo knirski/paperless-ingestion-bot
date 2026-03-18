@@ -32,7 +32,7 @@
 		"test:watch": "bun test --watch",
 		"check": "bash scripts/check-nix-hash.sh && bun run check:nix && bun run check:code && bun run check:docs && bun run lint:workflows && bun run lint:scripts",
 		"check:ci": "bash scripts/run-check-ci.sh",
-		"check:code": "bun run build && bun audit --audit-level=high && run-p lint knip typecheck && bun run test",
+		"check:code": "bun run build && bun audit --audit-level=high && bun run lint && bun run knip && bun run typecheck && bun run test",
 		"check:with-links": "bun run check && bun run check:just-links",
 		"check:nix": "scripts/nix-run-if-missing.sh statix check . && scripts/nix-run-if-missing.sh deadnix --exclude bun.nix .",
 		"check:docs": "bun x rumdl check . && scripts/nix-run-if-missing.sh typos",
@@ -45,9 +45,8 @@
 		"format": "biome format --write .",
 		"knip": "knip",
 		"typecheck": "tsgo --noEmit",
-		"prepare": "lefthook install",
 		"prepublishOnly": "bun run build",
-		"pack:dry": "bun run build && npm pack --dry-run"
+		"pack:dry": "bun run build && bun pm pack --dry-run"
 	},
 	"dependencies": {
 		"@effect/platform-node": "4.0.0-beta.33",
@@ -71,7 +70,6 @@
 		"knip": "^5.86.0",
 		"lefthook": "^2.1.4",
 		"lint-staged": "^16.3.2",
-		"npm-run-all": "^4.1.5",
 		"remark": "^15.0.1",
 		"typescript": "^5.7.0",
 		"unist-util-visit": "^5.1.0"

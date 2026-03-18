@@ -52,14 +52,14 @@ Install below, then follow [Setup](#setup) (Signal or Gmail) before running comm
 
 ### Installation
 
-**npm or Nix:**
+**Bun or Nix:**
 
-**npm (from source):**
+**Bun (from source):**
 
 ```bash
 git clone https://github.com/knirski/paperless-ingestion-bot.git
 cd paperless-ingestion-bot
-npm install && npm run build
+bun install && bun run build
 ```
 
 **Nix:**
@@ -184,7 +184,7 @@ See [config.example.json](config.example.json) for a full example. A JSON Schema
 - **Credentials** — Stored only in the OS keychain (@napi-rs/keyring). No file fallback; fails clearly when keyring unavailable. Gmail app passwords and Signal API access never touch disk in plaintext.
 - **Webhook** — Token-bucket rate limiting (120/min); excess returns 429. Same-host deployment recommended: bind to `127.0.0.1` so only local processes (signal-cli-rest-api) can reach it. See [ADR 0002](docs/adr/0002-signal-webhook-security.md).
 - **PII in errors** — Paths, emails, phones, URLs are redacted in logs via Effect `Redacted`; raw values never appear in structured logs.
-- **Supply chain** — `npm audit --audit-level=high` in every check. CycloneDX SBOM generated in CI. Dependabot, CodeQL, OpenSSF Scorecard with least-privilege workflow permissions. Release images signed with Sigstore/cosign keyless signing.
+- **Supply chain** — `bun audit --audit-level=high` in every check. CycloneDX SBOM generated in CI. Dependabot, CodeQL, OpenSSF Scorecard with least-privilege workflow permissions. Release images signed with Sigstore/cosign keyless signing.
 - **File permissions** — email-accounts metadata written with mode `0600`. Run as a dedicated user.
 
 **Trust model:** All family members in the config share the same Gmail account registry. Anyone can run `gmail status` to see all configured accounts and use pause/resume/remove on any of them. The design assumes a trusted group.
@@ -205,12 +205,12 @@ See [config.example.json](config.example.json) for a full example. A JSON Schema
 ## Verification
 
 ```bash
-npm run check
+bun run check
 ```
 
 Runs tests, lint, and typecheck.
 
-**CI:** GitHub Actions runs `npm run check` on push and PR. Commits must follow [Conventional Commits](https://www.conventionalcommits.org/) (enforced by commitlint). A CycloneDX SBOM is generated and uploaded as a workflow artifact.
+**CI:** GitHub Actions runs `bun run check` on push and PR. Commits must follow [Conventional Commits](https://www.conventionalcommits.org/) (enforced by commitlint). A CycloneDX SBOM is generated and uploaded as a workflow artifact.
 
 ## Documentation
 

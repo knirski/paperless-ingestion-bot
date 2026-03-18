@@ -31,10 +31,10 @@ pkgs.stdenv.mkDerivation rec {
 
   installPhase = ''
     mkdir -p $out/lib/node_modules/paperless-ingestion-bot
-    cp -r package.json bun.lock node_modules dist config.example.json .nvmrc $out/lib/node_modules/paperless-ingestion-bot/
+    cp -r package.json bun.lock node_modules dist config.example.json $out/lib/node_modules/paperless-ingestion-bot/
     mkdir -p $out/bin
     echo '#!${pkgs.runtimeShell}
-    exec ${pkgs.nodejs_24}/bin/node "$out/lib/node_modules/paperless-ingestion-bot/dist/cli.js" "$@"' > $out/bin/paperless-ingestion-bot
+    exec ${pkgs.bun}/bin/bun "$out/lib/node_modules/paperless-ingestion-bot/dist/cli.js" "$@"' > $out/bin/paperless-ingestion-bot
     chmod +x $out/bin/paperless-ingestion-bot
   '';
 }

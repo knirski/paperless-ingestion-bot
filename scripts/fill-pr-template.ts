@@ -267,7 +267,7 @@ export function fillTemplate(
 			? descriptionOverride
 			: getDescriptionFromCommits(commits);
 	const changes = commits.length ? getChanges(commits) : ["- "];
-	const howToTest = isDocsOnly(files) ? "N/A" : "1. Run `npm run check`\n2. ";
+	const howToTest = isDocsOnly(files) ? "N/A" : "1. Run `bun run check`\n2. ";
 	const breaking = pipe(
 		getBreakingChanges(commits),
 		Option.getOrElse(() => ""),

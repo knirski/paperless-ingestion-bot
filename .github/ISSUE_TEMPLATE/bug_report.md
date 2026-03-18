@@ -29,7 +29,7 @@ What actually happened.
 - OS: [e.g. NixOS 24.05, Ubuntu 24.04]
 - Node.js version: [e.g. 24.0.0]
 - paperless-ingestion-bot version: [e.g. 0.1.0]
-- How you run it: [e.g. systemd, nix run, npm start]
+- How you run it: [e.g. systemd, nix run, bun start]
 
 ## Config (redact secrets)
 

@@ -17,7 +17,7 @@ const result = await Bun.build({
 	target: "node",
 	minify: true,
 	sourcemap: "linked",
-	banner: "#!/usr/bin/env node\n",
+	banner: "#!/usr/bin/env bun\n",
 	naming: "[name].js",
 });
 

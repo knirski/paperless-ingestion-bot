@@ -6,7 +6,7 @@ This project pursues the [OpenSSF Best Practices badge](https://www.bestpractice
 
 | Criterion area | Status | Notes |
 |----------------|--------|-------|
-| **Dependency management** | Done | npm audit in check script; Dependabot for npm and GitHub Actions |
+| **Dependency management** | Done | bun audit in check script; Dependabot for npm and GitHub Actions |
 | **Static analysis** | Done | CodeQL (security-extended); oxlint |
 | **SBOM** | Done | CycloneDX SBOM generated in CI; artifact per run |
 | **Token permissions** | Done | All workflows use explicit least-privilege permissions (`permissions: {}` or job-level overrides) |

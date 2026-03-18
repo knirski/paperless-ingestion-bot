@@ -21,7 +21,7 @@ Use this checklist when preparing paperless-ingestion-bot for independent public
 - [x] SECURITY.md
 - [x] Issue templates (bug report, feature request)
 - [x] package.json `files` field
-- [x] Pre-publish scripts (`npm run publint`, `npm run pack:dry`)
+- [x] Pre-publish scripts (`bun run publint`, `bun run pack:dry`)
 
 ## Before Publishing
 
@@ -58,9 +58,9 @@ If `bun.nix` is stale, CI will auto-update on push. For fork PRs or manual fix: 
 If publishing to npm:
 
 - [ ] Add `publishConfig` if using a scoped package
-- [ ] Run `npm run pack:dry` to verify included files
-- [ ] Run `npm run publint` to validate package structure
-- [ ] Run `npm publish --dry-run` before publishing
+- [ ] Run `bun run pack:dry` to verify included files
+- [ ] Run `bun run publint` to validate package structure
+- [ ] Run `bun publish --dry-run` before publishing
 
 ### 5. Branch protection (GitHub Settings)
 

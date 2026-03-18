@@ -149,7 +149,7 @@ The workflow uses `scripts/fill-pr-template.ts` (invoked by `scripts/create-or-u
 | **Description** | For 1 commit: first commit body (or subject after colon). For 2+ commits: Ollama summarizes all commit bodies; fallback to concatenated bodies if Ollama fails |
 | **Type of change** | Inferred from conventional commit (`feat`→New feature, `fix`→Bug fix, `docs`→Documentation update, `chore`→Chore, `feat!`/`BREAKING`→Breaking change); non-conventional commits fall back to Chore. |
 | **Changes made** | One bullet per non-merge commit (merge commits filtered; non-conventional included) |
-| **How to test** | `N/A` for docs-only changes; otherwise `1. Run \`npm run check\`` + placeholder |
+| **How to test** | `N/A` for docs-only changes; otherwise `1. Run \`bun run check\`` + placeholder |
 | **Checklist** | Auto-checks: conventional commits format, docs updated (if `*.md` changed), tests added (if test files changed) |
 | **Related issues** | Extracted `Closes #123`, `Fixes #456` from commit messages |
 | **Breaking changes** | Content after `BREAKING CHANGE:` in commit body (when type is Breaking change) |

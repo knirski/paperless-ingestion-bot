@@ -43,7 +43,7 @@ const TEST_TEMPLATE = `## Description
 
 ## Checklist
 - [{{checklistConventional}}] My commits follow [Conventional Commits](https://www.conventionalcommits.org/)
-- [ ] I have run \`npm run check\` and fixed any issues
+- [ ] I have run \`bun run check\` and fixed any issues
 - [{{checklistDocs}}] I have updated the documentation if needed
 - [{{checklistTests}}] I have added or updated tests for my changes
 
@@ -485,7 +485,7 @@ describe("fillTemplate", () => {
 	test("code files → howToTest has steps", () => {
 		const commits = [commit("feat: x", "")];
 		const data = fillTemplate(commits, ["src/foo.ts"]);
-		expect(data.howToTest).toContain("npm run check");
+		expect(data.howToTest).toContain("bun run check");
 	});
 
 	test("commitsConventional false when any commit is non-conventional", () => {
@@ -609,7 +609,7 @@ describe("runFillBody", () => {
 				expect(output).toContain("New feature");
 				expect(output).toContain("feat: add foo");
 				expect(output).toContain("This adds the foo module");
-				expect(output).toContain("npm run check");
+				expect(output).toContain("bun run check");
 			}),
 		);
 	});

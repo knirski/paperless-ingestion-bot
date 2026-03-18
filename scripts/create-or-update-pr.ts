@@ -5,7 +5,7 @@
  * Optional env: PR_TITLE (from title step when 2+ commits; when empty, uses first line of semantic_subjects.txt)
  * Optional env: DESCRIPTION_FILE (Ollama-generated description when 2+ semantic commits)
  *
- * Run: npx tsx scripts/create-or-update-pr.ts
+ * Run: bun run scripts/create-or-update-pr.ts
  */
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";

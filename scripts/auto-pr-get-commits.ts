@@ -5,7 +5,7 @@
  *
  * Requires env: DEFAULT_BRANCH (e.g. main), GITHUB_WORKSPACE, GITHUB_OUTPUT
  *
- * Run: npx tsx scripts/auto-pr-get-commits.ts
+ * Run: bun run scripts/auto-pr-get-commits.ts
  */
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";

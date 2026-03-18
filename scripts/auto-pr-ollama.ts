@@ -6,7 +6,7 @@
  * Reads: semantic_subjects.txt, scripts/auto-pr/prompts/pr-title.txt, scripts/auto-pr/prompts/pr-description.txt
  * Outputs: title, description_file
  *
- * Run: npx tsx scripts/auto-pr-ollama.ts
+ * Run: bun run scripts/auto-pr-ollama.ts
  */
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";

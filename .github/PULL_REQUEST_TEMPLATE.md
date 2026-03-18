@@ -30,10 +30,10 @@
 
 ## Checklist
 
-<!-- For manual PRs: replace {{checklistConventional}}, {{checklistDocs}}, {{checklistTests}} with a space or x. The "npm run check" box has no placeholder—check it when done. -->
+<!-- For manual PRs: replace {{checklistConventional}}, {{checklistDocs}}, {{checklistTests}} with a space or x. The "bun run check" box has no placeholder—check it when done. -->
 
 - [{{checklistConventional}}] My commits follow [Conventional Commits](https://www.conventionalcommits.org/)
-- [ ] I have run `npm run check` or `bun run check` and fixed any issues
+- [ ] I have run `bun run check` and fixed any issues
 - [{{checklistDocs}}] I have updated the documentation if needed
 - [{{checklistTests}}] I have added or updated tests for my changes
 
