@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   nix:
-    # nix.yml needs contents: write for git push (npmDepsHash update)
+    # nix.yml needs contents: write for git push (bun.nix update)
     permissions:
       contents: write
     uses: ./.github/workflows/nix.yml

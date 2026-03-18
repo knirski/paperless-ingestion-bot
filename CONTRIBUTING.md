@@ -59,4 +59,4 @@ Issues labeled `good first issue` are suitable for newcomers: they have clear sc
 
 ## Code Style
 
-The project uses [Biome](https://biomejs.dev/) for linting and formatting. Run `bun run lint:fix` to auto-fix issues.
+The project uses [Biome](https://github.com/biomejs/biome) for linting and formatting. Run `bun run lint:fix` to auto-fix issues.

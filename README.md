@@ -44,7 +44,7 @@ Might add: other email providers (Outlook, Proton), other IMs (Matrix, Telegram)
 | [Ollama](https://ollama.com/)                                            | No         | Optional AI eligibility assessment; also used for AI-generated PR titles in the auto-PR workflow (runs locally)                                    |
 | [paperless-ai](https://github.com/clusterzx/paperless-ai)               | No         | Optional AI post-processing (tags, titles, correspondents). This bot uses Ollama directly for pre-ingestion; paperless-ai augments after ingestion |
 | [signal-cli-rest-api](https://github.com/bbernhard/signal-cli-rest-api) | For Signal | Webhook server for Signal Messenger                                                                                                                |
-| Node.js ≥ 24                                                            | Yes        | Runtime. See [Node support policy](#node-support-policy) below.                                                                                       |
+| Bun ≥ 1.3                                                              | Yes        | Runtime. See [Bun support policy](#bun-support-policy) below.                                                                                         |
 
 ## Quick Start
 
@@ -216,9 +216,9 @@ Runs tests, lint, and typecheck.
 
 TypeScript implementation using [Effect](https://effect.website/) and functional programming conventions. Bleeding edge: Effect v4 beta, [TypeScript Native](https://devblogs.microsoft.com/typescript/announcing-typescript-native-previews/) (`tsgo`) for build and typecheck (~10× faster than `tsc`).
 
-### Node support policy
+### Bun support policy
 
-We target **Node.js 24+** (current) and Effect v4 beta. This is a deliberate choice for modern features; it may limit adoption on older LTS lines. We intend to support the current Node LTS line(s) that Effect v4 officially supports. Check [Effect compatibility](https://effect.website/) and our `engines` field in `package.json` for the minimum supported version. We do not commit to supporting older Node versions once we move to a newer LTS line.
+We target **Bun 1.3+** and Effect v4 beta. This is a deliberate choice for modern features. We intend to support the Bun version that Effect v4 officially supports. Check [Effect compatibility](https://effect.website/) and our `packageManager` field in `package.json` for the minimum supported version.
 
 - [deploy/](deploy/): Deployment recipes — [Compose](deploy/compose/README.md) (Docker) and [systemd](deploy/systemd/README.md) (service units)
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md): Project structure and design

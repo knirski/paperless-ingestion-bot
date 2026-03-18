@@ -27,7 +27,7 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | [ci-nix.yml](../.github/workflows/ci-nix.yml) | push, pull_request → main | `paths: **/*.nix, package*.json, bun.lock, flake.lock` | nix |
 | [ci-release-please.yml](../.github/workflows/ci-release-please.yml) | pull_request → main | `paths: .release-please-manifest.json` | check |
 | [codeql.yml](../.github/workflows/codeql.yml) | push, pull_request → main | `paths-ignore: **/*.md, docs/**` | analyze |
-| [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through) |
+| [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through, distinct name) |
 | [docker.yml](../.github/workflows/docker.yml) | release published, workflow_dispatch | — | build (GHCR), sign, sbom |
 | [release-please.yml](../.github/workflows/release-please.yml) | push → main | — | release-please (creates release PRs) |
 | [update-bun-nix.yml](../.github/workflows/update-bun-nix.yml) | workflow_dispatch | — | update bun.nix (manual) |
@@ -100,7 +100,7 @@ All workflows declare explicit permissions. Use `permissions: {}` when no workfl
 
 ## Reusable Workflows
 
-- **check.yml** — test, lint, knip, typecheck, rumdl, typos, lychee, actionlint, shellcheck, SBOM (npm sbom CycloneDX), Codecov. Called by ci.yml.
+- **check.yml** — test, lint, knip, typecheck, rumdl, typos, lychee, actionlint, shellcheck, SBOM (bunx cdxgen CycloneDX), Codecov. Called by ci.yml.
 - **check-workflows.yml** — actionlint on workflows. Called by ci-workflows.yml for .github-only changes.
 - **check-docs.yml** — rumdl (markdown lint), lychee (link check), typos (spell check). No bun install. Config: `.rumdl.toml`, `_typos.toml`. Lychee respects `.gitignore`. Rumdl excludes `CHANGELOG.md` (auto-generated).
 - **nix.yml** — Nix build + bun.nix update. Called by ci-nix.yml and update-bun-nix.yml.
@@ -129,6 +129,14 @@ When ci-nix pushes a bun.nix update, the PR head changes to a new commit. The re
 2. **Re-run workflows** — If the check still hasn't run, use "Re-run all jobs" from the Actions tab.
 3. **Manual trigger** — Push an empty commit: `git commit --allow-empty -m "ci: trigger workflows" && git push`.
 
+## Troubleshooting: Code scanning / CodeQL
+
+If the [Security → Code scanning](https://docs.github.com/en/code-security/code-scanning) tab shows no results, errors, or your custom CodeQL workflow appears disabled:
+
+**Default setup conflicts with advanced setup.** This repo uses advanced setup (custom `codeql.yml`). If default setup is enabled in **Settings → Security → Code security and analysis → CodeQL analysis**, it disables custom workflows. Fix: Click "Switch to advanced" or "Disable CodeQL", then re-enable so only the custom workflows run. See [GitHub docs on default vs advanced setup](https://docs.github.com/en/code-security/code-scanning/enabling-code-scanning/configuring-default-setup-for-code-scanning).
+
+**No source code seen.** For JavaScript/TypeScript with `build-mode: none`, CodeQL analyzes without a build. If you see "No source code was seen", ensure the repo has analyzable `.ts`/`.js` files and the workflow `paths-ignore` does not exclude them.
+
 ## Design: ensuring check runs after ci-nix push
 
 We use a **workflow_dispatch trigger** so that when ci-nix pushes a bun.nix update, the check workflow is explicitly triggered on the new commit. This guarantees the required status is reported even if the push-triggered run is delayed or cancelled by concurrency.
@@ -142,7 +150,7 @@ We use a **workflow_dispatch trigger** so that when ci-nix pushes a bun.nix upda
 | **Don't push on PRs** | No commit mismatch; simpler | Worse DX; contributors must run `nix run .#update-bun-nix` locally |
 | **Documentation only** | Simple | No technical fix; still depends on timing |
 
-**GitHub App permission:** The App used for the push must have **Actions: Read and write** so it can trigger workflows via `gh workflow run`. If you see "Failed to trigger ci.yml. Ensure App has Actions: Read and write permission.", verify the App has Actions: Read and write in its permissions.
+**GitHub App permission:** The App used for the push must have **Actions: Read and write** so it can trigger workflows via `gh workflow run`. If you see "Failed to trigger ci.yml. Ensure App has Actions: Read and write permission.", go to [github.com/settings/apps](https://github.com/settings/apps) → your app → **Repository permissions** → set **Actions** to **Read and write**. If already set, go to **Install App** → **Configure** next to the repo → accept any pending permission changes.
 
 ## Local CI-like checks
 

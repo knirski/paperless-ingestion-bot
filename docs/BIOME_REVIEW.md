@@ -1,6 +1,6 @@
 # Biome Migration – Final Review
 
-Comparison with [Biome’s official recipes](https://biomejs.dev/recipes/git-hooks/) and common patterns.
+Comparison with [Biome’s official recipes](https://github.com/biomejs/website/blob/main/src/content/docs/recipes/git-hooks.mdx) and common patterns.
 
 ## Summary
 
@@ -26,6 +26,6 @@ Comparison with [Biome’s official recipes](https://biomejs.dev/recipes/git-hoo
 
 ## References
 
-- [Biome Git Hooks recipe](https://biomejs.dev/recipes/git-hooks/) – lint-staged config and flags
-- [Biome Configuration](https://biomejs.dev/reference/configuration/) – `files.includes`, formatter, linter
+- [Biome Git Hooks recipe](https://github.com/biomejs/website/blob/main/src/content/docs/recipes/git-hooks.mdx) – lint-staged config and flags
+- [Biome Configuration](https://github.com/biomejs/website/blob/main/src/content/docs/reference/configuration.mdx) – `files.includes`, formatter, linter
 - [ivangabriele/biome-config](https://github.com/ivangabriele/biome-config) – shared Biome config with lint-staged
