@@ -1,10 +1,10 @@
 /**
  * Signal webhook pipeline — HTTP server (effect/unstable/http), attachment handling, account commands.
  *
- * Uses idiomatic HttpRouter.serve + NodeHttpServer.layer; Layer.launch as entry point.
+ * Uses idiomatic HttpRouter.serve + BunHttpServer.layer; Layer.launch as entry point.
  */
 
-import * as NodeHttpServer from "@effect/platform-node/NodeHttpServer";
+import * as BunHttpServer from "@effect/platform-bun/BunHttpServer";
 import {
 	Duration,
 	Effect,
@@ -21,9 +21,6 @@ import * as Http from "effect/unstable/http";
 import { HttpClient, HttpClientRequest } from "effect/unstable/http";
 import { RateLimiter } from "effect/unstable/persistence";
 import { fileTypeFromBuffer } from "file-type";
-// Use "http" (not node:http) per project preference to avoid node: imports
-// biome-ignore lint/style/useNodejsImportProtocol: intentional - Effect-native style
-import { createServer } from "http";
 import { isEligibleMime } from "../core/eligibility.js";
 import {
 	authorizeSource,
@@ -305,7 +302,7 @@ export function buildSignalServerLayer(
 		yield* ensureUserConsumeDirs();
 
 		const serverLayer = Http.HttpRouter.serve(webhookRoutes).pipe(
-			Layer.provide(NodeHttpServer.layer(createServer, { port: config.port, host: config.host })),
+			Layer.provide(BunHttpServer.layer({ port: config.port, hostname: config.host })),
 			Layer.provide(appWithMaxBody),
 		);
 		return Http.HttpServer.withLogAddress(serverLayer);

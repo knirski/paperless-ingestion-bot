@@ -2,11 +2,11 @@
  * Layer composition for paperless-ingestion-bot.
  */
 
-import * as NodeChildProcessSpawner from "@effect/platform-node-shared/NodeChildProcessSpawner";
-import * as NodeFileSystem from "@effect/platform-node-shared/NodeFileSystem";
-import * as NodePath from "@effect/platform-node-shared/NodePath";
-import * as NodeStdio from "@effect/platform-node-shared/NodeStdio";
-import * as NodeTerminal from "@effect/platform-node-shared/NodeTerminal";
+import * as BunChildProcessSpawner from "@effect/platform-bun/BunChildProcessSpawner";
+import * as BunFileSystem from "@effect/platform-bun/BunFileSystem";
+import * as BunPath from "@effect/platform-bun/BunPath";
+import * as BunStdio from "@effect/platform-bun/BunStdio";
+import * as BunTerminal from "@effect/platform-bun/BunTerminal";
 import { Effect, Layer, Logger, type LogLevel, References } from "effect";
 import * as Http from "effect/unstable/http";
 import { RateLimiter } from "effect/unstable/persistence";
@@ -56,12 +56,12 @@ const buildEmailLoggerLevelLayer = Effect.fn("buildEmailLoggerLevelLayer")(funct
 /** Layer that sets minimum log level from EmailConfig. */
 const EmailLoggerLevelLayer = Layer.unwrap(buildEmailLoggerLevelLayer());
 
-export const PlatformServicesLayer = NodeFileSystem.layer.pipe(Layer.provideMerge(NodePath.layer));
+export const PlatformServicesLayer = BunFileSystem.layer.pipe(Layer.provideMerge(BunPath.layer));
 
 /** CLI services required by effect/unstable/cli (Terminal, Stdio, ChildProcessSpawner). */
-const CliLayer = NodeStdio.layer.pipe(
-	Layer.provideMerge(NodeTerminal.layer),
-	Layer.provideMerge(NodeChildProcessSpawner.layer),
+const CliLayer = BunStdio.layer.pipe(
+	Layer.provideMerge(BunTerminal.layer),
+	Layer.provideMerge(BunChildProcessSpawner.layer),
 );
 
 /** All layers needed to run the CLI (platform + CLI services + logger). */
