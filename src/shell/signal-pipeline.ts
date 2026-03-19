@@ -259,18 +259,30 @@ const MAX_BODY_SIZE = FileSystem.Size(50 * 1024 * 1024);
 /** Max webhook requests per minute (fixed window). Protects against runaway senders. */
 const WEBHOOK_RATE_LIMIT_PER_MINUTE = 120;
 
-/**
- * Options for buildSignalServerLayer. Public API for consumers.
- * @lintignore
- */
-export interface SignalServerOptions {
-	/** Skip startup validation of signal_api_url reachability. */
-	readonly skipReachabilityCheck?: boolean;
-}
+/** Run server startup validation (no HTTP server). Exported for testing. */
+export const runServerStartupValidation = Effect.fn("runServerStartupValidation")(function* (
+	skipReachabilityCheck: boolean,
+) {
+	const config = yield* SignalConfig;
+	if (config.registry.users.length === 0) {
+		yield* Effect.fail(
+			new ConfigValidationError({
+				message: "No users configured",
+				path: redactedForLog(config.usersPath, redactPath),
+				fix: usersHint(config.usersPath),
+			}),
+		);
+	}
+	yield* validateConsumeDir(config.consumeDir);
+	if (!skipReachabilityCheck) {
+		yield* validateSignalApiReachability(config.signalApiUrl);
+	}
+	yield* ensureUserConsumeDirs();
+});
 
 export function buildSignalServerLayer(
 	appLayer: SignalAppLayer,
-	options?: SignalServerOptions,
+	skipReachabilityCheck: boolean,
 ): Layer.Layer<never, ConfigValidationError | Layer.Error<SignalAppLayer>, never> {
 	const appWithMaxBody = appLayer.pipe(
 		Layer.provideMerge(Layer.succeed(Http.HttpIncomingMessage.MaxBodySize)(MAX_BODY_SIZE)),
@@ -283,23 +295,9 @@ export function buildSignalServerLayer(
 		}),
 	);
 
-	const skipReachabilityCheck = options?.skipReachabilityCheck ?? false;
 	const buildServerLayer = Effect.fn("buildSignalServerLayer")(function* () {
+		yield* runServerStartupValidation(skipReachabilityCheck);
 		const config = yield* SignalConfig;
-		if (config.registry.users.length === 0) {
-			yield* Effect.fail(
-				new ConfigValidationError({
-					message: "No users configured",
-					path: redactedForLog(config.usersPath, redactPath),
-					fix: usersHint(config.usersPath),
-				}),
-			);
-		}
-		yield* validateConsumeDir(config.consumeDir);
-		if (!skipReachabilityCheck) {
-			yield* validateSignalApiReachability(config.signalApiUrl);
-		}
-		yield* ensureUserConsumeDirs();
 
 		const serverLayer = Http.HttpRouter.serve(webhookRoutes).pipe(
 			Layer.provide(BunHttpServer.layer({ port: config.port, hostname: config.host })),

@@ -73,7 +73,7 @@ const signalCommand = Command.make(
 		const usersPath = resolveUsersPath(Option.getOrUndefined(users));
 		const emailAccountsPath = resolveEmailAccountsPath(Option.getOrUndefined(emailAccounts));
 		const appLayer = buildSignalLayer(configPath, usersPath, emailAccountsPath);
-		const serverLayer = buildSignalServerLayer(appLayer, { skipReachabilityCheck });
+		const serverLayer = buildSignalServerLayer(appLayer, skipReachabilityCheck);
 		return Layer.launch(serverLayer);
 	},
 );
