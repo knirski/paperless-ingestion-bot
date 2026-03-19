@@ -49,8 +49,7 @@
 		"pack:dry": "bun run build && bun pm pack --dry-run"
 	},
 	"dependencies": {
-		"@effect/platform-node": "4.0.0-beta.35",
-		"@effect/platform-node-shared": "4.0.0-beta.35",
+		"@effect/platform-bun": "4.0.0-beta.35",
 		"@napi-rs/keyring": "1.2.0",
 		"effect": "4.0.0-beta.35",
 		"file-type": "^21.3.1",

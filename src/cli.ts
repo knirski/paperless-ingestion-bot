@@ -8,7 +8,7 @@
  *   email [--config path] [--users path] [--email-accounts path] [--json]  — Run email crawl pipeline
  */
 
-import * as NodeRuntime from "@effect/platform-node-shared/NodeRuntime";
+import * as BunRuntime from "@effect/platform-bun/BunRuntime";
 import { Cause, Effect, ErrorReporter, Layer, Option } from "effect";
 import * as Arr from "effect/Array";
 import { Command, Flag } from "effect/unstable/cli";
@@ -124,7 +124,7 @@ if (import.meta.main) {
 			process.exit();
 		});
 	}
-	NodeRuntime.runMain(
+	BunRuntime.runMain(
 		cliProgram.pipe(
 			Effect.withErrorReporting,
 			Effect.provide(ErrorReporter.layer([domainErrorReporter])),

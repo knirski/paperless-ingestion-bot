@@ -197,7 +197,7 @@ Plan for integrating `effect/unstable/*` modules into paperless-ingestion-bot. O
 
 ### 4.1 Current State
 
-- `ChildProcessSpawner` from `@effect/platform-node-shared` is used by `effect/unstable/cli` for completions
+- `ChildProcessSpawner` from `@effect/platform-bun` (BunChildProcessSpawner) is used by `effect/unstable/cli` for completions
 - No direct subprocess calls in application code (no `pdftotext`, `tesseract`, etc.)
 
 ### 4.2 When to Adopt
@@ -209,7 +209,7 @@ Plan for integrating `effect/unstable/*` modules into paperless-ingestion-bot. O
 
 - Replace `child_process.spawn` / `tinyexec` with `ChildProcess.make`
 - Use `Stream.runCollect(handle.stdout)` for output
-- Provide `NodeServices.layer` (includes `ChildProcessSpawner`) — already in `MainLayer` via CLI
+- Provide `BunChildProcessSpawner.layer` via `CliLayer` — already in `MainLayer`
 
 ---
 
@@ -235,7 +235,7 @@ Plan for integrating `effect/unstable/*` modules into paperless-ingestion-bot. O
 
 ## Dependencies
 
-All modules are in `effect` 4.0.0-beta.31. No new packages required.
+All modules are in `effect` 4.0.0-beta.35. Platform: `@effect/platform-bun` 4.0.0-beta.35. No additional packages required beyond effect and platform-bun.
 
 ---
 
