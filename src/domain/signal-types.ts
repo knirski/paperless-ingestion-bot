@@ -87,7 +87,7 @@ const SignalAttachmentRefSchema = Schema.Struct({
 const SignalDataMessageSchema = Schema.Struct({
 	body: Schema.optional(Schema.String),
 	message: Schema.optional(Schema.String),
-	attachments: Schema.optional(Schema.Array(SignalAttachmentRefSchema)),
+	attachments: Schema.optional(Schema.ArrayEnsure(SignalAttachmentRefSchema)),
 });
 
 const SignalEnvelopeSchema = Schema.Struct({

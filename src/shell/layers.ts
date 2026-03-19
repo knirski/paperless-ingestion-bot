@@ -86,11 +86,7 @@ export type SignalAppLayer = ReturnType<typeof buildSignalLayer>;
 /** All Signal layers that depend on SignalConfig. Provide configWithPlatform once. */
 const SignalConfigDependentLayers = Layer.mergeAll(SignalClientFromConfig, SignalLoggerLevelLayer);
 
-export function buildSignalLayer(
-	configPath: string | undefined,
-	usersPath: string,
-	emailAccountsPath: string,
-) {
+export function buildSignalLayer(configPath: string, usersPath: string, emailAccountsPath: string) {
 	const configWithPlatform = SignalConfig.layer(configPath, usersPath, emailAccountsPath).pipe(
 		Layer.provideMerge(PlatformServicesLayer),
 		Layer.provideMerge(Http.FetchHttpClient.layer),
@@ -132,11 +128,7 @@ const EmailConfigDependentLayers = Layer.mergeAll(
 	RateLimiterMemoryLayer,
 );
 
-export function buildEmailLayer(
-	configPath: string | undefined,
-	usersPath: string,
-	emailAccountsPath: string,
-) {
+export function buildEmailLayer(configPath: string, usersPath: string, emailAccountsPath: string) {
 	const configWithPlatform = EmailConfig.layer(configPath, usersPath, emailAccountsPath).pipe(
 		Layer.provideMerge(PlatformServicesLayer),
 		Layer.provideMerge(Http.FetchHttpClient.layer),

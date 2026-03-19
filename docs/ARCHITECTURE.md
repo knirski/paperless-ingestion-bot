@@ -101,7 +101,7 @@ flowchart LR
 
 JSON config. Schema-based validation in [`src/shell/config.ts`](../src/shell/config.ts). `RawSignalConfigSchema` and `RawEmailConfigSchema` define the shape; shared fields (`consume_dir`, `signal_api_url`, etc.) plus pipeline-specific fields (Signal: `webhook_host`, `webhook_port`; Email: `ollama_url`, `ollama_vision_model`, etc.). Config as service — pipelines `yield* SignalConfig` / `yield* EmailConfig`.
 
-**Resolution:** `--config` or `PAPERLESS_INGESTION_CONFIG` or default path. `loadConfiguration(schema, configPath)` loads from file, applies env overrides (12-factor: individual vars like `PAPERLESS_INGESTION_SIGNAL_API_URL` override file values), and decodes with the given schema.
+**Resolution:** `--config` or `PAPERLESS_INGESTION_CONFIG` or default path. Config layers load from file, apply env overrides (12-factor: individual vars like `PAPERLESS_INGESTION_SIGNAL_API_URL` override file values), and decode with the given schema (e.g. `Config.schema(RawSignalConfigSchema)`).
 
 **Ingest users:** Always in separate file. Path from `--users` or `PAPERLESS_INGESTION_USERS_PATH` (default: `/var/lib/paperless-ingestion-bot/users.json`).
 
