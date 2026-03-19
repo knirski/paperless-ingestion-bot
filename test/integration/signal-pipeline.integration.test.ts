@@ -1,6 +1,7 @@
 import { describe, expect } from "bun:test";
 import { Effect, Exit, FileSystem, Layer, Option } from "effect";
 import * as Http from "effect/unstable/http";
+import { HttpClient, HttpClientResponse } from "effect/unstable/http";
 import type { SignalNumber } from "../../src/domain/signal-types.js";
 import type { AppEffect } from "../../src/domain/types.js";
 import {
@@ -49,6 +50,13 @@ const DEFAULT_REGISTRY = createUserRegistry([
 	},
 ]);
 
+/** Mock HttpClient that returns 200 for any request. Use for validateSignalApiReachability tests. */
+const mockHttpClientOkLayer = Layer.succeed(HttpClient.HttpClient)(
+	HttpClient.make((request) =>
+		Effect.succeed(HttpClientResponse.fromWeb(request, new Response(null, { status: 200 }))),
+	),
+);
+
 function buildTestLayer(
 	fixture: { tmpDir: string; emailAccountsPath: string },
 	scenario: SignalMockScenario,
@@ -57,6 +65,7 @@ function buildTestLayer(
 		configOverrides?: Partial<SignalConfigService>;
 		credentialsStore?: Record<string, string>;
 		signalClientLayer?: Layer.Layer<SignalClient>;
+		httpClientLayer?: Layer.Layer<HttpClient.HttpClient>;
 	},
 ) {
 	const { tmpDir, emailAccountsPath } = fixture;
@@ -67,9 +76,10 @@ function buildTestLayer(
 			...(options?.spy != null && { spy: options.spy }),
 			defaultAccount: AUTHORIZED_NUMBER,
 		});
+	const httpClientLayer = options?.httpClientLayer ?? Http.FetchHttpClient.layer;
 	return Layer.mergeAll(
 		TestBaseLayer,
-		Http.FetchHttpClient.layer,
+		httpClientLayer,
 		signalConfigTest({
 			consumeDir,
 			emailAccountsPath,
@@ -113,6 +123,25 @@ describe("signal-pipeline integration", () => {
 				);
 				const layer = buildTestLayer({ tmpDir, emailAccountsPath }, {});
 				await runWithLayer(layer)(runServerStartupValidation(true));
+			},
+		);
+
+		integrationTest(
+			"runServerStartupValidation without skipReachabilityCheck — runs Signal API reachability check",
+			async ({ tmpDir, emailAccountsPath }) => {
+				const consumeDir = joinPathSync(tmpDir, "consume");
+				await Effect.runPromise(
+					Effect.gen(function* () {
+						const fs = yield* FileSystem.FileSystem;
+						yield* fs.makeDirectory(consumeDir, { recursive: true });
+					}).pipe(Effect.provide(TestBaseLayer)),
+				);
+				const layer = buildTestLayer(
+					{ tmpDir, emailAccountsPath },
+					{},
+					{ httpClientLayer: mockHttpClientOkLayer },
+				);
+				await runWithLayer(layer)(runServerStartupValidation(false));
 			},
 		);
 
