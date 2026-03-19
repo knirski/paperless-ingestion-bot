@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test";
-import { Effect, Exit, Layer, Option } from "effect";
+import { Effect, Exit, FileSystem, Layer, Option } from "effect";
 import * as Http from "effect/unstable/http";
 import type { SignalNumber } from "../../src/domain/signal-types.js";
 import type { AppEffect } from "../../src/domain/types.js";
@@ -14,6 +14,7 @@ import type { SignalConfigService } from "../../src/shell/config.js";
 import {
 	MAX_ATTACHMENTS_PER_MESSAGE,
 	processWebhookPayload,
+	runServerStartupValidation,
 } from "../../src/shell/signal-pipeline.js";
 import {
 	signalImageAttachment,
@@ -30,6 +31,7 @@ import {
 	credentialsStoreTest,
 	joinPathSync,
 	readTestDirectory,
+	runWithLayer,
 	signalConfigTest,
 	TestBaseLayer,
 } from "../test-utils.js";
@@ -56,7 +58,7 @@ function buildTestLayer(
 		credentialsStore?: Record<string, string>;
 		signalClientLayer?: Layer.Layer<SignalClient>;
 	},
-): Layer.Layer<never> {
+) {
 	const { tmpDir, emailAccountsPath } = fixture;
 	const consumeDir = joinPathSync(tmpDir, "consume");
 	const signalLayer =
@@ -81,7 +83,7 @@ function buildTestLayer(
 }
 
 async function runWebhook(
-	layer: Layer.Layer<never>,
+	layer: ReturnType<typeof buildTestLayer>,
 	payload: Parameters<typeof processWebhookPayload>[0],
 ): Promise<void> {
 	await Effect.runPromise(
@@ -99,6 +101,21 @@ function createSpy(): SignalMockSpy {
 
 describe("signal-pipeline integration", () => {
 	describe("happy path", () => {
+		integrationTest(
+			"runServerStartupValidation with skipReachabilityCheck — skips Signal API check",
+			async ({ tmpDir, emailAccountsPath }) => {
+				const consumeDir = joinPathSync(tmpDir, "consume");
+				await Effect.runPromise(
+					Effect.gen(function* () {
+						const fs = yield* FileSystem.FileSystem;
+						yield* fs.makeDirectory(consumeDir, { recursive: true });
+					}).pipe(Effect.provide(TestBaseLayer)),
+				);
+				const layer = buildTestLayer({ tmpDir, emailAccountsPath }, {});
+				await runWithLayer(layer)(runServerStartupValidation(true));
+			},
+		);
+
 		integrationTest(
 			"empty payload / no dataMessage — no reply, no error",
 			async ({ tmpDir, emailAccountsPath }) => {
