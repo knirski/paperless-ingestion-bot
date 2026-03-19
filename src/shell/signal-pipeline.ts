@@ -259,18 +259,9 @@ const MAX_BODY_SIZE = FileSystem.Size(50 * 1024 * 1024);
 /** Max webhook requests per minute (fixed window). Protects against runaway senders. */
 const WEBHOOK_RATE_LIMIT_PER_MINUTE = 120;
 
-/**
- * Options for buildSignalServerLayer. Public API for consumers.
- * @lintignore
- */
-export interface SignalServerOptions {
-	/** Skip startup validation of signal_api_url reachability. */
-	readonly skipReachabilityCheck?: boolean;
-}
-
 export function buildSignalServerLayer(
 	appLayer: SignalAppLayer,
-	options?: SignalServerOptions,
+	skipReachabilityCheck: boolean,
 ): Layer.Layer<never, ConfigValidationError | Layer.Error<SignalAppLayer>, never> {
 	const appWithMaxBody = appLayer.pipe(
 		Layer.provideMerge(Layer.succeed(Http.HttpIncomingMessage.MaxBodySize)(MAX_BODY_SIZE)),
@@ -283,7 +274,6 @@ export function buildSignalServerLayer(
 		}),
 	);
 
-	const skipReachabilityCheck = options?.skipReachabilityCheck ?? false;
 	const buildServerLayer = Effect.fn("buildSignalServerLayer")(function* () {
 		const config = yield* SignalConfig;
 		if (config.registry.users.length === 0) {
