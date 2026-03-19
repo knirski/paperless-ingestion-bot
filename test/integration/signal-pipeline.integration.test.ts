@@ -1,7 +1,7 @@
 import { describe, expect } from "bun:test";
 import { Effect, Exit, FileSystem, Layer, Option } from "effect";
 import * as Http from "effect/unstable/http";
-import { HttpClient, HttpClientResponse } from "effect/unstable/http";
+import { HttpClient, HttpClientError, HttpClientResponse } from "effect/unstable/http";
 import type { SignalNumber } from "../../src/domain/signal-types.js";
 import type { AppEffect } from "../../src/domain/types.js";
 import {
@@ -54,6 +54,28 @@ const DEFAULT_REGISTRY = createUserRegistry([
 const mockHttpClientOkLayer = Layer.succeed(HttpClient.HttpClient)(
 	HttpClient.make((request) =>
 		Effect.succeed(HttpClientResponse.fromWeb(request, new Response(null, { status: 200 }))),
+	),
+);
+
+/** Mock HttpClient that returns 500. Use to cover validateSignalApiReachability status >= 500 branch. */
+const mockHttpClient500Layer = Layer.succeed(HttpClient.HttpClient)(
+	HttpClient.make((request) =>
+		Effect.succeed(HttpClientResponse.fromWeb(request, new Response(null, { status: 500 }))),
+	),
+);
+
+/** Mock HttpClient that fails. Use to cover validateSignalApiReachability mapError branch. */
+const mockHttpClientFailLayer = Layer.succeed(HttpClient.HttpClient)(
+	HttpClient.make((request) =>
+		Effect.fail(
+			new HttpClientError.HttpClientError({
+				reason: new HttpClientError.TransportError({
+					request,
+					cause: new Error("connection refused"),
+					description: "connection refused",
+				}),
+			}),
+		),
 	),
 );
 
@@ -422,6 +444,93 @@ describe("signal-pipeline integration", () => {
 	});
 
 	describe("failure scenarios", () => {
+		integrationTest(
+			"runServerStartupValidation with empty registry — fails No users configured",
+			async ({ tmpDir, emailAccountsPath }) => {
+				const consumeDir = joinPathSync(tmpDir, "consume");
+				await Effect.runPromise(
+					Effect.gen(function* () {
+						const fs = yield* FileSystem.FileSystem;
+						yield* fs.makeDirectory(consumeDir, { recursive: true });
+					}).pipe(Effect.provide(TestBaseLayer)),
+				);
+				const layer = buildTestLayer(
+					{ tmpDir, emailAccountsPath },
+					{},
+					{ configOverrides: { registry: createUserRegistry([]) } },
+				);
+				const eff = runServerStartupValidation(true).pipe(Effect.provide(layer), Effect.exit);
+				const exit = await Effect.runPromise(eff);
+				expect(Exit.isFailure(exit)).toBe(true);
+				const err = Exit.findErrorOption(exit);
+				expect(Option.isSome(err)).toBe(true);
+				if (Option.isSome(err)) {
+					expect(err.value).toMatchObject({
+						_tag: "ConfigValidationError",
+						message: "No users configured",
+					});
+				}
+			},
+		);
+
+		integrationTest(
+			"runServerStartupValidation without skipReachabilityCheck — Signal API returns 500",
+			async ({ tmpDir, emailAccountsPath }) => {
+				const consumeDir = joinPathSync(tmpDir, "consume");
+				await Effect.runPromise(
+					Effect.gen(function* () {
+						const fs = yield* FileSystem.FileSystem;
+						yield* fs.makeDirectory(consumeDir, { recursive: true });
+					}).pipe(Effect.provide(TestBaseLayer)),
+				);
+				const layer = buildTestLayer(
+					{ tmpDir, emailAccountsPath },
+					{},
+					{ httpClientLayer: mockHttpClient500Layer },
+				);
+				const eff = runServerStartupValidation(false).pipe(Effect.provide(layer), Effect.exit);
+				const exit = await Effect.runPromise(eff);
+				expect(Exit.isFailure(exit)).toBe(true);
+				const err = Exit.findErrorOption(exit);
+				expect(Option.isSome(err)).toBe(true);
+				if (Option.isSome(err)) {
+					expect(err.value).toMatchObject({
+						_tag: "ConfigValidationError",
+						message: expect.stringContaining("HTTP 500"),
+					});
+				}
+			},
+		);
+
+		integrationTest(
+			"runServerStartupValidation without skipReachabilityCheck — Signal API unreachable",
+			async ({ tmpDir, emailAccountsPath }) => {
+				const consumeDir = joinPathSync(tmpDir, "consume");
+				await Effect.runPromise(
+					Effect.gen(function* () {
+						const fs = yield* FileSystem.FileSystem;
+						yield* fs.makeDirectory(consumeDir, { recursive: true });
+					}).pipe(Effect.provide(TestBaseLayer)),
+				);
+				const layer = buildTestLayer(
+					{ tmpDir, emailAccountsPath },
+					{},
+					{ httpClientLayer: mockHttpClientFailLayer },
+				);
+				const eff = runServerStartupValidation(false).pipe(Effect.provide(layer), Effect.exit);
+				const exit = await Effect.runPromise(eff);
+				expect(Exit.isFailure(exit)).toBe(true);
+				const err = Exit.findErrorOption(exit);
+				expect(Option.isSome(err)).toBe(true);
+				if (Option.isSome(err)) {
+					expect(err.value).toMatchObject({
+						_tag: "ConfigValidationError",
+						message: expect.stringContaining("not reachable"),
+					});
+				}
+			},
+		);
+
 		integrationTest(
 			"fetchAttachmentFail — pipeline rejects, no file saved",
 			async ({ tmpDir, emailAccountsPath }) => {
