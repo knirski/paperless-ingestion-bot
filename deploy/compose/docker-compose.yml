@@ -1,12 +1,12 @@
 # Paperless ingestion bot + Signal CLI REST API
-# Use with Paperless-ngx: mount the consume volume into Paperless's consume dir,
-# or use a bind mount to your Paperless consume path.
+# Minimal setup: Paperless-ngx runs elsewhere. Bot uploads via REST API.
 #
 # Setup:
 # 1. Create config.json and users.json (see config.example.json and README)
-# 2. Link Signal: open http://localhost:8080/v1/qrcodelink
-# 3. Configure signal-cli-rest-api: RECEIVE_WEBHOOK_URL=http://ingestion-bot:8089/webhook
-# 4. docker compose up -d
+# 2. Set paperless_url and paperless_token in config.json (or via env below)
+# 3. Link Signal: open http://localhost:8080/v1/qrcodelink
+# 4. Configure signal-cli-rest-api: RECEIVE_WEBHOOK_URL=http://ingestion-bot:8089/webhook
+# 5. docker compose up -d
 
 services:
   signal-api:
@@ -30,14 +30,12 @@ services:
     volumes:
       - ./config.json:/etc/paperless-ingestion-bot/config.json:ro
       - ./users.json:/var/lib/paperless-ingestion-bot/users.json:ro
-      - consume:/var/lib/paperless-ingestion-bot/consume
     environment:
+      # Set in config.json or override via .env: PAPERLESS_INGESTION_PAPERLESS_URL, PAPERLESS_INGESTION_PAPERLESS_TOKEN
       PAPERLESS_INGESTION_SIGNAL_API_URL: http://signal-api:8080
       PAPERLESS_INGESTION_WEBHOOK_HOST: 0.0.0.0
       PAPERLESS_INGESTION_WEBHOOK_PORT: "8089"
-      PAPERLESS_INGESTION_CONSUME_DIR: /var/lib/paperless-ingestion-bot/consume
     command: ["signal", "--config", "/etc/paperless-ingestion-bot/config.json", "--skip-reachability-check"]
 
 volumes:
   signal-data:
-  consume:

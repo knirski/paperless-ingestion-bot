@@ -4,7 +4,7 @@ Two options: **minimal** (Signal + ingestion bot only) or **full-stack** (Paperl
 
 ## Minimal: Signal + ingestion bot
 
-Use `docker-compose.yml` when you already have Paperless-ngx elsewhere. The `consume` volume holds documents; mount it into Paperless or bind-mount your Paperless consume path.
+Use `docker-compose.yml` when you already have Paperless-ngx elsewhere. The bot uploads documents via Paperless REST API. **Required:** Set `paperless_url` and `paperless_token` in `config.json`, or use env vars `PAPERLESS_INGESTION_PAPERLESS_URL` and `PAPERLESS_INGESTION_PAPERLESS_TOKEN` (e.g. in a `.env` file).
 
 ## Full-stack: Paperless + Signal + ingestion bot + Ollama
 
@@ -12,10 +12,8 @@ Use `docker-compose.full-stack.yml` for a complete setup in one compose:
 
 - **Paperless-ngx** — Document management (PostgreSQL, Redis, Tika, Gotenberg)
 - **Signal CLI REST API** — Signal webhook
-- **Ingestion bot** — Receives Signal attachments, writes to consume
+- **Ingestion bot** — Receives Signal attachments, uploads to Paperless via API
 - **Ollama** — Optional AI (eligibility for email; also for [paperless-ai](#paperless-ai) post-processing)
-
-Shared `consume` volume: ingestion bot writes here; Paperless ingests from here.
 
 ### Full-stack setup
 
@@ -23,14 +21,36 @@ Shared `consume` volume: ingestion bot writes here; Paperless ingests from here.
 
    ```bash
    cp docker-compose.env.example docker-compose.env
-   # Edit docker-compose.env: set PAPERLESS_SECRET_KEY (long random string)
+   # Edit docker-compose.env:
+   # - PAPERLESS_SECRET_KEY (long random string)
+   # - PAPERLESS_INGESTION_PAPERLESS_TOKEN (see below)
    ```
+
+   **Obtain API token** (no UI required):
+
+   - **Option A — via API** (after Paperless is running, e.g. after step 3):
+
+     ```bash
+     curl -s -X POST -d "username=admin&password=YOUR_PASSWORD" \
+       http://localhost:8000/api/token/
+     ```
+
+     Add the returned token to `docker-compose.env` as `PAPERLESS_INGESTION_PAPERLESS_TOKEN`, then `docker compose -f docker-compose.full-stack.yml up -d` to apply.
+
+   - **Option B — via management command** (inside container, after step 3):
+
+     ```bash
+     docker compose -f docker-compose.full-stack.yml exec webserver \
+       python manage.py drf_create_token admin
+     ```
+
+   - **Option C — via UI:** Settings → Users → Create token
 
 2. **Create config and users**
 
    ```bash
    cp ../../config.example.json config.json
-   # Edit config.json if needed (defaults work for full-stack)
+   # Edit config.json: paperless_url, paperless_token (or use env overrides from docker-compose.env)
    ```
 
    Create `users.json` with your Signal users (see main [README](../../README.md#config) Config section).
@@ -56,7 +76,7 @@ Shared `consume` volume: ingestion bot writes here; Paperless ingests from here.
 
 ## Minimal setup (Signal only)
 
-1. **Create config and users** — Same as above.
+1. **Create config and users** — Same as above. Ensure `paperless_url` and `paperless_token` are set (Paperless runs elsewhere).
 
 2. **Start**
 
@@ -68,7 +88,7 @@ Shared `consume` volume: ingestion bot writes here; Paperless ingests from here.
 
 4. **Configure webhook** — Set `RECEIVE_WEBHOOK_URL=http://ingestion-bot:8089/webhook` in the signal-api service.
 
-5. **Connect to Paperless** — Either add the `consume` volume to your Paperless compose as an external volume, or bind-mount your Paperless consume path.
+5. **Connect to Paperless** — Set `paperless_url` and `paperless_token` in config (or env). The bot uploads via REST API.
 
 ## What's not included (and why)
 
@@ -83,7 +103,7 @@ Shared `consume` volume: ingestion bot writes here; Paperless ingests from here.
 
 [paperless-ai](https://github.com/clusterzx/paperless-ai) is a **separate** project that runs **after** Paperless ingests documents. It adds AI-generated tags, titles, and correspondents.
 
-- **This ingestion bot** — Pre-ingestion: receives from Signal/Gmail, optionally filters with Ollama, writes to consume.
+- **This ingestion bot** — Pre-ingestion: receives from Signal/Gmail, optionally filters with Ollama, uploads to Paperless via API.
 - **paperless-ai** — Post-ingestion: augments documents already in Paperless.
 
 To add paperless-ai, run it alongside Paperless-ngx (it connects to Paperless API and uses Ollama). See [paperless-ai installation](https://github.com/clusterzx/paperless-ai/wiki/2.-Installation).

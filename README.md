@@ -19,7 +19,7 @@ Setup is a bit involved. Geeks will feel at home - determined non-geeks can get 
 
 ## Prerequisites
 
-- [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx) running with a consume directory
+- [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx) (API upload)
 - For **Signal**: [signal-cli-rest-api](https://github.com/bbernhard/signal-cli-rest-api) must be running first
 - For **Gmail**: Signal must be set up first (accounts are added via Signal commands)
 
@@ -44,7 +44,7 @@ See [docs/RELATED_PROJECTS.md](docs/RELATED_PROJECTS.md) for a list of projects 
 
 | Dependency                                                              | Required   | Purpose                                                                                                                                            |
 | ----------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx)         | Yes        | Document management system; bot writes files to the consume directory                                                                              |
+| [Paperless-ngx](https://github.com/paperless-ngx/paperless-ngx)         | Yes        | Document management system; bot uploads via REST API                                                                                                 |
 | [Ollama](https://ollama.com/)                                            | No         | Optional AI eligibility assessment; also used for AI-generated PR titles in the auto-PR workflow (runs locally)                                    |
 | [paperless-ai](https://github.com/clusterzx/paperless-ai)               | No         | Optional AI post-processing (tags, titles, correspondents). This bot uses Ollama directly for pre-ingestion; paperless-ai augments after ingestion |
 | [signal-cli-rest-api](https://github.com/bbernhard/signal-cli-rest-api) | For Signal | Webhook server for Signal Messenger                                                                                                                |
@@ -85,7 +85,7 @@ docker run --rm \
   ghcr.io/knirski/paperless-ingestion-bot:latest signal
 ```
 
-Mount your config directory at `/etc/paperless-ingestion-bot` (must contain `config.json`) and a data directory at `/var/lib/paperless-ingestion-bot` (for consume, email-accounts.json, users.json). For Gmail, headless Linux requires a system credential store (libsecret/Secret Service); see [Troubleshooting](#troubleshooting).
+Mount your config directory at `/etc/paperless-ingestion-bot` (must contain `config.json`) and a data directory at `/var/lib/paperless-ingestion-bot` (for email-accounts.json, users.json). For Gmail, headless Linux requires a system credential store (libsecret/Secret Service); see [Troubleshooting](#troubleshooting).
 
 **Env overrides:** Override file values with individual env vars (e.g. `-e PAPERLESS_INGESTION_SIGNAL_API_URL=http://signal:8080`). Use `--skip-reachability-check` when the Signal API starts after the bot (e.g. Docker Compose).
 
@@ -93,7 +93,7 @@ Mount your config directory at `/etc/paperless-ingestion-bot` (must contain `con
 
 ### Commands
 
-- `paperless-ingestion-bot signal`: Run Signal webhook server (validates `consume_dir` and `signal_api_url` at startup; use `--skip-reachability-check` to bypass API reachability check)
+- `paperless-ingestion-bot signal`: Run Signal webhook server (validates `paperless_url` and `signal_api_url` at startup; use `--skip-reachability-check` to bypass API reachability check)
 - `paperless-ingestion-bot email`: Scan Gmail inboxes for attachments (one-shot; use with cron/systemd timer)
 - `paperless-ingestion-bot --help`: Show help
 - `paperless-ingestion-bot --version`: Show version
@@ -127,13 +127,14 @@ JSON config (often Nix-generated via `builtins.toJSON`). Standalone: no parent-r
 
 **Resolution:** `--config` flag or `PAPERLESS_INGESTION_CONFIG` env or default `/etc/paperless-ingestion-bot/config.json`. 12-factor: individual values and paths override via env (e.g. `PAPERLESS_INGESTION_SIGNAL_API_URL`).
 
-**Env overrides (12-factor):** Individual env vars override file values when set: `PAPERLESS_INGESTION_CONSUME_DIR`, `PAPERLESS_INGESTION_SIGNAL_API_URL`, `PAPERLESS_INGESTION_WEBHOOK_HOST`, `PAPERLESS_INGESTION_WEBHOOK_PORT`, `PAPERLESS_INGESTION_LOG_LEVEL`, etc. See schema for full list.
+**Env overrides (12-factor):** Individual env vars override file values when set: `PAPERLESS_INGESTION_PAPERLESS_URL`, `PAPERLESS_INGESTION_PAPERLESS_TOKEN`, `PAPERLESS_INGESTION_SIGNAL_API_URL`, `PAPERLESS_INGESTION_WEBHOOK_HOST`, `PAPERLESS_INGESTION_WEBHOOK_PORT`, `PAPERLESS_INGESTION_LOG_LEVEL`, etc. See schema for full list.
 
 ### Schema
 
 ```json
 {
-	"consume_dir": "/path/to/paperless/consume",
+	"paperless_url": "http://127.0.0.1:8000",
+	"paperless_token": "your-paperless-api-token",
 	"signal_api_url": "http://127.0.0.1:8080",
 	"log_level": "INFO",
 	"webhook_host": "127.0.0.1",
@@ -146,7 +147,8 @@ JSON config (often Nix-generated via `builtins.toJSON`). Standalone: no parent-r
 }
 ```
 
-- `consume_dir`: Paperless-ngx consume directory (bot writes files here)
+- `paperless_url`: Paperless-ngx base URL (e.g. `http://127.0.0.1:8000`)
+- `paperless_token`: Paperless API token (Settings → Users → Create token)
 - `signal_api_url`: signal-cli-rest-api base URL (e.g. `http://127.0.0.1:8080`)
 - Config path: `--config` or `PAPERLESS_INGESTION_CONFIG` (default: `/etc/paperless-ingestion-bot/config.json`).
 - Users path: `--users` or `PAPERLESS_INGESTION_USERS_PATH` (default: `/var/lib/paperless-ingestion-bot/users.json`). Create manually, don't commit.
@@ -157,7 +159,7 @@ JSON config (often Nix-generated via `builtins.toJSON`). Standalone: no parent-r
 - `mark_processed_label`: Gmail label for processed messages; empty string disables labeling
 - `page_size`: Email fetch batch size
 
-**Env overrides:** Each key can be overridden by an env var: `PAPERLESS_INGESTION_` + UPPER_SNAKE_CASE of the key (e.g. `consume_dir` → `PAPERLESS_INGESTION_CONSUME_DIR`).
+**Env overrides:** Each key can be overridden by an env var: `PAPERLESS_INGESTION_` + UPPER_SNAKE_CASE of the key (e.g. `paperless_url` → `PAPERLESS_INGESTION_PAPERLESS_URL`).
 
 See [config.example.json](config.example.json) for a full example. A JSON Schema is emitted at build time: `dist/config.schema.json`.
 
@@ -168,18 +170,14 @@ See [config.example.json](config.example.json) for a full example. A JSON Schema
 	{
 		"slug": "krzysiek",
 		"signal_number": "+48123456789",
-		"consume_subdir": "krzysiek",
-		"display_name": "Krzysiek",
-		"tag_name": "Added by Krzysiek"
+		"display_name": "Krzysiek"
 	}
 ]
 ```
 
-- `slug`: Unique identifier (used in consume subdir, config references)
+- `slug`: Unique identifier; Paperless tag is `signal-{slug}` (e.g. `signal-krzysiek`)
 - `signal_number`: User's Signal phone number
-- `consume_subdir`: Subdirectory under `consume_dir` for this user's documents
 - `display_name`: Human-readable name
-- `tag_name`: Tag Paperless-ngx applies when ingesting (e.g. "Added by Krzysiek")
 
 ## Security
 
@@ -199,9 +197,9 @@ See [config.example.json](config.example.json) for a full example. A JSON Schema
 | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `System keychain unavailable` or `File system error: getPassword at keyring` | Ensure libsecret/Secret Service is available (e.g. gnome-keyring, kwallet). On headless Linux, run a secret service or use a session with keychain support.                                  |
 | `Config file not found`                                            | Pass `--config /path/to/config.json` or set `PAPERLESS_INGESTION_CONFIG`.                                                                                |
-| `consume_dir does not exist`                                       | Create the directory: `mkdir -p /path/to/consume`.                                                                                                                                            |
+| `paperless_url not reachable`                                      | Ensure Paperless-ngx is running. Use `--skip-reachability-check` to bypass (e.g. Paperless starts after bot).                                                                                 |
 | `signal_api_url not reachable`                                     | Ensure Signal REST API is running. Use `--skip-reachability-check` to bypass (e.g. API starts after bot).                                                                                     |
-| `No users configured`                                              | Create `users.json` at `--users` path or `PAPERLESS_INGESTION_USERS_PATH`: `[{"slug":"krzysiek","signal_number":"+48...","consume_subdir":"krzysiek","display_name":"Krzysiek","tag_name":"Added by Krzysiek"},...]`. |
+| `No users configured`                                              | Create `users.json` at `--users` path or `PAPERLESS_INGESTION_USERS_PATH`: `[{"slug":"krzysiek","signal_number":"+48...","display_name":"Krzysiek"},...]`. |
 | `No account found` for gmail commands                              | Run `gmail status` to list accounts. Add with `gmail add email@example.com <app_password>`.                                                                                                  |
 | IMAP connection fails                                              | Enable IMAP in Gmail; use App Password, not main password.                                                                                                                                   |
 | Ollama assessment timeout                                          | Increase model load or reduce prompt; timeout is 60s.                                                                                                                                        |

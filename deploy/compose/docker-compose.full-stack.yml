@@ -54,7 +54,8 @@ services:
       - paperless-data:/usr/src/paperless/data
       - paperless-media:/usr/src/paperless/media
       - ./export:/usr/src/paperless/export
-      - consume:/usr/src/paperless/consume
+      # consume: Paperless-ngx can have a consume dir (scanners, manual drops); unrelated to this project
+      # - consume:/usr/src/paperless/consume
     env_file: docker-compose.env
     environment:
       PAPERLESS_REDIS: redis://broker:6379
@@ -80,17 +81,19 @@ services:
     restart: unless-stopped
     depends_on:
       - signal-api
+      - webserver
     ports:
       - "8089:8089"
     volumes:
       - ./config.json:/etc/paperless-ingestion-bot/config.json:ro
       - ./users.json:/var/lib/paperless-ingestion-bot/users.json:ro
-      - consume:/var/lib/paperless-ingestion-bot/consume
+    env_file: docker-compose.env
     environment:
+      PAPERLESS_INGESTION_PAPERLESS_URL: http://webserver:8000
+      PAPERLESS_INGESTION_PAPERLESS_TOKEN: ${PAPERLESS_INGESTION_PAPERLESS_TOKEN:-}
       PAPERLESS_INGESTION_SIGNAL_API_URL: http://signal-api:8080
       PAPERLESS_INGESTION_WEBHOOK_HOST: 0.0.0.0
       PAPERLESS_INGESTION_WEBHOOK_PORT: "8089"
-      PAPERLESS_INGESTION_CONSUME_DIR: /var/lib/paperless-ingestion-bot/consume
       PAPERLESS_INGESTION_OLLAMA_URL: http://ollama:11434
     command: ["signal", "--config", "/etc/paperless-ingestion-bot/config.json", "--skip-reachability-check"]
 
@@ -111,5 +114,5 @@ volumes:
   pgdata:
   redisdata:
   signal-data:
-  consume:
+  # consume: - look at the comment above about consumer dir
   ollama-data:

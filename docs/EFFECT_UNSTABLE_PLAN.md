@@ -157,7 +157,7 @@ Plan for integrating `effect/unstable/*` modules into paperless-ingestion-bot. O
 **Implementation:**
 
 - Add `KeyValueStore` service to layers
-- Use `FileSystemKeyValueStore` with path under `consumeDir` or temp
+- Use `FileSystemKeyValueStore` with path under temp or app data dir
 - New module: `src/shell/crawl-state.ts` — get/set last UID per account
 
 **Files to touch:**
