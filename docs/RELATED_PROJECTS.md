@@ -4,7 +4,7 @@ Projects that complement or extend paperless-ingestion-bot. See also [paperless-
 
 ## Scan & physical ingestion
 
-- [scan-to-paperless](https://github.com/sbrunner/scan-to-paperless) — Physical scanner → NAS → Paperless (crop, deskew, OCR). Complements digital ingestion; both write to the same consume directory.
+- [scan-to-paperless](https://github.com/sbrunner/scan-to-paperless) — Physical scanner → NAS → Paperless (crop, deskew, OCR). Complements digital ingestion; scan-to-paperless uses Paperless consume dir; this bot uses the API.
 - [scanservjs](https://github.com/sbs20/scanservjs) — SANE scanner web UI for network scanners.
 - [scantopl](https://github.com/Celedhrim/scantopl) — Auto-upload to Paperless when filename matches a prefix; pairs with scanservjs.
 

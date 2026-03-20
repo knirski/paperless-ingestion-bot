@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+
+### Added
+
+* **Paperless API upload:** Documents are uploaded via REST API (`POST /api/documents/post_document/`) instead of consume directory. Tags set directly (source, user, Gmail labels). See [ADR 0007](docs/adr/0007-paperless-api-upload.md).
+* **Signal user tags:** User tag derived from slug as `signal-{slug}` (e.g. `signal-krzysiek`); consistent with email slug pattern.
+* **ci:** Modern CI (2026): reusable workflows (check.yml, nix.yml), `secrets: inherit`, GitHub-provided actions (checkout@v4, setup-node@v4 with built-in npm cache, upload-artifact@v4). Add packageManager to package.json for reproducibility. Determinate Nix tooling, modular composite actions.
+* **auto-pr:** TypeScript/Effect scripts replace shell scripts. `auto-pr-ollama.ts` generates PR title and description via Ollama when 2+ semantic commits; `OLLAMA_MODEL` (default: `llama3.1:8b`) and `OLLAMA_URL` overridable via repo vars. Prompts moved from `.github/prompts/` to `scripts/auto-pr/prompts/`. `fill-pr-template` gains `--description-file` for Ollama output. Error handling aligned with main project (Schema.TaggedErrorClass, formatAutoPrError, mapFsError, redactPath).
+* **fill-pr-template:** Renamed from fill-pr-body. Filter merge commits from body and title input; include non-conventional commits (type falls back to Chore). Auto-PR workflow: retry `gh` up to 3 times with 5s delay.
+* **PII redaction:** Effect `Redacted` for paths, emails, phones, URLs in domain errors. `redactedForLog`, `redactPath`, `redactEmail`, `redactPhone`, `redactUrl` in domain/utils. Raw values never appear in structured logs.
+
+### Breaking Changes
+
+* **Paperless:** Replace consume directory with REST API upload. Config must include `paperless_url` and `paperless_token` (from Paperless Settings → Users → Create token). Remove `consume_dir` if present. No shared volume with Paperless; bot needs network reachability. See [ADR 0007](docs/adr/0007-paperless-api-upload.md).
+* **users.json:** Remove `tag_name` and `consume_subdir` from user entries. New format: `{"slug":"krzysiek","signal_number":"+48...","display_name":"Krzysiek"}`. Signal documents are tagged `signal-{slug}`.
+* **config:** Split config files (Option 3). Config path from `--config` or `PAPERLESS_INGESTION_CONFIG`; users path from `--users` or `PAPERLESS_INGESTION_USERS_PATH`; email accounts path from `--email-accounts` or `PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH` (no longer in config.json). Config loading uses Effect ConfigProvider with orElse(env, file).
+* **credentials:** Replace keytar with @napi-rs/keyring; remove file-based credential fallback. Credentials are stored only in the OS keychain. Users who relied on `PAPERLESS_INGESTION_CREDENTIALS=file` must migrate credentials to the system keychain before upgrading. On headless Linux, ensure libsecret/Secret Service is available (e.g. gnome-keyring, kwallet). See ADR-0001.
+
 ## [0.2.1](https://github.com/knirski/paperless-ingestion-bot/compare/v0.2.0...v0.2.1) (2026-03-19)
 
 
@@ -98,20 +117,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * **ci:** handle initial push in commitlint, pin scorecard-action to v2.3.1 ([2265a4a](https://github.com/knirski/paperless-ingestion-bot/commit/2265a4a61087fc0543815200ddb656e32fa67f49))
 * **ci:** remove custom CodeQL workflow, drop magic-nix-cache-action ([155d435](https://github.com/knirski/paperless-ingestion-bot/commit/155d4352cdf19c34f2c9674dfd819d908d862c3c))
-
-## [Unreleased]
-
-### Added
-
-* **ci:** Modern CI (2026): reusable workflows (check.yml, nix.yml), `secrets: inherit`, GitHub-provided actions (checkout@v4, setup-node@v4 with built-in npm cache, upload-artifact@v4). Add packageManager to package.json for reproducibility. Determinate Nix tooling, modular composite actions.
-* **auto-pr:** TypeScript/Effect scripts replace shell scripts. `auto-pr-ollama.ts` generates PR title and description via Ollama when 2+ semantic commits; `OLLAMA_MODEL` (default: `llama3.1:8b`) and `OLLAMA_URL` overridable via repo vars. Prompts moved from `.github/prompts/` to `scripts/auto-pr/prompts/`. `fill-pr-template` gains `--description-file` for Ollama output. Error handling aligned with main project (Schema.TaggedErrorClass, formatAutoPrError, mapFsError, redactPath).
-* **fill-pr-template:** Renamed from fill-pr-body. Filter merge commits from body and title input; include non-conventional commits (type falls back to Chore). Auto-PR workflow: retry `gh` up to 3 times with 5s delay.
-* **PII redaction:** Effect `Redacted` for paths, emails, phones, URLs in domain errors. `redactedForLog`, `redactPath`, `redactEmail`, `redactPhone`, `redactUrl` in domain/utils. Raw values never appear in structured logs.
-
-### Breaking Changes
-
-* **config:** Split config files (Option 3). Config path from `--config` or `PAPERLESS_INGESTION_CONFIG`; users path from `--users` or `PAPERLESS_INGESTION_USERS_PATH`; email accounts path from `--email-accounts` or `PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH` (no longer in config.json). Config loading uses Effect ConfigProvider with orElse(env, file).
-* **credentials:** Replace keytar with @napi-rs/keyring; remove file-based credential fallback. Credentials are stored only in the OS keychain. Users who relied on `PAPERLESS_INGESTION_CREDENTIALS=file` must migrate credentials to the system keychain before upgrading. On headless Linux, ensure libsecret/Secret Service is available (e.g. gnome-keyring, kwallet). See ADR-0001.
 
 ## [0.1.0] - 2025-03-07
 
