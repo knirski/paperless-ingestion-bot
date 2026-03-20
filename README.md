@@ -36,6 +36,10 @@ Supported file types: PDF, Word (.doc, .docx), RTF, Office formats, images (JPEG
 
 Might add: other email providers (Outlook, Proton), other IMs (Matrix, Telegram), cloud storage, scanners, fax.
 
+### Potentially useful projects
+
+See [docs/RELATED_PROJECTS.md](docs/RELATED_PROJECTS.md) for a list of projects that complement or extend this bot.
+
 ## Dependencies
 
 | Dependency                                                              | Required   | Purpose                                                                                                                                            |
@@ -222,6 +226,7 @@ We target **Bun 1.3+** and Effect v4 beta. This is a deliberate choice for moder
 
 - [deploy/](deploy/): Deployment recipes — [Compose](deploy/compose/README.md) (Docker) and [systemd](deploy/systemd/README.md) (service units)
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md): Project structure and design
+- [RELATED_PROJECTS.md](docs/RELATED_PROJECTS.md): Potentially useful complementary projects
 - [CONTRIBUTING.md](CONTRIBUTING.md): How to contribute
 - [knirski/auto-pr](https://github.com/knirski/auto-pr): Auto-PR workflow (push to `ai/*` branches)
 - [docs/SCHEDULED_WORKFLOWS.md](docs/SCHEDULED_WORKFLOWS.md): Enable scheduled workflows (cron)
