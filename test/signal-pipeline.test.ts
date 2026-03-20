@@ -1,97 +1,98 @@
 import { describe, expect, test } from "bun:test";
-import { Effect } from "effect";
+import { validateAttachmentsToRaw } from "../src/core/index.js";
+import type { SignalAttachmentRef } from "../src/domain/signal-types.js";
 import type { AccountEmail } from "../src/domain/types.js";
-import { PlatformServicesLayer } from "../src/shell/layers.js";
 import {
-	collectValidAttachmentRefs,
 	formatGmailAddReply,
 	formatPauseIngestionReply,
 	formatRemoveAccountReply,
 	formatResumeIngestionReply,
 	MAX_ATTACHMENTS_PER_MESSAGE,
 	trimAttachmentsToMax,
-	validateConsumeDir,
 } from "../src/shell/signal-pipeline.js";
-import { createTestTempDir, SilentLoggerLayer } from "./test-utils.js";
 
 describe("signal-pipeline", () => {
-	describe("collectValidAttachmentRefs", () => {
-		test.each([
-			{ input: [], expected: [] },
-			{
-				input: [{ id: "att1", contentType: "application/pdf", customFilename: "doc.pdf" }],
-				expected: [{ id: "att1", contentType: "application/pdf", customFilename: "doc.pdf" }],
-			},
-			{ input: [{ customFilename: "a.pdf" }], expected: [] },
-			{
-				input: [null, { id: "att1", contentType: "application/pdf" }],
-				expected: [{ id: "att1", contentType: "application/pdf" }],
-			},
-			{
-				input: [[], { id: "att1", contentType: "application/pdf" }],
-				expected: [{ id: "att1", contentType: "application/pdf" }],
-			},
-			{
-				input: ["string", 42, true, undefined, { id: "att1", contentType: "application/pdf" }],
-				expected: [{ id: "att1", contentType: "application/pdf" }],
-			},
-			{
-				input: [
-					{ customFilename: "no-id.pdf" },
-					null,
-					{ id: "att1", contentType: "application/pdf" },
-					[],
-					{ id: "att2", contentType: "image/jpeg" },
-				],
-				expected: [
-					{ id: "att1", contentType: "application/pdf" },
-					{ id: "att2", contentType: "image/jpeg" },
-				],
-			},
-			{ input: [{ id: "att1" }], expected: [{ id: "att1" }] },
-		])("filters invalid refs", ({ input, expected }) => {
-			const result = collectValidAttachmentRefs(input as unknown as readonly unknown[]);
-			expect(result).toEqual(expected as unknown as typeof result);
-		});
-	});
-
-	describe("validateConsumeDir", () => {
-		test("fails when directory does not exist", async () => {
-			const program = validateConsumeDir("/nonexistent/path/12345").pipe(
-				Effect.provide(PlatformServicesLayer),
-				Effect.provide(SilentLoggerLayer),
-			);
-			await expect(Effect.runPromise(program)).rejects.toMatchObject({
-				_tag: "ConfigValidationError",
-				message: "consume_dir does not exist",
-			});
+	describe("validateAttachmentsToRaw", () => {
+		test("empty array succeeds", () => {
+			const result = validateAttachmentsToRaw([]);
+			expect(result._tag).toBe("Success");
+			if (result._tag === "Success") expect(result.success).toEqual([]);
 		});
 
-		test("succeeds when directory exists and is writable", async () => {
-			const { path: tmpDir, remove } = await createTestTempDir("validate-consume-");
-			try {
-				const program = validateConsumeDir(tmpDir).pipe(
-					Effect.provide(PlatformServicesLayer),
-					Effect.provide(SilentLoggerLayer),
-				);
-				await Effect.runPromise(program);
-			} finally {
-				await remove();
+		test("valid refs succeed", () => {
+			const input: SignalAttachmentRef[] = [
+				{ id: "att1", contentType: "application/pdf", customFilename: "doc.pdf" },
+			];
+			const result = validateAttachmentsToRaw(input);
+			expect(result._tag).toBe("Success");
+			if (result._tag === "Success") {
+				expect(result.success).toHaveLength(1);
+				expect(result.success[0]).toMatchObject({
+					id: "att1",
+					contentType: "application/pdf",
+					customFilename: "doc.pdf",
+				});
 			}
+		});
+
+		test("ref without id fails", () => {
+			const input: SignalAttachmentRef[] = [{ customFilename: "a.pdf" }];
+			const result = validateAttachmentsToRaw(input);
+			expect(result._tag).toBe("Failure");
+			if (result._tag === "Failure")
+				expect(result.failure).toMatchObject({
+					_tag: "InvalidAttachmentRefError",
+					message: "Attachment ref missing required id",
+					index: 0,
+				});
+		});
+
+		test("ref with invalid id fails", () => {
+			const input: SignalAttachmentRef[] = [{ id: "" }];
+			const result = validateAttachmentsToRaw(input);
+			expect(result._tag).toBe("Failure");
+			if (result._tag === "Failure")
+				expect(result.failure).toMatchObject({
+					_tag: "InvalidAttachmentRefError",
+					index: 0,
+				});
+		});
+
+		test("fails on first invalid", () => {
+			const input: SignalAttachmentRef[] = [
+				{ customFilename: "no-id.pdf" },
+				{ id: "att1", contentType: "application/pdf" },
+			];
+			const result = validateAttachmentsToRaw(input);
+			expect(result._tag).toBe("Failure");
+			if (result._tag === "Failure") expect(result.failure.index).toBe(0);
+
+			const input2: SignalAttachmentRef[] = [
+				{ id: "att1", contentType: "application/pdf" },
+				{ id: "att2", contentType: "image/jpeg" },
+			];
+			const result2 = validateAttachmentsToRaw(input2);
+			expect(result2._tag).toBe("Success");
+			if (result2._tag === "Success") expect(result2.success).toHaveLength(2);
 		});
 	});
 
 	describe("trimAttachmentsToMax", () => {
 		test("returns all when under limit", () => {
-			const arr = [1, 2, 3];
-			expect(trimAttachmentsToMax(arr)).toEqual([1, 2, 3]);
+			const valid = validateAttachmentsToRaw([{ id: "a1" }, { id: "a2" }, { id: "a3" }]);
+			if (valid._tag !== "Success") throw new Error("unexpected");
+			const result = trimAttachmentsToMax(valid.success);
+			expect(result).toHaveLength(3);
 		});
 
 		test("trims to MAX_ATTACHMENTS_PER_MESSAGE when over", () => {
-			const arr = Array.from({ length: 25 }, (_, i) => i);
-			const result = trimAttachmentsToMax(arr);
+			const refs = Array.from({ length: MAX_ATTACHMENTS_PER_MESSAGE + 5 }, (_, i) => ({
+				id: `att${i}`,
+			}));
+			const valid = validateAttachmentsToRaw(refs);
+			if (valid._tag !== "Success") throw new Error("unexpected");
+			const result = trimAttachmentsToMax(valid.success);
 			expect(result).toHaveLength(MAX_ATTACHMENTS_PER_MESSAGE);
-			expect(result).toEqual(Array.from({ length: 20 }, (_, i) => i));
 		});
 
 		test("returns empty for empty input", () => {

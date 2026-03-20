@@ -1,5 +1,6 @@
 {
-	"consume_dir": "/var/lib/paperless-ingestion-bot/consume",
+	"paperless_url": "http://127.0.0.1:8000",
+	"paperless_token": "your-paperless-api-token",
 	"signal_api_url": "http://127.0.0.1:8080",
 	"log_level": "INFO",
 	"webhook_host": "127.0.0.1",

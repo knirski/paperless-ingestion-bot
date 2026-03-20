@@ -1,15 +1,10 @@
 import { describe, expect } from "bun:test";
 import { Effect, Exit, Layer } from "effect";
 import * as Http from "effect/unstable/http";
-import { emailToSlug } from "../../src/core/search.js";
+import { toTagName } from "../../src/domain/paperless-types.js";
 import type { SignalNumber } from "../../src/domain/signal-types.js";
 import type { AppEffect } from "../../src/domain/types.js";
-import {
-	type ConsumeSubdir,
-	createUserRegistry,
-	type EmailLabel,
-	type UserSlug,
-} from "../../src/domain/types.js";
+import { createUserRegistry, type EmailLabel, type UserSlug } from "../../src/domain/types.js";
 import { EmailClient } from "../../src/live/imap-email-client.js";
 import { OllamaClient } from "../../src/live/ollama-client.js";
 import type { EmailConfigService } from "../../src/shell/config.js";
@@ -36,14 +31,9 @@ import {
 	integrationTest,
 	writeAccountsFile,
 } from "../fixtures/integration-context.js";
+import { createPaperlessMockLayer, type PaperlessMockSpy } from "../fixtures/paperless-mock.js";
 import { createSignalMockLayer, type SignalMockSpy } from "../fixtures/signal-mock.js";
-import {
-	credentialsStoreTest,
-	emailConfigTest,
-	joinPath,
-	readTestDirectory,
-	TestBaseLayer,
-} from "../test-utils.js";
+import { credentialsStoreTest, emailConfigTest, TestBaseLayer } from "../test-utils.js";
 
 const alwaysAcceptOllamaLayer = Layer.mock(OllamaClient)({
 	assess: () => Effect.succeed(true),
@@ -51,10 +41,6 @@ const alwaysAcceptOllamaLayer = Layer.mock(OllamaClient)({
 const rejectOllamaLayer = Layer.mock(OllamaClient)({
 	assess: () => Effect.succeed(false),
 });
-
-function accountSubdir(tmpDir: string, email = "test@example.com"): Promise<string> {
-	return joinPath(tmpDir, emailToSlug(email));
-}
 
 async function runPipeline(layer: Layer.Layer<never>): Promise<{ saved: number }> {
 	return Effect.runPromise(
@@ -66,9 +52,7 @@ const CREDENTIAL_FAILURE_REGISTRY = createUserRegistry([
 	{
 		slug: "user1" as UserSlug,
 		signalNumber: "+15550000001" as SignalNumber,
-		consumeSubdir: "user1" as ConsumeSubdir,
 		displayName: "User 1",
-		tagName: "User 1",
 	},
 ]);
 
@@ -78,18 +62,18 @@ function buildTestLayer(
 	options?: {
 		spy?: ImapMockSpy;
 		signalSpy?: SignalMockSpy;
+		paperlessSpy?: PaperlessMockSpy;
 		configOverrides?: Partial<EmailConfigService>;
 		ollama?: Layer.Layer<never>;
 	},
 ): Layer.Layer<never> {
-	const { tmpDir, emailAccountsPath } = fixture;
+	const { emailAccountsPath } = fixture;
 	const ollama = options?.ollama ?? alwaysAcceptOllamaLayer;
 	return Layer.mergeAll(
 		TestBaseLayer,
 		Http.FetchHttpClient.layer,
 		RateLimiterMemoryLayer,
 		emailConfigTest({
-			consumeDir: tmpDir,
 			emailAccountsPath,
 			markProcessedLabel: "paperless" as EmailLabel,
 			registry: CREDENTIAL_FAILURE_REGISTRY,
@@ -97,6 +81,7 @@ function buildTestLayer(
 		}),
 		credentialsStoreTest({ "test@example.com": "secret" }),
 		createImapMockLayer(scenario, options?.spy ? { spy: options.spy } : undefined),
+		createPaperlessMockLayer(options?.paperlessSpy),
 		createSignalMockLayer(
 			{},
 			{
@@ -116,11 +101,15 @@ describe("email-pipeline integration", () => {
 				fetchCalls: [],
 				markProcessedCalls: [],
 			};
-			const layer = buildTestLayer({ tmpDir, emailAccountsPath }, { searchResult: [] }, { spy });
+			const paperlessSpy: PaperlessMockSpy = { uploadCalls: [] };
+			const layer = buildTestLayer(
+				{ tmpDir, emailAccountsPath },
+				{ searchResult: [] },
+				{ spy, paperlessSpy },
+			);
 			const result = await runPipeline(layer);
 			expect(result).toEqual({ saved: 0 });
-			const files = await readTestDirectory(await accountSubdir(tmpDir));
-			expect(files).toHaveLength(0);
+			expect(paperlessSpy.uploadCalls).toHaveLength(0);
 		});
 
 		integrationTest("one eligible PDF", async ({ tmpDir, emailAccountsPath }) => {
@@ -129,19 +118,21 @@ describe("email-pipeline integration", () => {
 				fetchCalls: [],
 				markProcessedCalls: [],
 			};
+			const paperlessSpy: PaperlessMockSpy = { uploadCalls: [] };
 			const layer = buildTestLayer(
 				{ tmpDir, emailAccountsPath },
 				{
 					searchResult: [1],
 					attachments: [eligiblePdfAttachment(1)],
 				},
-				{ spy },
+				{ spy, paperlessSpy },
 			);
 			const result = await runPipeline(layer);
 			expect(result).toEqual({ saved: 1 });
-			const files = await readTestDirectory(await accountSubdir(tmpDir));
-			expect(files).toHaveLength(1);
-			expect(files[0]).toMatch(/\.pdf$/);
+			expect(paperlessSpy.uploadCalls).toHaveLength(1);
+			expect(paperlessSpy.uploadCalls[0]?.filename).toMatch(/\.pdf$/);
+			expect(paperlessSpy.uploadCalls[0]?.tags).toContain(toTagName("email"));
+			expect(paperlessSpy.uploadCalls[0]?.tags).toContain(toTagName("test-example-com"));
 			expect(spy.markProcessedCalls).toEqual([{ uids: [1], value: "paperless" }]);
 		});
 
@@ -249,16 +240,16 @@ describe("email-pipeline integration", () => {
 				fetchCalls: [],
 				markProcessedCalls: [],
 			};
+			const paperlessSpy: PaperlessMockSpy = { uploadCalls: [] };
 			const layer = buildTestLayer(
 				{ tmpDir, emailAccountsPath },
 				{ searchResult: [1], searchFail: new Error("IMAP timeout") },
-				{ spy, configOverrides: { imapRetrySchedule: imapRetryScheduleFast } },
+				{ spy, paperlessSpy, configOverrides: { imapRetrySchedule: imapRetryScheduleFast } },
 			);
 			const result = await runPipeline(layer);
 			expect(result).toEqual({ saved: 0 });
 			expect(spy.searchCalls.length).toBeGreaterThanOrEqual(1);
-			const files = await readTestDirectory(await accountSubdir(tmpDir));
-			expect(files).toHaveLength(0);
+			expect(paperlessSpy.uploadCalls).toHaveLength(0);
 		});
 
 		integrationTest("fetch failure degrades gracefully", async ({ tmpDir, emailAccountsPath }) => {
@@ -309,10 +300,12 @@ describe("email-pipeline integration", () => {
 				fetchCalls: [],
 				markProcessedCalls: [],
 			};
+			const paperlessSpy: PaperlessMockSpy = { uploadCalls: [] };
 			const layer = Layer.mergeAll(
 				TestBaseLayer,
+				Http.FetchHttpClient.layer,
+				RateLimiterMemoryLayer,
 				emailConfigTest({
-					consumeDir: tmpDir,
 					emailAccountsPath: accountsPath,
 					markProcessedLabel: "paperless" as EmailLabel,
 				}),
@@ -327,14 +320,22 @@ describe("email-pipeline integration", () => {
 					},
 					{ spy },
 				),
+				createPaperlessMockLayer(paperlessSpy),
+				createSignalMockLayer({}, { defaultAccount: "+15550000001" as SignalNumber }),
 				alwaysAcceptOllamaLayer,
 			);
 			const result = await runPipeline(layer);
 			expect(result).toEqual({ saved: 2 });
-			const files1 = await readTestDirectory(await accountSubdir(tmpDir, "test@example.com"));
-			const files2 = await readTestDirectory(await accountSubdir(tmpDir, "other@example.com"));
-			expect(files1).toHaveLength(1);
-			expect(files2).toHaveLength(1);
+			const uploadsBySlug = {
+				"test-example-com": paperlessSpy.uploadCalls.filter((u) =>
+					u.tags.includes(toTagName("test-example-com")),
+				),
+				"other-example-com": paperlessSpy.uploadCalls.filter((u) =>
+					u.tags.includes(toTagName("other-example-com")),
+				),
+			};
+			expect(uploadsBySlug["test-example-com"]).toHaveLength(1);
+			expect(uploadsBySlug["other-example-com"]).toHaveLength(1);
 			expect(spy.markProcessedCalls).toHaveLength(2);
 		});
 
@@ -350,8 +351,9 @@ describe("email-pipeline integration", () => {
 			};
 			const layer = Layer.mergeAll(
 				TestBaseLayer,
+				Http.FetchHttpClient.layer,
+				RateLimiterMemoryLayer,
 				emailConfigTest({
-					consumeDir: tmpDir,
 					emailAccountsPath: accountsPath,
 					markProcessedLabel: "paperless" as EmailLabel,
 				}),
@@ -363,6 +365,8 @@ describe("email-pipeline integration", () => {
 					{ searchResult: [1], attachments: [eligiblePdfAttachment(1)] },
 					{ spy },
 				),
+				createPaperlessMockLayer(),
+				createSignalMockLayer({}, { defaultAccount: "+15550000001" as SignalNumber }),
 				alwaysAcceptOllamaLayer,
 			);
 			const result = await runPipeline(layer);
@@ -399,23 +403,23 @@ describe("email-pipeline integration", () => {
 			},
 		);
 
-		integrationTest(
-			"account without credentials is skipped",
-			async ({ tmpDir, emailAccountsPath }) => {
-				const layer = Layer.mergeAll(
-					TestBaseLayer,
-					emailConfigTest({
-						consumeDir: tmpDir,
-						emailAccountsPath,
-						markProcessedLabel: "paperless" as EmailLabel,
-					}),
-					credentialsStoreTest({}),
-					Layer.mock(EmailClient)({}),
-					alwaysAcceptOllamaLayer,
-				);
-				const result = await runPipeline(layer);
-				expect(result).toEqual({ saved: 0 });
-			},
-		);
+		integrationTest("account without credentials is skipped", async ({ emailAccountsPath }) => {
+			const layer = Layer.mergeAll(
+				TestBaseLayer,
+				Http.FetchHttpClient.layer,
+				RateLimiterMemoryLayer,
+				emailConfigTest({
+					emailAccountsPath,
+					markProcessedLabel: "paperless" as EmailLabel,
+				}),
+				credentialsStoreTest({}),
+				Layer.mock(EmailClient)({}),
+				createPaperlessMockLayer(),
+				createSignalMockLayer({}, { defaultAccount: "+15550000001" as SignalNumber }),
+				alwaysAcceptOllamaLayer,
+			);
+			const result = await runPipeline(layer);
+			expect(result).toEqual({ saved: 0 });
+		});
 	});
 });

@@ -104,6 +104,22 @@ export class ImapConnectionError extends Schema.TaggedErrorClass<ImapConnectionE
 	{ email: Schema.Redacted(AccountEmailSchema), message: Schema.String },
 ) {}
 
+/** Signal attachment ref missing id or with invalid id. Fail fast when validating webhook attachments. */
+export class InvalidAttachmentRefError extends Schema.TaggedErrorClass<InvalidAttachmentRefError>()(
+	"InvalidAttachmentRefError",
+	{ message: Schema.String, index: Schema.optional(Schema.Number) },
+) {}
+
+/** Paperless API errors (HTTP 4xx/5xx, network failure). */
+export class PaperlessApiError extends Schema.TaggedErrorClass<PaperlessApiError>()(
+	"PaperlessApiError",
+	{
+		status: Schema.Number,
+		url: Schema.Redacted(Schema.String),
+		message: Schema.String,
+	},
+) {}
+
 /** File parse errors (config, credentials, users.json). path + message required. */
 export class ConfigParseError extends Schema.TaggedErrorClass<ConfigParseError>()(
 	"ConfigParseError",
@@ -125,6 +141,8 @@ export type DomainError =
 	| PayloadTooLargeError
 	| OllamaRequestError
 	| ImapConnectionError
+	| InvalidAttachmentRefError
+	| PaperlessApiError
 	| ConfigParseError
 	| FileSystemError
 	| KeyringError;
@@ -179,6 +197,14 @@ export const formatDomainError: (err: DomainError) => string = Match.type<Domain
 		"ImapConnectionError",
 		({ email, message }) =>
 			`IMAP connection failed for ${email.label ?? "<redacted>"} (${message})`,
+	),
+	Match.tag("InvalidAttachmentRefError", ({ message, index }) =>
+		index !== undefined ? `Invalid attachment at index ${index}: ${message}` : message,
+	),
+	Match.tag("PaperlessApiError", ({ status, url, message }) =>
+		status === 0
+			? message
+			: `Paperless API HTTP ${status} at ${url.label ?? "<redacted>"}: ${message}`,
 	),
 	Match.tag("ConfigParseError", ({ path, message, fix }) =>
 		formatWithFix(`Config parse error at ${path.label ?? "<redacted>"}: ${message}`, fix),

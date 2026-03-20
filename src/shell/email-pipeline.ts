@@ -6,7 +6,7 @@
  * Document assessment via Ollama (OllamaClient.assess).
  */
 
-import { Duration, Effect, FileSystem, Path, Schedule } from "effect";
+import { Duration, Effect, Schedule } from "effect";
 import * as Arr from "effect/Array";
 import { sumAll } from "effect/Number";
 import { buildSearch, emailToSlug, mergeExcludeLabels } from "../core/index.js";
@@ -22,7 +22,6 @@ import {
 	fetchUidsWithRetry,
 	saveEligibleAttachments,
 } from "./email-attachments.js";
-import { mapFsError } from "./fs-utils.js";
 import { loadAllAccounts } from "./runtime.js";
 
 /** Re-export for tests. */
@@ -110,18 +109,11 @@ const processAccountPages = Effect.fn("processAccountPages")(function* (
 	uids: readonly MessageUid[],
 ) {
 	const config = yield* EmailConfig;
-	const fs = yield* FileSystem.FileSystem;
-	const pathApi = yield* Path.Path;
-
-	const emailSubdir = pathApi.join(config.consumeDir, emailToSlug(acc.email));
-
-	yield* fs
-		.makeDirectory(emailSubdir, { recursive: true })
-		.pipe(mapFsError(emailSubdir, "makeDirectory"));
+	const emailSlug = emailToSlug(acc.email);
 
 	const pages = Arr.chunksOf(uids, config.pageSize);
 	for (const pageUids of pages) {
-		const result = yield* processPage(acc, session, emailSubdir, pageUids);
+		const result = yield* processPage(acc, session, emailSlug, pageUids);
 		if (result.saved > 0) {
 			const value = config.markProcessedLabel;
 			if (value && result.labeledUids.length > 0) {
@@ -136,7 +128,7 @@ const processAccountPages = Effect.fn("processAccountPages")(function* (
 const processPage = Effect.fn("processPage")(function* (
 	acc: Account,
 	session: EmailSession,
-	emailSubdir: string,
+	emailSlug: string,
 	pageUids: readonly MessageUid[],
 ) {
 	const config = yield* EmailConfig;
@@ -144,7 +136,7 @@ const processPage = Effect.fn("processPage")(function* (
 
 	const rawAttachments = yield* fetchAttachmentsWithRetry(session, pageUids, acc, retrySchedule);
 
-	const toSave = yield* collectEligibleAttachments(rawAttachments, emailSubdir);
+	const toSave = yield* collectEligibleAttachments(rawAttachments, emailSlug);
 	if (toSave.length === 0) return { saved: 0, labeledUids: [] };
 
 	return yield* saveEligibleAttachments(toSave);

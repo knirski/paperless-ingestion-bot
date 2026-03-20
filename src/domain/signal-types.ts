@@ -71,6 +71,9 @@ export interface SignalAttachmentRef {
 	readonly contentType?: string;
 }
 
+/** Raw Signal attachment ref (id required). Output of validateAttachmentsToRaw. */
+export type RawSignalAttachment = Omit<SignalAttachmentRef, "id"> & { id: AttachmentId };
+
 // --- Schemas for webhook payload validation ---
 
 const SourceSchema = Schema.Union([

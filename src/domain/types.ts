@@ -27,10 +27,7 @@ export type AccountEmail = Schema.Schema.Type<typeof AccountEmailSchema>;
 export const UserSlugSchema = Schema.String.pipe(Schema.brand("UserSlug"));
 export type UserSlug = Schema.Schema.Type<typeof UserSlugSchema>;
 
-export const ConsumeSubdirSchema = Schema.String.pipe(Schema.brand("ConsumeSubdir"));
-export type ConsumeSubdir = Schema.Schema.Type<typeof ConsumeSubdirSchema>;
-
-/** Gmail/IMAP label (e.g. "SPAM", "category:promotions", exclude_labels, mark-processed label). */
+/** Gmail/IMAP label (e.g. "SPAM", "category:promotions", exclude_labels, mark-processed label, message labels). */
 export const EmailLabelSchema = Schema.String.pipe(Schema.brand("EmailLabel"));
 export type EmailLabel = Schema.Schema.Type<typeof EmailLabelSchema>;
 
@@ -42,9 +39,7 @@ export type MessageUid = Schema.Schema.Type<typeof MessageUidSchema>;
 export interface User {
 	readonly slug: UserSlug;
 	readonly signalNumber: SignalNumber;
-	readonly consumeSubdir: ConsumeSubdir;
 	readonly displayName: string;
-	readonly tagName: string;
 }
 
 /** User registry — lookup by Signal number. */

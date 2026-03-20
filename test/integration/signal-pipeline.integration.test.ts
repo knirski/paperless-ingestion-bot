@@ -1,15 +1,11 @@
 import { describe, expect } from "bun:test";
-import { Effect, Exit, FileSystem, Layer, Option } from "effect";
+import { Effect, Exit, Layer, Option } from "effect";
 import * as Http from "effect/unstable/http";
 import { HttpClient, HttpClientError, HttpClientResponse } from "effect/unstable/http";
+import { toTagName } from "../../src/domain/paperless-types.js";
 import type { SignalNumber } from "../../src/domain/signal-types.js";
 import type { AppEffect } from "../../src/domain/types.js";
-import {
-	type ConsumeSubdir,
-	createUserRegistry,
-	type EmailLabel,
-	type UserSlug,
-} from "../../src/domain/types.js";
+import { createUserRegistry, type EmailLabel, type UserSlug } from "../../src/domain/types.js";
 import { SignalClient } from "../../src/live/signal-client.js";
 import type { SignalConfigService } from "../../src/shell/config.js";
 import {
@@ -23,6 +19,7 @@ import {
 	signalPdfAttachment,
 } from "../fixtures/attachments.js";
 import { integrationTest, writeAccountsFile } from "../fixtures/integration-context.js";
+import { createPaperlessMockLayer, type PaperlessMockSpy } from "../fixtures/paperless-mock.js";
 import {
 	createSignalMockLayer,
 	type SignalMockScenario,
@@ -30,8 +27,6 @@ import {
 } from "../fixtures/signal-mock.js";
 import {
 	credentialsStoreTest,
-	joinPathSync,
-	readTestDirectory,
 	runWithLayer,
 	signalConfigTest,
 	TestBaseLayer,
@@ -44,9 +39,7 @@ const DEFAULT_REGISTRY = createUserRegistry([
 	{
 		slug: "user1" as UserSlug,
 		signalNumber: AUTHORIZED_NUMBER,
-		consumeSubdir: "user1" as ConsumeSubdir,
 		displayName: "User 1",
-		tagName: "User 1",
 	},
 ]);
 
@@ -84,14 +77,14 @@ function buildTestLayer(
 	scenario: SignalMockScenario,
 	options?: {
 		spy?: SignalMockSpy;
+		paperlessSpy?: PaperlessMockSpy;
 		configOverrides?: Partial<SignalConfigService>;
 		credentialsStore?: Record<string, string>;
 		signalClientLayer?: Layer.Layer<SignalClient>;
 		httpClientLayer?: Layer.Layer<HttpClient.HttpClient>;
 	},
 ) {
-	const { tmpDir, emailAccountsPath } = fixture;
-	const consumeDir = joinPathSync(tmpDir, "consume");
+	const { emailAccountsPath } = fixture;
 	const signalLayer =
 		options?.signalClientLayer ??
 		createSignalMockLayer(scenario, {
@@ -99,11 +92,11 @@ function buildTestLayer(
 			defaultAccount: AUTHORIZED_NUMBER,
 		});
 	const httpClientLayer = options?.httpClientLayer ?? Http.FetchHttpClient.layer;
+	const paperlessSpy = options?.paperlessSpy;
 	return Layer.mergeAll(
 		TestBaseLayer,
 		httpClientLayer,
 		signalConfigTest({
-			consumeDir,
 			emailAccountsPath,
 			registry: DEFAULT_REGISTRY,
 			markProcessedLabel: "paperless" as EmailLabel,
@@ -111,6 +104,7 @@ function buildTestLayer(
 		}),
 		credentialsStoreTest(options?.credentialsStore ?? { "test@example.com": "secret" }),
 		signalLayer,
+		createPaperlessMockLayer(paperlessSpy),
 	);
 }
 
@@ -134,30 +128,16 @@ function createSpy(): SignalMockSpy {
 describe("signal-pipeline integration", () => {
 	describe("happy path", () => {
 		integrationTest(
-			"runServerStartupValidation with skipReachabilityCheck — skips Signal API check",
+			"runServerStartupValidation with skipReachabilityCheck — skips API checks",
 			async ({ tmpDir, emailAccountsPath }) => {
-				const consumeDir = joinPathSync(tmpDir, "consume");
-				await Effect.runPromise(
-					Effect.gen(function* () {
-						const fs = yield* FileSystem.FileSystem;
-						yield* fs.makeDirectory(consumeDir, { recursive: true });
-					}).pipe(Effect.provide(TestBaseLayer)),
-				);
 				const layer = buildTestLayer({ tmpDir, emailAccountsPath }, {});
 				await runWithLayer(layer)(runServerStartupValidation(true));
 			},
 		);
 
 		integrationTest(
-			"runServerStartupValidation without skipReachabilityCheck — runs Signal API reachability check",
+			"runServerStartupValidation without skipReachabilityCheck — runs Paperless and Signal API reachability checks",
 			async ({ tmpDir, emailAccountsPath }) => {
-				const consumeDir = joinPathSync(tmpDir, "consume");
-				await Effect.runPromise(
-					Effect.gen(function* () {
-						const fs = yield* FileSystem.FileSystem;
-						yield* fs.makeDirectory(consumeDir, { recursive: true });
-					}).pipe(Effect.provide(TestBaseLayer)),
-				);
 				const layer = buildTestLayer(
 					{ tmpDir, emailAccountsPath },
 					{},
@@ -196,10 +176,10 @@ describe("signal-pipeline integration", () => {
 		);
 
 		integrationTest(
-			"eligible attachments (PDF + image) — both saved",
+			"eligible attachments (PDF + image) — both uploaded to Paperless",
 			async ({ tmpDir, emailAccountsPath }) => {
 				const spy = createSpy();
-				const consumeDir = joinPathSync(tmpDir, "consume");
+				const paperlessSpy: PaperlessMockSpy = { uploadCalls: [] };
 				const layer = buildTestLayer(
 					{ tmpDir, emailAccountsPath },
 					{
@@ -208,7 +188,7 @@ describe("signal-pipeline integration", () => {
 							...signalImageAttachment("att2"),
 						},
 					},
-					{ spy },
+					{ spy, paperlessSpy },
 				);
 				await runWebhook(layer, {
 					sourceNumber: AUTHORIZED_NUMBER,
@@ -220,10 +200,19 @@ describe("signal-pipeline integration", () => {
 						],
 					},
 				});
-				const files = await readTestDirectory(joinPathSync(consumeDir, "user1"));
-				expect(files).toHaveLength(2);
-				expect(files.some((f) => f.endsWith(".pdf"))).toBe(true);
-				expect(files.some((f) => f.endsWith(".jpg") || f.endsWith(".jpeg"))).toBe(true);
+				expect(paperlessSpy.uploadCalls).toHaveLength(2);
+				expect(paperlessSpy.uploadCalls.some((u) => u.filename.endsWith(".pdf"))).toBe(true);
+				expect(
+					paperlessSpy.uploadCalls.some(
+						(u) => u.filename.endsWith(".jpg") || u.filename.endsWith(".jpeg"),
+					),
+				).toBe(true);
+				expect(
+					paperlessSpy.uploadCalls.every((u) => u.tags.includes(toTagName("signal-user1"))),
+				).toBe(true);
+				expect(paperlessSpy.uploadCalls.every((u) => u.tags.includes(toTagName("signal")))).toBe(
+					true,
+				);
 				expect(spy.fetchAttachmentCalls).toContain("att1");
 				expect(spy.fetchAttachmentCalls).toContain("att2");
 			},
@@ -405,20 +394,16 @@ describe("signal-pipeline integration", () => {
 					{
 						slug: "user1" as UserSlug,
 						signalNumber: AUTHORIZED_NUMBER,
-						consumeSubdir: "user1" as ConsumeSubdir,
 						displayName: "User 1",
-						tagName: "User 1",
 					},
 					{
 						slug: "user2" as UserSlug,
 						signalNumber: "+15550000002" as SignalNumber,
-						consumeSubdir: "user2" as ConsumeSubdir,
 						displayName: "User 2",
-						tagName: "User 2",
 					},
 				]);
 				const spy = createSpy();
-				const consumeDir = joinPathSync(tmpDir, "consume");
+				const paperlessSpy: PaperlessMockSpy = { uploadCalls: [] };
 				const layer = buildTestLayer(
 					{ tmpDir, emailAccountsPath },
 					{
@@ -426,6 +411,7 @@ describe("signal-pipeline integration", () => {
 					},
 					{
 						spy,
+						paperlessSpy,
 						configOverrides: { registry },
 					},
 				);
@@ -436,9 +422,9 @@ describe("signal-pipeline integration", () => {
 						attachments: [{ id: "att1", contentType: "application/pdf" }],
 					},
 				});
-				const files = await readTestDirectory(joinPathSync(consumeDir, "user2"));
-				expect(files).toHaveLength(1);
-				expect(files[0]).toMatch(/\.pdf$/);
+				expect(paperlessSpy.uploadCalls).toHaveLength(1);
+				expect(paperlessSpy.uploadCalls[0]?.filename).toMatch(/\.pdf$/);
+				expect(paperlessSpy.uploadCalls[0]?.tags).toContain(toTagName("signal-user2"));
 			},
 		);
 	});
@@ -447,13 +433,6 @@ describe("signal-pipeline integration", () => {
 		integrationTest(
 			"runServerStartupValidation with empty registry — fails No users configured",
 			async ({ tmpDir, emailAccountsPath }) => {
-				const consumeDir = joinPathSync(tmpDir, "consume");
-				await Effect.runPromise(
-					Effect.gen(function* () {
-						const fs = yield* FileSystem.FileSystem;
-						yield* fs.makeDirectory(consumeDir, { recursive: true });
-					}).pipe(Effect.provide(TestBaseLayer)),
-				);
 				const layer = buildTestLayer(
 					{ tmpDir, emailAccountsPath },
 					{},
@@ -476,13 +455,6 @@ describe("signal-pipeline integration", () => {
 		integrationTest(
 			"runServerStartupValidation without skipReachabilityCheck — Signal API returns 500",
 			async ({ tmpDir, emailAccountsPath }) => {
-				const consumeDir = joinPathSync(tmpDir, "consume");
-				await Effect.runPromise(
-					Effect.gen(function* () {
-						const fs = yield* FileSystem.FileSystem;
-						yield* fs.makeDirectory(consumeDir, { recursive: true });
-					}).pipe(Effect.provide(TestBaseLayer)),
-				);
 				const layer = buildTestLayer(
 					{ tmpDir, emailAccountsPath },
 					{},
@@ -505,13 +477,6 @@ describe("signal-pipeline integration", () => {
 		integrationTest(
 			"runServerStartupValidation without skipReachabilityCheck — Signal API unreachable",
 			async ({ tmpDir, emailAccountsPath }) => {
-				const consumeDir = joinPathSync(tmpDir, "consume");
-				await Effect.runPromise(
-					Effect.gen(function* () {
-						const fs = yield* FileSystem.FileSystem;
-						yield* fs.makeDirectory(consumeDir, { recursive: true });
-					}).pipe(Effect.provide(TestBaseLayer)),
-				);
 				const layer = buildTestLayer(
 					{ tmpDir, emailAccountsPath },
 					{},
@@ -532,17 +497,17 @@ describe("signal-pipeline integration", () => {
 		);
 
 		integrationTest(
-			"fetchAttachmentFail — pipeline rejects, no file saved",
+			"fetchAttachmentFail — pipeline rejects, no upload",
 			async ({ tmpDir, emailAccountsPath }) => {
 				const spy = createSpy();
-				const consumeDir = joinPathSync(tmpDir, "consume");
+				const paperlessSpy: PaperlessMockSpy = { uploadCalls: [] };
 				const layer = buildTestLayer(
 					{ tmpDir, emailAccountsPath },
 					{
 						fetchAttachmentData: signalPdfAttachment("att1"),
 						fetchAttachmentFail: new Error("fetch failed"),
 					},
-					{ spy },
+					{ spy, paperlessSpy },
 				);
 				const eff = processWebhookPayload({
 					sourceNumber: AUTHORIZED_NUMBER,
@@ -558,8 +523,7 @@ describe("signal-pipeline integration", () => {
 				if (Option.isSome(err)) {
 					expect(err.value).toMatchObject({ _tag: "ConfigValidationError" });
 				}
-				const files = await readTestDirectory(joinPathSync(consumeDir, "user1")).catch(() => []);
-				expect(files).toHaveLength(0);
+				expect(paperlessSpy.uploadCalls).toHaveLength(0);
 			},
 		);
 
@@ -641,9 +605,7 @@ describe("signal-pipeline integration", () => {
 					{
 						slug: "user1" as UserSlug,
 						signalNumber: "+15550000002" as SignalNumber,
-						consumeSubdir: "user1" as ConsumeSubdir,
 						displayName: "User 1",
-						tagName: "User 1",
 					},
 				]);
 				const layer = buildTestLayer(
@@ -699,16 +661,16 @@ describe("signal-pipeline integration", () => {
 		);
 
 		integrationTest(
-			"ineligible attachment (text/calendar) — no file saved, reply with file types",
+			"ineligible attachment (text/calendar) — no upload, reply with file types",
 			async ({ tmpDir, emailAccountsPath }) => {
 				const spy = createSpy();
-				const consumeDir = joinPathSync(tmpDir, "consume");
+				const paperlessSpy: PaperlessMockSpy = { uploadCalls: [] };
 				const layer = buildTestLayer(
 					{ tmpDir, emailAccountsPath },
 					{
 						fetchAttachmentData: signalIneligibleAttachment("att1"),
 					},
-					{ spy },
+					{ spy, paperlessSpy },
 				);
 				await runWebhook(layer, {
 					sourceNumber: AUTHORIZED_NUMBER,
@@ -719,22 +681,21 @@ describe("signal-pipeline integration", () => {
 						],
 					},
 				});
-				const files = await readTestDirectory(joinPathSync(consumeDir, "user1")).catch(() => []);
-				expect(files).toHaveLength(0);
+				expect(paperlessSpy.uploadCalls).toHaveLength(0);
 				expect(spy.sendMessageCalls).toHaveLength(1);
 				expect(spy.sendMessageCalls[0]?.message).toContain("Valid types");
 			},
 		);
 
 		integrationTest(
-			"empty fetchAttachment response — no file saved, reply with file types",
+			"empty fetchAttachment response — no upload, reply with file types",
 			async ({ tmpDir, emailAccountsPath }) => {
 				const spy = createSpy();
-				const consumeDir = joinPathSync(tmpDir, "consume");
+				const paperlessSpy: PaperlessMockSpy = { uploadCalls: [] };
 				const layer = buildTestLayer(
 					{ tmpDir, emailAccountsPath },
 					{ fetchAttachmentData: {} },
-					{ spy },
+					{ spy, paperlessSpy },
 				);
 				await runWebhook(layer, {
 					sourceNumber: AUTHORIZED_NUMBER,
@@ -743,45 +704,51 @@ describe("signal-pipeline integration", () => {
 						attachments: [{ id: "unknown", contentType: "application/pdf" }],
 					},
 				});
-				const files = await readTestDirectory(joinPathSync(consumeDir, "user1")).catch(() => []);
-				expect(files).toHaveLength(0);
+				expect(paperlessSpy.uploadCalls).toHaveLength(0);
 				expect(spy.sendMessageCalls).toHaveLength(1);
 				expect(spy.sendMessageCalls[0]?.message).toContain("Valid types");
 			},
 		);
 
 		integrationTest(
-			"malformed attachments (no id, null, array) — skipped, not fetched",
+			"malformed attachments (no id) — fail fast, no fetch",
 			async ({ tmpDir, emailAccountsPath }) => {
 				const spy = createSpy();
 				const layer = buildTestLayer(
 					{ tmpDir, emailAccountsPath },
-					{
-						fetchAttachmentData: signalPdfAttachment("att1"),
-					},
+					{ fetchAttachmentData: signalPdfAttachment("att1") },
 					{ spy },
 				);
-				await runWebhook(layer, {
+				const eff = processWebhookPayload({
 					sourceNumber: AUTHORIZED_NUMBER,
 					dataMessage: {
 						body: "",
 						attachments: [
 							{ customFilename: "a.pdf" },
-							null,
-							[],
 							{ id: "att1", contentType: "application/pdf" },
 						],
 					},
-				} as Parameters<typeof processWebhookPayload>[0]);
-				expect(spy.fetchAttachmentCalls).toEqual(["att1"]);
+				} as Parameters<typeof processWebhookPayload>[0]).pipe(
+					Effect.provide(layer),
+				) as AppEffect<void>;
+				const exit = await Effect.runPromise(Effect.exit(eff));
+				expect(Exit.isFailure(exit)).toBe(true);
+				const err = Exit.findErrorOption(exit);
+				expect(Option.isSome(err)).toBe(true);
+				if (Option.isSome(err))
+					expect(err.value).toMatchObject({
+						_tag: "InvalidAttachmentRefError",
+						index: 0,
+					});
+				expect(spy.fetchAttachmentCalls).toHaveLength(0);
 			},
 		);
 
 		integrationTest(
-			"mixed attachments (some eligible, some not) — correct count saved",
+			"mixed attachments (some eligible, some not) — correct count uploaded",
 			async ({ tmpDir, emailAccountsPath }) => {
 				const spy = createSpy();
-				const consumeDir = joinPathSync(tmpDir, "consume");
+				const paperlessSpy: PaperlessMockSpy = { uploadCalls: [] };
 				const layer = buildTestLayer(
 					{ tmpDir, emailAccountsPath },
 					{
@@ -791,7 +758,7 @@ describe("signal-pipeline integration", () => {
 							...signalImageAttachment("att3"),
 						},
 					},
-					{ spy },
+					{ spy, paperlessSpy },
 				);
 				await runWebhook(layer, {
 					sourceNumber: AUTHORIZED_NUMBER,
@@ -804,14 +771,13 @@ describe("signal-pipeline integration", () => {
 						],
 					},
 				});
-				const files = await readTestDirectory(joinPathSync(consumeDir, "user1"));
-				expect(files).toHaveLength(2);
+				expect(paperlessSpy.uploadCalls).toHaveLength(2);
 				expect(spy.fetchAttachmentCalls).toHaveLength(3);
 			},
 		);
 
 		integrationTest(
-			"more than 20 attachments — trimmed to MAX_ATTACHMENTS_PER_MESSAGE",
+			"more than MAX_ATTACHMENTS_PER_MESSAGE attachments — trimmed",
 			async ({ tmpDir, emailAccountsPath }) => {
 				const attCount = MAX_ATTACHMENTS_PER_MESSAGE + 5;
 				const fetchData: Record<string, Uint8Array> = {};
@@ -819,11 +785,11 @@ describe("signal-pipeline integration", () => {
 					Object.assign(fetchData, signalPdfAttachment(`att${i}`));
 				}
 				const spy = createSpy();
-				const consumeDir = joinPathSync(tmpDir, "consume");
+				const paperlessSpy: PaperlessMockSpy = { uploadCalls: [] };
 				const layer = buildTestLayer(
 					{ tmpDir, emailAccountsPath },
 					{ fetchAttachmentData: fetchData },
-					{ spy },
+					{ spy, paperlessSpy },
 				);
 				const attachments = Array.from({ length: attCount }, (_, i) => ({
 					id: `att${i}`,
@@ -833,17 +799,16 @@ describe("signal-pipeline integration", () => {
 					sourceNumber: AUTHORIZED_NUMBER,
 					dataMessage: { body: "", attachments },
 				});
-				const files = await readTestDirectory(joinPathSync(consumeDir, "user1"));
-				expect(files).toHaveLength(MAX_ATTACHMENTS_PER_MESSAGE);
+				expect(paperlessSpy.uploadCalls).toHaveLength(MAX_ATTACHMENTS_PER_MESSAGE);
 				expect(spy.fetchAttachmentCalls).toHaveLength(MAX_ATTACHMENTS_PER_MESSAGE);
 			},
 		);
 
 		integrationTest(
-			"file path collision — 2 PDFs with same customFilename",
+			"2 PDFs with same customFilename — both uploaded (Paperless accepts duplicate filenames)",
 			async ({ tmpDir, emailAccountsPath }) => {
 				const spy = createSpy();
-				const consumeDir = joinPathSync(tmpDir, "consume");
+				const paperlessSpy: PaperlessMockSpy = { uploadCalls: [] };
 				const layer = buildTestLayer(
 					{ tmpDir, emailAccountsPath },
 					{
@@ -852,7 +817,7 @@ describe("signal-pipeline integration", () => {
 							...signalPdfAttachment("att2"),
 						},
 					},
-					{ spy },
+					{ spy, paperlessSpy },
 				);
 				await runWebhook(layer, {
 					sourceNumber: AUTHORIZED_NUMBER,
@@ -864,10 +829,8 @@ describe("signal-pipeline integration", () => {
 						],
 					},
 				});
-				const files = (await readTestDirectory(joinPathSync(consumeDir, "user1"))).toSorted();
-				expect(files).toHaveLength(2);
-				expect(files).toContain("doc.pdf");
-				expect(files).toContain("doc_1.pdf");
+				expect(paperlessSpy.uploadCalls).toHaveLength(2);
+				expect(paperlessSpy.uploadCalls.every((u) => u.filename === "doc.pdf")).toBe(true);
 			},
 		);
 

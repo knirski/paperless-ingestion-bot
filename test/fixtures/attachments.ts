@@ -1,6 +1,6 @@
 import { Encoding, Result } from "effect";
 import type { MessageUid } from "../../src/domain/types.js";
-import type { RawAttachment } from "../../src/interfaces/email-client.js";
+import type { RawImapAttachment } from "../../src/interfaces/email-client.js";
 
 /** Minimal valid PDF (~200 bytes). */
 const MINIMAL_PDF = new Uint8Array([
@@ -27,23 +27,24 @@ const MINIMAL_PDF = new Uint8Array([
 	0x0a, 0x25, 0x25, 0x45, 0x4f, 0x46, 0x0a,
 ]);
 
-function createRawAttachment(
-	overrides: Partial<RawAttachment> & {
+function createRawImapAttachment(
+	overrides: Partial<RawImapAttachment> & {
 		messageUid: MessageUid;
 	},
-): RawAttachment {
+): RawImapAttachment {
 	return {
 		contentType: "application/octet-stream",
 		filename: undefined,
 		size: 0,
 		data: new Uint8Array(0),
+		labels: [],
 		...overrides,
 	};
 }
 
 /** application/pdf, ~200 bytes, eligible. */
-export function eligiblePdfAttachment(uid: number): RawAttachment {
-	return createRawAttachment({
+export function eligiblePdfAttachment(uid: number): RawImapAttachment {
+	return createRawImapAttachment({
 		messageUid: uid as MessageUid,
 		contentType: "application/pdf",
 		filename: "doc.pdf",
@@ -53,9 +54,9 @@ export function eligiblePdfAttachment(uid: number): RawAttachment {
 }
 
 /** image/jpeg, 100_001 bytes (≥ MIN_EMAIL_IMAGE_SIZE), eligible. */
-export function eligibleImageAttachment(uid: number): RawAttachment {
+export function eligibleImageAttachment(uid: number): RawImapAttachment {
 	const data = new Uint8Array(100_001);
-	return createRawAttachment({
+	return createRawImapAttachment({
 		messageUid: uid as MessageUid,
 		contentType: "image/jpeg",
 		filename: "photo.jpg",
@@ -65,9 +66,9 @@ export function eligibleImageAttachment(uid: number): RawAttachment {
 }
 
 /** image/jpeg, 50 bytes, ineligible (too small). */
-export function ineligibleSmallImage(uid: number): RawAttachment {
+export function ineligibleSmallImage(uid: number): RawImapAttachment {
 	const data = new Uint8Array(50);
-	return createRawAttachment({
+	return createRawImapAttachment({
 		messageUid: uid as MessageUid,
 		contentType: "image/jpeg",
 		filename: "thumb.jpg",
@@ -77,9 +78,9 @@ export function ineligibleSmallImage(uid: number): RawAttachment {
 }
 
 /** text/calendar, 100 bytes, blocked MIME type. */
-export function blockedIcsAttachment(uid: number): RawAttachment {
+export function blockedIcsAttachment(uid: number): RawImapAttachment {
 	const data = new Uint8Array(100);
-	return createRawAttachment({
+	return createRawImapAttachment({
 		messageUid: uid as MessageUid,
 		contentType: "text/calendar",
 		filename: "event.ics",

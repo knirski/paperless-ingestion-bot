@@ -17,7 +17,7 @@
  * ## Effect ConfigProvider
  *
  * File as base, env vars override via orElse(env, file). Env: nested +
- * constantCase (consume_dir → PAPERLESS_INGESTION_CONSUME_DIR).
+ * constantCase (paperless_url → PAPERLESS_INGESTION_PAPERLESS_URL).
  */
 
 import {
@@ -34,7 +34,6 @@ import { ConfigParseError, FileSystemError } from "../domain/errors.js";
 import { SignalNumberSchema } from "../domain/signal-types.js";
 import type { UserRegistry } from "../domain/types.js";
 import {
-	ConsumeSubdirSchema,
 	createUserRegistry,
 	type EmailLabel,
 	EmailLabelSchema,
@@ -50,7 +49,8 @@ export type LogLevel = (typeof LOG_LEVELS)[number];
 
 /** Base config shared by Signal and Email pipelines. */
 interface BaseConfig {
-	readonly consumeDir: string;
+	readonly paperlessUrl: string;
+	readonly paperlessToken: string;
 	readonly emailAccountsPath: string;
 	readonly usersPath: string;
 	readonly signalApiUrl: string;
@@ -121,9 +121,7 @@ export function resolveEmailAccountsPath(cliPath: string | undefined): string {
 const UserSchema = Schema.Struct({
 	slug: UserSlugSchema,
 	signal_number: SignalNumberSchema,
-	consume_subdir: ConsumeSubdirSchema,
 	display_name: Schema.String,
-	tag_name: Schema.String,
 });
 
 type RawUser = Schema.Schema.Type<typeof UserSchema>;
@@ -132,15 +130,14 @@ function parseUserRegistry(users: readonly RawUser[]): readonly User[] {
 	return users.map((u) => ({
 		slug: u.slug,
 		signalNumber: u.signal_number,
-		consumeSubdir: u.consume_subdir,
 		displayName: u.display_name,
-		tagName: u.tag_name,
 	}));
 }
 
 /** Raw shape shared by both config schemas (snake_case from JSON). */
 interface RawBaseConfig {
-	readonly consume_dir: string;
+	readonly paperless_url: string;
+	readonly paperless_token: string;
 	readonly signal_api_url: string;
 	readonly log_level: LogLevel;
 	readonly mark_processed_label: EmailLabel;
@@ -153,7 +150,8 @@ function toBaseConfig(
 	emailAccountsPath: string,
 ): BaseConfig {
 	return {
-		consumeDir: raw.consume_dir,
+		paperlessUrl: raw.paperless_url,
+		paperlessToken: raw.paperless_token,
 		emailAccountsPath,
 		usersPath,
 		signalApiUrl: raw.signal_api_url,
@@ -165,7 +163,8 @@ function toBaseConfig(
 
 /** Infra config base. */
 const sharedBase = {
-	consume_dir: Schema.String,
+	paperless_url: Schema.String,
+	paperless_token: Schema.String,
 	signal_api_url: Schema.String,
 	log_level: Schema.Literals(LOG_LEVELS).pipe(Schema.withDecodingDefault(() => "INFO")),
 	mark_processed_label: EmailLabelSchema.pipe(
@@ -199,14 +198,14 @@ export const RawEmailConfigSchema = Schema.Struct({
 });
 
 export function usersHint(path: string): string {
-	return `Create ${path} with: [{"slug":"krzysiek","signal_number":"+48...","consume_subdir":"krzysiek","display_name":"Krzysiek","tag_name":"Added by Krzysiek"},...]`;
+	return `Create ${path} with: [{"slug":"krzysiek","signal_number":"+48...","display_name":"Krzysiek"},...]`;
 }
 
 const UsersArraySchema = Schema.Array(UserSchema);
 const UsersJsonSchema = Schema.fromJsonString(UsersArraySchema);
 
 const CONFIG_SCHEMA_FIX =
-	"Ensure config has required fields: consume_dir, signal_api_url, etc. See README.";
+	"Ensure config has required fields: paperless_url, paperless_token, signal_api_url, etc. See README.";
 const CONFIG_PARSE_FIX = "Check config file format and required fields. See README.";
 const CONFIG_SOURCE_FIX = `Pass --config /path. Default: ${DEFAULT_CONFIG_PATH}`;
 
@@ -376,7 +375,7 @@ const buildSignalConfigLayer = (
 				event: "config_resolved",
 				configPath: cfgPath,
 				users: config.registry.users.length,
-				consumeDir: config.consumeDir,
+				paperlessUrl: config.paperlessUrl,
 			});
 			return Layer.succeed(SignalConfig)(config);
 		})(configPath, usersPath, emailAccountsPath),
@@ -411,7 +410,7 @@ const buildEmailConfigLayer = (
 				event: "config_resolved",
 				configPath: cfgPath,
 				users: config.registry.users.length,
-				consumeDir: config.consumeDir,
+				paperlessUrl: config.paperlessUrl,
 			});
 			return Layer.succeed(EmailConfig)(config);
 		})(configPath, usersPath, emailAccountsPath),

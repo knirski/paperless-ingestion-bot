@@ -17,7 +17,8 @@ import { PlatformServicesLayer } from "../src/shell/layers.js";
 import { createTestTempDir, SilentLoggerLayer } from "./test-utils.js";
 
 const minimalSignalConfig = {
-	consume_dir: "/tmp/consume",
+	paperless_url: "http://localhost:8000",
+	paperless_token: "test-token",
 	signal_api_url: "http://localhost:8080",
 	webhook_host: "127.0.0.1",
 	webhook_port: 8089,
@@ -213,20 +214,8 @@ describe("buildSignalConfigLayer", () => {
 		await tmp.writeFile(
 			usersPath,
 			JSON.stringify([
-				{
-					slug: "user1",
-					signal_number: "+15550000001",
-					consume_subdir: "u1",
-					display_name: "User 1",
-					tag_name: "User 1",
-				},
-				{
-					slug: "user2",
-					signal_number: "+15550000002",
-					consume_subdir: "u2",
-					display_name: "User 2",
-					tag_name: "User 2",
-				},
+				{ slug: "user1", signal_number: "+15550000001", display_name: "User 1" },
+				{ slug: "user2", signal_number: "+15550000002", display_name: "User 2" },
 			]),
 		);
 
@@ -234,12 +223,10 @@ describe("buildSignalConfigLayer", () => {
 		expect(config.registry.users).toHaveLength(2);
 		expect(config.registry.findBySignal("+15550000001" as SignalNumber)).toMatchObject({
 			slug: "user1",
-			consumeSubdir: "u1",
 			displayName: "User 1",
 		});
 		expect(config.registry.findBySignal("+15550000002" as SignalNumber)).toMatchObject({
 			slug: "user2",
-			consumeSubdir: "u2",
 		});
 		await tmp.remove();
 	});
@@ -292,7 +279,8 @@ describe("buildSignalConfigLayer", () => {
 
 		const config = await runSignalConfigLayer(configPath, usersPath, emailAccountsPath);
 		expect(config).toMatchObject({
-			consumeDir: "/tmp/consume",
+			paperlessUrl: "http://localhost:8000",
+			paperlessToken: "test-token",
 			emailAccountsPath,
 			signalApiUrl: "http://localhost:8080",
 			logLevel: "INFO",
@@ -350,7 +338,8 @@ describe("buildEmailConfigLayer", () => {
 
 		const config = await runEmailConfigLayer(configPath, usersPath, emailAccountsPath);
 		expect(config).toMatchObject({
-			consumeDir: "/tmp/consume",
+			paperlessUrl: "http://localhost:8000",
+			paperlessToken: "test-token",
 			logLevel: "INFO",
 			markProcessedLabel: "paperless" as EmailLabel,
 			pageSize: 50,

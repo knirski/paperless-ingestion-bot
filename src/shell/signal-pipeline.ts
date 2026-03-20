@@ -11,7 +11,7 @@ import {
 	FileSystem,
 	Layer,
 	Option,
-	Path,
+	type Path,
 	Redacted,
 	Result,
 	Schema,
@@ -29,6 +29,7 @@ import {
 	parseAccountCommandInput,
 	upsertAccount,
 	validateAddGmailAccountInput,
+	validateAttachmentsToRaw,
 } from "../core/index.js";
 import { type Account, type AccountStatus, transitionAccount } from "../domain/account.js";
 import {
@@ -37,13 +38,13 @@ import {
 	type DomainError,
 	formatErrorForStructuredLog,
 } from "../domain/errors.js";
+import { toTagName } from "../domain/paperless-types.js";
 import {
 	type AttachmentId,
-	AttachmentIdSchema,
 	decodeWebhookPayload,
 	getDataMessage,
 	getDataMessageBody,
-	parseSignalAttachmentRef,
+	type RawSignalAttachment,
 	resolveSignalSource,
 	type SignalAttachmentRef,
 	type SignalNumber,
@@ -59,38 +60,19 @@ import {
 	unknownToMessage,
 } from "../domain/utils.js";
 import type { CredentialsStore } from "../live/credentials-store.js";
+import { PaperlessClient } from "../live/paperless-client.js";
 import { SignalClient } from "../live/signal-client.js";
 import { SignalConfig, usersHint } from "./config.js";
-import { mapFsError, resolveOutputPath } from "./fs-utils.js";
 import { RateLimiterMemoryLayer, type SignalAppLayer } from "./layers.js";
 import { loadAllAccounts, saveAllAccounts } from "./runtime.js";
 
-export const MAX_ATTACHMENTS_PER_MESSAGE = 20;
-
-/** Attachment ref with required id (output of collectValidAttachmentRefs). */
-type ValidAttachmentRef = Omit<SignalAttachmentRef, "id"> & { id: AttachmentId };
-
-/**
- * Extract valid attachment refs (have id) from webhook attachments array.
- * Skips malformed entries (null, array, non-object) and refs without id.
- * Pure function; exported for unit testing.
- */
-export function collectValidAttachmentRefs(attachments: readonly unknown[]): ValidAttachmentRef[] {
-	return Arr.filterMap(attachments, (attObj) => {
-		if (typeof attObj !== "object" || attObj === null || Array.isArray(attObj))
-			return Result.failVoid;
-		const att = parseSignalAttachmentRef(attObj as Partial<SignalAttachmentRef>);
-		if (!att.id) return Result.failVoid;
-		const idOpt = Schema.decodeUnknownOption(AttachmentIdSchema)(att.id);
-		return Option.match(idOpt, {
-			onNone: () => Result.failVoid,
-			onSome: (id) => Result.succeed({ ...att, id } as ValidAttachmentRef),
-		});
-	});
-}
+/** Max attachments per webhook message. Aligns with Signal client limit (~32). */
+export const MAX_ATTACHMENTS_PER_MESSAGE = 32;
 
 /** Trim attachments to max per message. Pure; exported for unit testing. */
-export function trimAttachmentsToMax(attachments: readonly unknown[]): unknown[] {
+export function trimAttachmentsToMax(
+	attachments: readonly RawSignalAttachment[],
+): RawSignalAttachment[] {
 	return attachments.slice(0, MAX_ATTACHMENTS_PER_MESSAGE);
 }
 
@@ -190,23 +172,32 @@ const webhookHandler = Effect.fn("webhookHandler")(function* () {
 	return Http.HttpServerResponse.jsonUnsafe({ ok: true });
 });
 
-/** Validate consume_dir exists and is writable (writes temp file, then removes). Exported for testing. */
-export const validateConsumeDir = Effect.fn("validateConsumeDir")(function* (consumeDir: string) {
-	const fs = yield* FileSystem.FileSystem;
-	const pathApi = yield* Path.Path;
-	const exists = yield* fs.exists(consumeDir).pipe(mapFsError(consumeDir, "exists"));
-	if (!exists) {
+/** Validate paperless_url is reachable (HEAD request to /api/). */
+const validatePaperlessReachability = Effect.fn("validatePaperlessReachability")(function* (
+	url: string,
+) {
+	const client = yield* HttpClient.HttpClient;
+	const base = url.replace(/\/$/, "");
+	const req = HttpClientRequest.head(`${base}/api/`);
+	const res = yield* client.execute(req).pipe(
+		Effect.mapError(
+			(e) =>
+				new ConfigValidationError({
+					message: `paperless_url not reachable: ${unknownToMessage(e)}`,
+					path: redactedForLog(url, redactUrl),
+					fix: "Ensure Paperless-ngx is running and reachable. Use --skip-reachability-check to bypass.",
+				}),
+		),
+	);
+	if (res.status >= 500) {
 		yield* Effect.fail(
 			new ConfigValidationError({
-				message: "consume_dir does not exist",
-				path: redactedForLog(consumeDir, redactPath),
-				fix: `Create the directory: mkdir -p ${consumeDir}`,
+				message: `paperless_url returned HTTP ${res.status}`,
+				path: redactedForLog(url, redactUrl),
+				fix: "Check Paperless-ngx health. Use --skip-reachability-check to bypass.",
 			}),
 		);
 	}
-	const probePath = pathApi.join(consumeDir, ".paperless-ingestion-bot-probe");
-	yield* fs.writeFileString(probePath, "").pipe(mapFsError(consumeDir, "writeFileString"));
-	yield* fs.remove(probePath).pipe(mapFsError(probePath, "remove"));
 });
 
 /** Validate signal_api_url is reachable (HEAD request). */
@@ -237,23 +228,6 @@ const validateSignalApiReachability = Effect.fn("validateSignalApiReachability")
 	}
 });
 
-/** Ensure consume dirs exist for all registry users. Exported for testing. */
-const ensureUserConsumeDirs = Effect.fn("ensureUserConsumeDirs")(function* () {
-	const config = yield* SignalConfig;
-	const fs = yield* FileSystem.FileSystem;
-	const pathApi = yield* Path.Path;
-	return yield* Effect.forEach(
-		config.registry.users,
-		(user) => {
-			const userDir = pathApi.join(config.consumeDir, user.consumeSubdir);
-			return fs
-				.makeDirectory(userDir, { recursive: true })
-				.pipe(mapFsError(userDir, "makeDirectory"));
-		},
-		{ discard: true },
-	);
-});
-
 const MAX_BODY_SIZE = FileSystem.Size(50 * 1024 * 1024);
 
 /** Max webhook requests per minute (fixed window). Protects against runaway senders. */
@@ -273,11 +247,10 @@ export const runServerStartupValidation = Effect.fn("runServerStartupValidation"
 			}),
 		);
 	}
-	yield* validateConsumeDir(config.consumeDir);
 	if (!skipReachabilityCheck) {
+		yield* validatePaperlessReachability(config.paperlessUrl);
 		yield* validateSignalApiReachability(config.signalApiUrl);
 	}
-	yield* ensureUserConsumeDirs();
 });
 
 export function buildSignalServerLayer(
@@ -335,7 +308,6 @@ const resolveAuthorizedUser = Effect.fn("resolveAuthorizedUser")(function* (
 /** Process webhook payload (exported for testing). */
 export function processWebhookPayload(data: SignalWebhookPayload) {
 	return Effect.fn("processWebhookPayload")(function* () {
-		const config = yield* SignalConfig;
 		const dataMessageOpt = getDataMessage(data);
 		const dataMessage = Option.getOrUndefined(dataMessageOpt);
 		if (!dataMessage) {
@@ -347,7 +319,7 @@ export function processWebhookPayload(data: SignalWebhookPayload) {
 			return;
 		}
 
-		const attachments = Array.isArray(dataMessage.attachments) ? dataMessage.attachments : [];
+		const attachments: readonly SignalAttachmentRef[] = dataMessage.attachments ?? [];
 		const body = getDataMessageBody(dataMessage);
 		const sourceOpt = resolveSignalSource(data);
 		const source = Option.getOrUndefined(sourceOpt);
@@ -358,18 +330,14 @@ export function processWebhookPayload(data: SignalWebhookPayload) {
 
 		const user = yield* resolveAuthorizedUser(source, data);
 
-		const trimmedAttachments = trimAttachmentsToMax(attachments);
+		const rawAttachments = yield* Effect.fromResult(validateAttachmentsToRaw(attachments));
+		const trimmedAttachments = trimAttachmentsToMax(rawAttachments);
 
 		if (trimmedAttachments.length === 0) {
 			return yield* processWebhookTextCommand(body, source, data, user);
 		}
 
-		return yield* processWebhookAttachments(
-			trimmedAttachments,
-			`${config.consumeDir}/${user.consumeSubdir}`,
-			source,
-			data,
-		);
+		return yield* processWebhookAttachments(trimmedAttachments, user, source, data);
 	})();
 }
 
@@ -394,17 +362,16 @@ function processWebhookTextCommand(
 	})();
 }
 
-/** Process webhook attachments: save to consume dir, log, optionally reply with file types. */
+/** Process webhook attachments: upload to Paperless, log, optionally reply with file types. */
 function processWebhookAttachments(
-	attachments: unknown[],
-	userConsumeDir: string,
+	attachments: readonly RawSignalAttachment[],
+	user: User,
 	source: SignalNumber,
 	_data: SignalWebhookPayload,
 ) {
 	return Effect.fn("processWebhookAttachments")(function* () {
-		const validRefs = collectValidAttachmentRefs(attachments);
-		const saveResults = yield* Effect.forEach(validRefs, (att) =>
-			saveAttachmentToConsume(att.id, att.customFilename, att.contentType, userConsumeDir),
+		const saveResults = yield* Effect.forEach(attachments, (att) =>
+			uploadAttachmentToPaperless(att.id, att.customFilename, att.contentType, user),
 		);
 		const saved = Arr.filter(saveResults, (b): b is true => b).length;
 
@@ -471,40 +438,16 @@ function detectMimeAndCheckEligibility(
 	})();
 }
 
-/** Write eligible attachment to consume dir. */
-function writeEligibleAttachmentToFs(
-	consumeDir: string,
-	attachmentId: string,
-	customFilename: string | undefined,
-	contentType: string | undefined,
-	fileType: Awaited<ReturnType<typeof fileTypeFromBuffer>>,
-	data: Uint8Array,
-) {
-	return Effect.fn("writeEligibleAttachmentToFs")(function* () {
-		const fs = yield* FileSystem.FileSystem;
-		yield* fs
-			.makeDirectory(consumeDir, { recursive: true })
-			.pipe(mapFsError(consumeDir, "makeDirectory"));
-		const baseFilename = buildSignalAttachmentBaseFilename(
-			attachmentId,
-			customFilename,
-			contentType,
-			fileType,
-		);
-		const outPath = yield* resolveOutputPath(consumeDir, baseFilename);
-		yield* fs.writeFile(outPath, data).pipe(mapFsError(outPath, "writeFile"));
-	})();
-}
-
-function saveAttachmentToConsume(
+function uploadAttachmentToPaperless(
 	attachmentId: AttachmentId,
 	customFilename: string | undefined,
 	contentType: string | undefined,
-	consumeDir: string,
+	user: User,
 ) {
-	return Effect.fn("saveAttachmentToConsume")(
+	return Effect.fn("uploadAttachmentToPaperless")(
 		function* () {
 			const signalClient = yield* SignalClient;
+			const paperlessClient = yield* PaperlessClient;
 
 			const data = yield* signalClient.fetchAttachment(attachmentId);
 			if (data.length === 0) return false;
@@ -512,14 +455,16 @@ function saveAttachmentToConsume(
 			const detection = yield* detectMimeAndCheckEligibility(new Uint8Array(data), contentType);
 			if (!detection.eligible) return false;
 
-			yield* writeEligibleAttachmentToFs(
-				consumeDir,
+			const baseFilename = buildSignalAttachmentBaseFilename(
 				attachmentId,
 				customFilename,
 				contentType,
 				detection.fileType,
-				data,
 			);
+			yield* paperlessClient.uploadDocument(data, baseFilename, [
+				toTagName(`signal-${user.slug}`),
+				toTagName("signal"),
+			]);
 			return true;
 		},
 		Effect.mapError((e) =>

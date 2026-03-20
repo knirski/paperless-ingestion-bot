@@ -19,3 +19,4 @@ When creating or editing ADRs, follow the workflow in [AGENTS.md](../../AGENTS.m
 | 0004 | [Biome migration](0004-biome-migration.md)                   |
 | 0005 | [Config: env overrides, JSON Schema, startup validation](0005-config-app-config-and-validation.md) |
 | 0006 | [Migrate to Bun as sole package manager and runtime](0006-bun-migration.md) |
+| 0007 | [Paperless API upload instead of consume directory](0007-paperless-api-upload.md) |

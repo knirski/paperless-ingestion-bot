@@ -1,12 +1,14 @@
 import { describe, expect, it, test } from "bun:test";
-import { Effect, FileSystem, Layer } from "effect";
+import { Effect, Layer } from "effect";
 import * as Http from "effect/unstable/http";
 import type { ImapSearchQuery } from "../src/core/search.js";
+import { type TagName, toTagName } from "../src/domain/paperless-types.js";
 import type { AppEffect, EmailLabel, MessageUid } from "../src/domain/types.js";
-import type { RawAttachment } from "../src/interfaces/email-client.js";
+import type { RawImapAttachment } from "../src/interfaces/email-client.js";
 import type { OllamaClientService } from "../src/interfaces/ollama-client.js";
 import { EmailClient } from "../src/live/imap-email-client.js";
 import { OllamaClient } from "../src/live/ollama-client.js";
+import { PaperlessClient } from "../src/live/paperless-client.js";
 import { processRawAttachment } from "../src/shell/email-attachments.js";
 import {
 	type AttachmentToSave,
@@ -48,7 +50,7 @@ describe("email-pipeline", () => {
 		const layer = Layer.mergeAll(
 			PlatformServicesLayer,
 			Http.FetchHttpClient.layer,
-			emailConfigTest({ consumeDir: tmp.path, emailAccountsPath }),
+			emailConfigTest({ emailAccountsPath }),
 			credentialsStoreTest({}),
 			emptyImapLayer,
 			alwaysAcceptOllamaLayer,
@@ -99,7 +101,6 @@ describe("email-pipeline", () => {
 			PlatformServicesLayer,
 			Http.FetchHttpClient.layer,
 			emailConfigTest({
-				consumeDir: tmp.path,
 				emailAccountsPath,
 				markProcessedLabel: "paperless" as EmailLabel,
 			}),
@@ -166,7 +167,6 @@ describe("email-pipeline", () => {
 			PlatformServicesLayer,
 			Http.FetchHttpClient.layer,
 			emailConfigTest({
-				consumeDir: tmp.path,
 				emailAccountsPath,
 				markProcessedLabel: "paperless" as EmailLabel,
 			}),
@@ -192,21 +192,26 @@ describe("email-pipeline", () => {
 });
 
 describe("saveEligibleAttachments", () => {
-	const mockFsLayer = (mockFs: FileSystem.FileSystem) =>
-		Layer.succeed(FileSystem.FileSystem)(mockFs);
+	const mockPaperlessLayer = (mock: {
+		uploadDocument: (
+			data: Uint8Array,
+			filename: string,
+			tags: readonly TagName[],
+		) => AppEffect<void>;
+	}) => Layer.succeed(PaperlessClient)(mock as never);
 	const mockOllamaLayer = (mockOllama: OllamaClientService) =>
 		Layer.succeed(OllamaClient)(mockOllama);
 
 	test("empty toSave returns saved: 0, labeledUids: []", async () => {
-		const mockFs = {
-			writeFile: () => Effect.void,
-		} as unknown as FileSystem.FileSystem;
+		const mockPaperless = {
+			uploadDocument: () => Effect.void,
+		};
 		const mockOllama = {
 			assess: () => Effect.succeed(true),
 		} as unknown as OllamaClientService;
 		const result = await Effect.runPromise(
 			saveEligibleAttachments([]).pipe(
-				Effect.provide(mockFsLayer(mockFs)),
+				Effect.provide(mockPaperlessLayer(mockPaperless)),
 				Effect.provide(mockOllamaLayer(mockOllama)),
 			),
 		);
@@ -214,9 +219,6 @@ describe("saveEligibleAttachments", () => {
 	});
 
 	test("item with ollamaReq: false rejects, not saved", async () => {
-		const mockFs = {
-			writeFile: () => Effect.void,
-		} as unknown as FileSystem.FileSystem;
 		const assessCalls: unknown[] = [];
 		const mockOllama = {
 			assess: (req: unknown) => {
@@ -226,15 +228,17 @@ describe("saveEligibleAttachments", () => {
 		} as unknown as OllamaClientService;
 		const toSave: AttachmentToSave[] = [
 			{
-				path: "/tmp/out.pdf",
+				filename: "out.pdf",
 				data: new Uint8Array([1, 2, 3]),
 				ollamaReq: { model: "x", prompt: "y", stream: false },
 				messageUid: 42 as MessageUid,
+				emailSlug: "test-example-com",
+				labels: [],
 			},
 		];
 		const result = await Effect.runPromise(
 			saveEligibleAttachments(toSave).pipe(
-				Effect.provide(mockFsLayer(mockFs)),
+				Effect.provide(mockPaperlessLayer({ uploadDocument: () => Effect.void })),
 				Effect.provide(mockOllamaLayer(mockOllama)),
 			),
 		);
@@ -244,36 +248,74 @@ describe("saveEligibleAttachments", () => {
 	});
 
 	test("item with ollamaReq: true accepts, saved", async () => {
-		let writtenPath: string | undefined;
-		let writtenData: Uint8Array | undefined;
-		const mockFs = {
-			writeFile: (path: string, data: Uint8Array) => {
-				writtenPath = path;
-				writtenData = data;
+		let uploadedFilename: string | undefined;
+		let uploadedData: Uint8Array | undefined;
+		let uploadedTags: readonly TagName[] | undefined;
+		const mockPaperless = {
+			uploadDocument: (data: Uint8Array, filename: string, tags: readonly TagName[]) => {
+				uploadedFilename = filename;
+				uploadedData = data;
+				uploadedTags = tags;
 				return Effect.void;
 			},
-		} as unknown as FileSystem.FileSystem;
+		};
 		const mockOllama = {
 			assess: () => Effect.succeed(true),
 		} as unknown as OllamaClientService;
 		const toSave: AttachmentToSave[] = [
 			{
-				path: "/tmp/out.pdf",
+				filename: "out.pdf",
 				data: new Uint8Array([1, 2, 3]),
 				ollamaReq: { model: "x", prompt: "y", stream: false },
 				messageUid: 42 as MessageUid,
+				emailSlug: "test-example-com",
+				labels: [],
 			},
 		];
 		const result = await Effect.runPromise(
 			saveEligibleAttachments(toSave).pipe(
-				Effect.provide(mockFsLayer(mockFs)),
+				Effect.provide(mockPaperlessLayer(mockPaperless)),
 				Effect.provide(mockOllamaLayer(mockOllama)),
 			),
 		);
 		expect(result.saved).toBe(1);
 		expect(result.labeledUids).toEqual([42 as MessageUid]);
-		expect(writtenPath).toBe("/tmp/out.pdf");
-		expect(writtenData).toEqual(new Uint8Array([1, 2, 3]));
+		expect(uploadedFilename).toBe("out.pdf");
+		expect(uploadedData).toEqual(new Uint8Array([1, 2, 3]));
+		expect(uploadedTags).toEqual([toTagName("email"), toTagName("test-example-com")]);
+	});
+
+	test("item with labels adds sanitized labels to tags", async () => {
+		let uploadedTags: readonly TagName[] | undefined;
+		const mockPaperless = {
+			uploadDocument: (_data: Uint8Array, _filename: string, tags: readonly TagName[]) => {
+				uploadedTags = tags;
+				return Effect.void;
+			},
+		};
+		const mockOllama = {
+			assess: () => Effect.succeed(true),
+		} as unknown as OllamaClientService;
+		const toSave: AttachmentToSave[] = [
+			{
+				filename: "doc.pdf",
+				data: new Uint8Array([1, 2, 3]),
+				ollamaReq: null,
+				messageUid: 1 as MessageUid,
+				emailSlug: "test-example-com",
+				labels: ["category:promotions", "INBOX"] as EmailLabel[],
+			},
+		];
+		await Effect.runPromise(
+			saveEligibleAttachments(toSave).pipe(
+				Effect.provide(mockPaperlessLayer(mockPaperless)),
+				Effect.provide(mockOllamaLayer(mockOllama)),
+			),
+		);
+		expect(uploadedTags).toContain(toTagName("email"));
+		expect(uploadedTags).toContain(toTagName("test-example-com"));
+		expect(uploadedTags).toContain(toTagName("gmail-category-promotions"));
+		expect(uploadedTags).not.toContain(toTagName("inbox"));
 	});
 });
 
@@ -284,28 +326,29 @@ describe("processRawAttachment", () => {
 		const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d]);
 		await tmp.writeFile(tempPath, pdfBytes);
 
-		const raw: RawAttachment = {
+		const raw: RawImapAttachment = {
 			contentType: "application/pdf",
 			filename: "doc.pdf",
 			size: pdfBytes.length,
 			data: new Uint8Array(0),
 			messageUid: 1 as MessageUid,
 			path: tempPath,
+			labels: [],
 		};
 
-		const emailSubdir = tmp.join("user1");
+		const emailSlug = "user1";
 		const layer = Layer.mergeAll(
 			TestBaseLayer,
-			emailConfigTest({ consumeDir: tmp.path, emailAccountsPath: tmp.join("accounts.json") }),
+			emailConfigTest({ emailAccountsPath: tmp.join("accounts.json") }),
 		);
 
 		const result = await Effect.runPromise(
-			processRawAttachment(raw, 0, emailSubdir).pipe(Effect.provide(layer)),
+			processRawAttachment(raw, 0, emailSlug).pipe(Effect.provide(layer)),
 		);
 
 		expect(result).not.toBe(null);
 		expect(result?.data).toEqual(pdfBytes);
-		expect(result?.path.startsWith(tmp.path)).toBe(true);
+		expect(result?.filename).toBe("doc.pdf");
 
 		const tempExists = await pathExists(tempPath);
 		expect(tempExists).toBe(false);
