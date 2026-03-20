@@ -23,12 +23,12 @@ import { collectAttachmentParts } from "../core/imap-body-structure.js";
 import type { ImapSearchQuery } from "../core/search.js";
 import type { Account } from "../domain/account.js";
 import { ImapConnectionError } from "../domain/errors.js";
-import type { AppEffect, MessageUid } from "../domain/types.js";
+import type { AppEffect, EmailLabel, MessageUid } from "../domain/types.js";
 import { redactEmail, redactedForLog, unknownToMessage } from "../domain/utils.js";
 import type {
 	EmailClientService,
 	EmailSession,
-	RawAttachment,
+	RawImapAttachment,
 } from "../interfaces/email-client.js";
 
 export class EmailClient extends ServiceMap.Service<EmailClient, EmailClientService>()(
@@ -128,6 +128,7 @@ const fetchPart = Effect.fn("paperless-ingestion-bot/live/imap-email-client.fetc
 	uid: number,
 	part: { partId: string; contentType: string; filename: string | undefined; size: number },
 	maxSize: number,
+	labels: readonly EmailLabel[],
 ) {
 	const fs = yield* FileSystem.FileSystem;
 	const downloadObj = yield* imap(account, () => client.download(uid, part.partId, { uid: true }));
@@ -151,6 +152,7 @@ const fetchPart = Effect.fn("paperless-ingestion-bot/live/imap-email-client.fetc
 		data: new Uint8Array(0),
 		messageUid: uid as MessageUid,
 		path,
+		labels,
 	};
 });
 
@@ -161,7 +163,7 @@ export const fetchAttachmentsForUidsEffect = (
 	uids: readonly MessageUid[],
 	maxSize: number,
 ): Effect.Effect<
-	readonly RawAttachment[],
+	readonly RawImapAttachment[],
 	ImapConnectionError,
 	FileSystem.FileSystem | Path.Path
 > =>
@@ -170,15 +172,21 @@ export const fetchAttachmentsForUidsEffect = (
 		const { mailbox } = account.imapConfig;
 		yield* imap(account, () => openMailbox(client, mailbox, true));
 
+		const requestLabels = account.imapConfig.provider === "gmail";
 		const perUid = yield* Effect.forEach(uids, (uid: MessageUid) =>
 			Effect.gen(function* () {
+				const fetchQuery = requestLabels
+					? { bodyStructure: true, labels: true }
+					: { bodyStructure: true };
 				const full = yield* imap(account, () =>
-					client.fetchOne(uid as number, { bodyStructure: true }, { uid: true }),
+					client.fetchOne(uid as number, fetchQuery, { uid: true }),
 				);
 				if (full === false || !full.bodyStructure) return [];
+				const labels: EmailLabel[] =
+					requestLabels && full.labels ? [...full.labels].map((l) => l as EmailLabel) : [];
 				const parts = collectAttachmentParts(full.bodyStructure);
 				return yield* Effect.forEach(parts, (part) =>
-					fetchPart(account, client, uid as number, part, maxSize),
+					fetchPart(account, client, uid as number, part, maxSize, labels),
 				);
 			}),
 		);
@@ -187,7 +195,7 @@ export const fetchAttachmentsForUidsEffect = (
 		return Arr.filter(
 			flattened,
 			(a): a is NonNullable<typeof a> => a !== null,
-		) as readonly RawAttachment[];
+		) as readonly RawImapAttachment[];
 	});
 
 function createSession(client: ImapFlow, account: Account): EmailSession {
@@ -205,7 +213,7 @@ function createSession(client: ImapFlow, account: Account): EmailSession {
 		fetchAttachmentsForUids: (uids, maxSize) =>
 			// Cast: EmailSession declares AppEffect (no FileSystem/Path) but implementation requires them; caller provides layers.
 			fetchAttachmentsForUidsEffect(account, client, uids, maxSize) as AppEffect<
-				readonly RawAttachment[]
+				readonly RawImapAttachment[]
 			>,
 
 		markProcessed: (uids, value) =>

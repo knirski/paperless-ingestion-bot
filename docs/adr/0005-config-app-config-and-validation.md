@@ -29,6 +29,6 @@ Chosen option: **C**, because it aligns with 12-factor ("env vars are granular c
 | users.json | `--users` | `PAPERLESS_INGESTION_USERS_PATH` | `/var/lib/paperless-ingestion-bot/users.json` |
 | email-accounts.json | `--email-accounts` | `PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH` | `/var/lib/paperless-ingestion-bot/email-accounts.json` |
 
-**Loading:** File → parse JSON → env overrides (e.g. `PAPERLESS_INGESTION_CONSUME_DIR`) → `Schema.decodeUnknownEffect`. Effect ConfigProvider orElse(env, file). JSON Schema: `scripts/generate-schema.ts` → `dist/config.schema.json`.
+**Loading:** File → parse JSON → env overrides (e.g. `PAPERLESS_INGESTION_PAPERLESS_URL`) → `Schema.decodeUnknownEffect`. Effect ConfigProvider orElse(env, file). JSON Schema: `scripts/generate-schema.ts` → `dist/config.schema.json`.
 
-**Startup (Signal):** Validates `consume_dir` and `signal_api_url` reachability; `--skip-reachability-check` bypasses API check.
+**Startup (Signal):** Validates `paperless_url` and `signal_api_url` reachability; `--skip-reachability-check` bypasses API check.

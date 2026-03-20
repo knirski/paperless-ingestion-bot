@@ -11,7 +11,11 @@ export function safeFilename(name: string, maxLen = 200): string {
 	return sanitized.slice(0, maxLen) || "attachment";
 }
 
-/** Build base filename for Signal attachment (customFilename or attachmentId, with ext from contentType/fileType). */
+/** Fallback stem when source has no filename. Pattern: unnamed_{source}_attachment_{id}. */
+const UNNAMED_EMAIL_STEM = "unnamed_email_attachment";
+const UNNAMED_SIGNAL_STEM = "unnamed_signal_attachment";
+
+/** Build base filename for Signal attachment (customFilename or fallback, with ext from contentType/fileType). */
 export function buildSignalAttachmentBaseFilename(
 	attachmentId: string,
 	customFilename: string | undefined,
@@ -21,7 +25,7 @@ export function buildSignalAttachmentBaseFilename(
 	const ext = extensionFromContentType(contentType) || (fileType?.ext ? `.${fileType.ext}` : "");
 	let base = customFilename
 		? safeFilename(customFilename.replace(/\.[^.]+$/, ""))
-		: `signal_${attachmentId}`;
+		: `${UNNAMED_SIGNAL_STEM}_${attachmentId}`;
 	if (ext && !base.toLowerCase().endsWith(ext.toLowerCase())) base += ext;
 	return base;
 }
@@ -35,7 +39,7 @@ export function attachmentBaseFilename(
 	const ext = extensionFromContentType(contentType);
 	const base = filename
 		? safeFilename(filename.replace(/\.[^.]+$/, ""))
-		: `attachment_${fallbackIndex}`;
+		: `${UNNAMED_EMAIL_STEM}_${fallbackIndex}`;
 	return ext && !base.toLowerCase().endsWith(ext.toLowerCase()) ? `${base}${ext}` : base;
 }
 

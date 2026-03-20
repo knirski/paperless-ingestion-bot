@@ -75,16 +75,6 @@ export async function joinPath(...segments: string[]): Promise<string> {
 	);
 }
 
-/** Sync join for use in non-async contexts (e.g. layer builders). */
-export function joinPathSync(...segments: string[]): string {
-	return Effect.runSync(
-		Effect.gen(function* () {
-			const path = yield* Path.Path;
-			return path.join(...segments);
-		}).pipe(Effect.provide(PlatformServicesLayer)),
-	);
-}
-
 /** Write file at path using Effect FileSystem. */
 export async function writeTestFile(path: string, content: string | Uint8Array): Promise<void> {
 	return Effect.runPromise(
@@ -95,19 +85,6 @@ export async function writeTestFile(path: string, content: string | Uint8Array):
 			} else {
 				yield* fs.writeFile(path, content);
 			}
-		}).pipe(Effect.provide(PlatformServicesLayer)),
-	);
-}
-
-/** Read directory contents using Effect FileSystem. */
-export async function readTestDirectory(
-	path: string,
-	options?: { recursive?: boolean },
-): Promise<string[]> {
-	return Effect.runPromise(
-		Effect.gen(function* () {
-			const fs = yield* FileSystem.FileSystem;
-			return yield* fs.readDirectory(path, options);
 		}).pipe(Effect.provide(PlatformServicesLayer)),
 	);
 }

@@ -10,7 +10,8 @@ import {
 /** Minimal SignalConfig for tests (raw object). */
 function minimalSignalConfig(overrides?: Partial<SignalConfigService>): SignalConfigService {
 	return {
-		consumeDir: "/tmp/consume",
+		paperlessUrl: "http://localhost:8000",
+		paperlessToken: "test-token",
 		emailAccountsPath: "/tmp/email-accounts.json",
 		usersPath: "/tmp/users.json",
 		signalApiUrl: "http://localhost:8080",
@@ -33,7 +34,8 @@ export function signalConfigTest(
 /** Minimal EmailConfig for tests (raw object, not a layer). */
 function minimalEmailConfig(overrides?: Partial<EmailConfigService>): EmailConfigService {
 	return {
-		consumeDir: "/tmp/consume",
+		paperlessUrl: "http://localhost:8000",
+		paperlessToken: "test-token",
 		emailAccountsPath: "/tmp/email-accounts.json",
 		usersPath: "/tmp/users.json",
 		signalApiUrl: "http://localhost:8080",

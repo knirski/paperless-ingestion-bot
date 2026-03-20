@@ -12,6 +12,8 @@ export {
 	safeFilename,
 	splitFilenameForCollision,
 } from "./filename.js";
+export { emailLabelsToTagNames } from "./labels.js";
 export { buildOllamaRequest, parseOllamaYesNo } from "./ollama.js";
 export { buildSearch, emailToSlug, mergeExcludeLabels } from "./search.js";
+export { validateAttachmentsToRaw } from "./signal-attachments.js";
 export { validateAddGmailAccountInput, validateAppPassword, validateEmail } from "./validation.js";

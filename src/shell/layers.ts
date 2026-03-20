@@ -13,6 +13,7 @@ import { RateLimiter } from "effect/unstable/persistence";
 import { CredentialsStore } from "../live/credentials-store.js";
 import { EmailClientLive } from "../live/imap-email-client.js";
 import { OllamaClient } from "../live/ollama-client.js";
+import { PaperlessClient } from "../live/paperless-client.js";
 import { createSignalClient, SignalClient } from "../live/signal-client.js";
 import type { LogLevel as ConfigLogLevel } from "./config.js";
 import { EmailConfig, SignalConfig } from "./config.js";
@@ -58,6 +59,16 @@ const EmailLoggerLevelLayer = Layer.unwrap(buildEmailLoggerLevelLayer());
 
 export const PlatformServicesLayer = BunFileSystem.layer.pipe(Layer.provideMerge(BunPath.layer));
 
+/** HttpClient with retry on transient errors (5 retries). */
+const buildResilientClient = Effect.gen(function* () {
+	const base = yield* Http.HttpClient.HttpClient;
+	return base.pipe(Http.HttpClient.retryTransient({ times: 5 }));
+});
+
+const ResilientHttpClientLayer = Layer.effect(Http.HttpClient.HttpClient)(
+	buildResilientClient,
+).pipe(Layer.provide(Http.FetchHttpClient.layer));
+
 /** CLI services required by effect/unstable/cli (Terminal, Stdio, ChildProcessSpawner). */
 const CliLayer = BunStdio.layer.pipe(
 	Layer.provideMerge(BunTerminal.layer),
@@ -78,18 +89,32 @@ const buildSignalClientFromConfig = Effect.fn("buildSignalClientFromConfig")(fun
 /** SignalClient service built from config's signalApiUrl. */
 const SignalClientFromConfig = Layer.effect(SignalClient)(buildSignalClientFromConfig());
 
+const buildPaperlessClientFromSignalConfig = Effect.fn("buildPaperlessClientFromSignalConfig")(
+	function* () {
+		const cfg = yield* SignalConfig;
+		return PaperlessClient.live(cfg.paperlessUrl, cfg.paperlessToken);
+	},
+);
+
+/** PaperlessClient built from SignalConfig (shared base). */
+const PaperlessClientFromSignalConfig = Layer.unwrap(buildPaperlessClientFromSignalConfig());
+
 const CredentialsStoreLayer = CredentialsStore.live;
 
 /** Type of the layer returned by buildSignalLayer. Use for buildSignalServerLayer parameter. */
 export type SignalAppLayer = ReturnType<typeof buildSignalLayer>;
 
 /** All Signal layers that depend on SignalConfig. Provide configWithPlatform once. */
-const SignalConfigDependentLayers = Layer.mergeAll(SignalClientFromConfig, SignalLoggerLevelLayer);
+const SignalConfigDependentLayers = Layer.mergeAll(
+	SignalClientFromConfig,
+	PaperlessClientFromSignalConfig,
+	SignalLoggerLevelLayer,
+);
 
 export function buildSignalLayer(configPath: string, usersPath: string, emailAccountsPath: string) {
 	const configWithPlatform = SignalConfig.layer(configPath, usersPath, emailAccountsPath).pipe(
 		Layer.provideMerge(PlatformServicesLayer),
-		Layer.provideMerge(Http.FetchHttpClient.layer),
+		Layer.provideMerge(ResilientHttpClientLayer),
 	);
 	return configWithPlatform.pipe(
 		Layer.provideMerge(SignalConfigDependentLayers.pipe(Layer.provide(configWithPlatform))),
@@ -120,10 +145,21 @@ export const RateLimiterMemoryLayer = RateLimiter.layer.pipe(
 	Layer.provide(RateLimiter.layerStoreMemory),
 );
 
+const buildPaperlessClientFromEmailConfig = Effect.fn("buildPaperlessClientFromEmailConfig")(
+	function* () {
+		const cfg = yield* EmailConfig;
+		return PaperlessClient.live(cfg.paperlessUrl, cfg.paperlessToken);
+	},
+);
+
+/** PaperlessClient built from EmailConfig (shared base). */
+const PaperlessClientFromEmailConfig = Layer.unwrap(buildPaperlessClientFromEmailConfig());
+
 /** All Email layers that depend on EmailConfig. Provide configWithPlatform once. */
 const EmailConfigDependentLayers = Layer.mergeAll(
 	SignalClientFromEmailConfig,
 	OllamaClientFromConfig,
+	PaperlessClientFromEmailConfig,
 	EmailLoggerLevelLayer,
 	RateLimiterMemoryLayer,
 );
@@ -131,7 +167,7 @@ const EmailConfigDependentLayers = Layer.mergeAll(
 export function buildEmailLayer(configPath: string, usersPath: string, emailAccountsPath: string) {
 	const configWithPlatform = EmailConfig.layer(configPath, usersPath, emailAccountsPath).pipe(
 		Layer.provideMerge(PlatformServicesLayer),
-		Layer.provideMerge(Http.FetchHttpClient.layer),
+		Layer.provideMerge(ResilientHttpClientLayer),
 	);
 	return configWithPlatform.pipe(
 		Layer.provideMerge(EmailClientLive),

@@ -79,7 +79,7 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 
 - Config — JSON (Nix-generated). Resolution: `--config` or `PAPERLESS_INGESTION_CONFIG` or default. 12-factor: individual values and paths override via env.
   Config layers load from file and apply env overrides (12-factor: individual vars like `PAPERLESS_INGESTION_SIGNAL_API_URL`). Pipelines `yield* SignalConfig` / `yield* EmailConfig`.
-  JSON Schema: `dist/config.schema.json` (build time). Startup validation: consume_dir, signal_api_url; `--skip-reachability-check` bypasses API check.
+  JSON Schema: `dist/config.schema.json` (build time). Startup validation: paperless_url, signal_api_url; `--skip-reachability-check` bypasses API check.
 
 - Services: `SignalClient`, `EmailClient`, `OllamaClient`, `CredentialsStore`, `SignalConfig`, `EmailConfig`.
   Mocks: `signalConfigTest`, `emailConfigTest`, `credentialsStoreTest`, `createImapMockLayer`, `createSignalMockLayer`.

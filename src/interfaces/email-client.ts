@@ -9,8 +9,8 @@ import type { ImapSearchQuery } from "../core/search.js";
 import type { Account } from "../domain/account.js";
 import type { AppEffect, EmailLabel, MessageUid } from "../domain/types.js";
 
-/** Raw attachment from email — pipeline applies eligibility, path resolution. */
-export interface RawAttachment {
+/** Raw IMAP attachment — pipeline applies eligibility, path resolution. */
+export interface RawImapAttachment {
 	readonly contentType: string;
 	readonly filename: string | undefined;
 	readonly size: number;
@@ -19,6 +19,8 @@ export interface RawAttachment {
 	readonly messageUid: MessageUid;
 	/** When set, attachment was streamed to this temp file. Use instead of data. */
 	readonly path?: string;
+	/** Gmail labels on the message (empty for generic IMAP). Used as Paperless tags. */
+	readonly labels: readonly EmailLabel[];
 }
 
 /** Session-scoped email operations (connection already established). */
@@ -27,7 +29,7 @@ export interface EmailSession {
 	readonly fetchAttachmentsForUids: (
 		uids: readonly MessageUid[],
 		maxSize: number,
-	) => AppEffect<ReadonlyArray<RawAttachment>>;
+	) => AppEffect<ReadonlyArray<RawImapAttachment>>;
 	readonly markProcessed: (uids: readonly MessageUid[], value: EmailLabel) => AppEffect<void>;
 }
 

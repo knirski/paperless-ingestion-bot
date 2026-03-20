@@ -47,15 +47,15 @@ flowchart LR
     subgraph Email["Email Pipeline"]
         IMAP[IMAP search] --> Fetch[Fetch attachments]
         Fetch --> Ollama[Ollama eligibility]
-        Ollama --> Save[Save to consume]
-        Save --> Label[Mark processed]
+        Ollama --> Upload[Upload to Paperless]
+        Upload --> Label[Mark processed]
     end
 
     subgraph Signal["Signal Pipeline"]
         Webhook[Webhook payload] --> Attach[Fetch attachment]
         Attach --> MIME[MIME eligibility]
-        MIME --> SaveS[Save to consume]
-        SaveS --> Reply[Send reply]
+        MIME --> UploadS[Upload to Paperless]
+        UploadS --> Reply[Send reply]
     end
 ```
 
@@ -93,13 +93,13 @@ flowchart LR
 
 ## Main Flows
 
-**Email:** IMAP search → fetch attachments → eligibility (Ollama) → save to consume dir → mark processed. See [`email-attachments.ts`](../src/shell/email-attachments.ts) for fetch/eligibility/save; [`email-pipeline.ts`](../src/shell/email-pipeline.ts) for orchestration. On IMAP auth failure, [`credential-failure.ts`](../src/shell/credential-failure.ts) sends a throttled Signal notification to the account owner.
+**Email:** IMAP search → fetch attachments → eligibility (Ollama) → upload to Paperless via API → mark processed. See [`email-attachments.ts`](../src/shell/email-attachments.ts) for fetch/eligibility/upload; [`email-pipeline.ts`](../src/shell/email-pipeline.ts) for orchestration. On IMAP auth failure, [`credential-failure.ts`](../src/shell/credential-failure.ts) sends a throttled Signal notification to the account owner.
 
-**Signal:** Webhook payload → fetch attachment → eligibility (MIME) → save to consume dir → send reply. See [`signal-pipeline.ts`](../src/shell/signal-pipeline.ts) for `processWebhookPayload` and account commands.
+**Signal:** Webhook payload → fetch attachment → eligibility (MIME) → upload to Paperless via API → send reply. See [`signal-pipeline.ts`](../src/shell/signal-pipeline.ts) for `processWebhookPayload` and account commands.
 
 ## Config
 
-JSON config. Schema-based validation in [`src/shell/config.ts`](../src/shell/config.ts). `RawSignalConfigSchema` and `RawEmailConfigSchema` define the shape; shared fields (`consume_dir`, `signal_api_url`, etc.) plus pipeline-specific fields (Signal: `webhook_host`, `webhook_port`; Email: `ollama_url`, `ollama_vision_model`, etc.). Config as service — pipelines `yield* SignalConfig` / `yield* EmailConfig`.
+JSON config. Schema-based validation in [`src/shell/config.ts`](../src/shell/config.ts). `RawSignalConfigSchema` and `RawEmailConfigSchema` define the shape; shared fields (`paperless_url`, `paperless_token`, `signal_api_url`, etc.) plus pipeline-specific fields (Signal: `webhook_host`, `webhook_port`; Email: `ollama_url`, `ollama_vision_model`, etc.). Config as service — pipelines `yield* SignalConfig` / `yield* EmailConfig`.
 
 **Resolution:** `--config` or `PAPERLESS_INGESTION_CONFIG` or default path. Config layers load from file, apply env overrides (12-factor: individual vars like `PAPERLESS_INGESTION_SIGNAL_API_URL` override file values), and decode with the given schema (e.g. `Config.schema(RawSignalConfigSchema)`).
 
@@ -107,17 +107,17 @@ JSON config. Schema-based validation in [`src/shell/config.ts`](../src/shell/con
 
 **JSON Schema:** Emitted at build time to `dist/config.schema.json` via `scripts/generate-schema.ts`.
 
-**Startup validation (Signal):** Before starting the webhook server, validates `consume_dir` (exists + writable) and `signal_api_url` (reachability). Use `--skip-reachability-check` to bypass the API check.
+**Startup validation (Signal):** Before starting the webhook server, validates `paperless_url` and `signal_api_url` (reachability). Use `--skip-reachability-check` to bypass.
 
 **Paths:** config.json → `--config` or `PAPERLESS_INGESTION_CONFIG`; users.json → `--users` or `PAPERLESS_INGESTION_USERS_PATH`; email-accounts.json → `--email-accounts` or `PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH`. Loaded via [`runtime.ts`](../src/shell/runtime.ts) (`loadAllAccounts`, `saveAllAccounts`).
 
-**Consume dir layout:** `consumeDir/{userSlug}/` — each user has a subdir. Email: slug from email; Signal: `consume_subdir` from users.json.
+**Upload:** Documents are uploaded to Paperless via REST API (`POST /api/documents/post_document/`). Tags: Signal `[signal-{slug}, "signal"]`; Email `["email", emailSlug]`.
 
 ## Configuration vs user-generated data
 
 | Kind | Files | Set by | Examples |
 |------|-------|--------|----------|
-| **Configuration** | config.json (infra), users.json (registry) | Admin/deployer | consume_dir, signal_api_url, --users, --email-accounts, webhook_port |
+| **Configuration** | config.json (infra), users.json (registry) | Admin/deployer | paperless_url, paperless_token, signal_api_url, --users, --email-accounts, webhook_port |
 | **User-generated data** | email-accounts.json | Users via `gmail add` | Gmail accounts, pause/resume/remove state |
 
 Config is split: config.json has infra only; users.json is always a separate file (path from `--users` or env). Env vars override config.json. User-generated data is loaded/saved at runtime; passwords in OS keyring.
@@ -139,6 +139,7 @@ Abstract interfaces in `interfaces/`, live interpreters in `live/`:
 - `SignalClient` — Signal API
 - `EmailClient` — IMAP
 - `OllamaClient` — document assessment
+- `PaperlessClient` — Paperless-ngx REST API (upload documents)
 - `CredentialsStore` — credential storage (OS keyring)
 - `SignalConfig`, `EmailConfig` — config layers
 

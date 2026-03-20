@@ -18,6 +18,7 @@ import { EmailClient, EmailClientLive } from "../../src/live/imap-email-client.j
 import { OllamaClient } from "../../src/live/ollama-client.js";
 import { runEmailPipeline } from "../../src/shell/email-pipeline.js";
 import { PlatformServicesLayer } from "../../src/shell/layers.js";
+import { createPaperlessMockLayer } from "../fixtures/paperless-mock.js";
 import {
 	createTestTempDir,
 	credentialsStoreTest,
@@ -141,13 +142,13 @@ describe.skipIf(!hasGmailCreds)("gmail live", () => {
 			TestBaseLayer,
 			Http.FetchHttpClient.layer,
 			emailConfigTest({
-				consumeDir: tmp.path,
 				emailAccountsPath: accountsPath,
 				markProcessedLabel: "paperless",
 			}),
 			credentialsStoreTest({ [email]: appPassword }),
 			ReadOnlyFileSystemLayer,
 			ReadOnlyEmailClientLayer,
+			createPaperlessMockLayer(),
 			alwaysAcceptOllamaLayer,
 		);
 

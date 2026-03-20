@@ -57,8 +57,7 @@ Requires a system keychain (libsecret/Secret Service, e.g. gnome-keyring, kwalle
 
 Same strategy as email: `processWebhookPayload` is called directly with mock layers. No HTTP server needed.
 
-- **Consume dir**: The pipeline creates the consume subdir when absent (before first write); tests need no explicit setup.
-- **Adding a test**: Use `integrationTest`, `buildTestLayer`, `runWebhook(layer, payload)`. Assert on `spy.sendMessageCalls`, `spy.fetchAttachmentCalls`, or files in `consumeDir/user1`. Use `configOverrides` for custom registry; `credentialsStore` for gmail commands with specific accounts.
+- **Adding a test**: Use `integrationTest`, `buildTestLayer`, `runWebhook(layer, payload)`. Assert on `spy.sendMessageCalls`, `spy.fetchAttachmentCalls`, or `paperlessSpy.uploadCalls`. Use `configOverrides` for custom registry; `credentialsStore` for gmail commands with specific accounts.
 
 ## Adding a Test
 
@@ -76,4 +75,4 @@ For failure tests, pass `configOverrides: { imapRetrySchedule: imapRetrySchedule
 1. Use `integrationTest("name", async ({ tmpDir, emailAccountsPath }) => { ... })`.
 2. Build layer: `buildTestLayer({ tmpDir, emailAccountsPath }, scenario, options)`.
 3. Run: `await runWebhook(layer, payload)`.
-4. Assert on `spy.sendMessageCalls`, `spy.fetchAttachmentCalls`, or files in `join(tmpDir, "consume", "user1")`.
+4. Assert on `spy.sendMessageCalls`, `spy.fetchAttachmentCalls`, or `paperlessSpy.uploadCalls`.

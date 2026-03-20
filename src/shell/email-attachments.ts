@@ -10,27 +10,32 @@ import { sumAll } from "effect/Number";
 import {
 	attachmentBaseFilename,
 	buildOllamaRequest,
+	emailLabelsToTagNames,
 	isEmailAttachmentEligible,
 } from "../core/index.js";
 import type { ImapSearchQuery } from "../core/search.js";
 import type { Account } from "../domain/account.js";
 import { formatErrorForStructuredLog } from "../domain/errors.js";
-import type { AppEffect, MessageUid } from "../domain/types.js";
-import type { EmailSession, RawAttachment } from "../interfaces/email-client.js";
+import { toTagName } from "../domain/paperless-types.js";
+import type { AppEffect, EmailLabel, MessageUid } from "../domain/types.js";
+import type { EmailSession, RawImapAttachment } from "../interfaces/email-client.js";
 import type { OllamaRequest } from "../interfaces/ollama-client.js";
 import { OllamaClient } from "../live/ollama-client.js";
+import { PaperlessClient } from "../live/paperless-client.js";
 import { EmailConfig } from "./config.js";
-import { mapFsError, resolveOutputPath } from "./fs-utils.js";
+import { mapFsError } from "./fs-utils.js";
 
 /** Max attachment size for IMAP fetch (25 MiB). Exported for tests. */
 export const MAX_ATTACHMENT_SIZE = 25 * 1024 * 1024;
 
-/** Attachment ready to save (eligible, path resolved). */
+/** Attachment ready to save (eligible, filename resolved). */
 export interface AttachmentToSave {
-	readonly path: string;
+	readonly filename: string;
 	readonly data: Uint8Array;
 	readonly ollamaReq: OllamaRequest | null;
 	readonly messageUid: MessageUid;
+	readonly emailSlug: string;
+	readonly labels: readonly EmailLabel[];
 }
 
 /** Result from processing a single page. */
@@ -68,7 +73,7 @@ export function fetchAttachmentsWithRetry(
 	pageUids: readonly MessageUid[],
 	acc: Account,
 	retrySchedule: Schedule.Schedule<unknown>,
-): AppEffect<readonly RawAttachment[]> {
+): AppEffect<readonly RawImapAttachment[]> {
 	return session.fetchAttachmentsForUids(pageUids, MAX_ATTACHMENT_SIZE).pipe(
 		Effect.retry({ schedule: retrySchedule }),
 		Effect.catch((e) =>
@@ -86,14 +91,16 @@ export function fetchAttachmentsWithRetry(
 }
 
 const processItem = Effect.fn("saveEligibleAttachmentsItem")(function* (item: AttachmentToSave) {
-	const fs = yield* FileSystem.FileSystem;
 	const ollama = yield* OllamaClient;
+	const paperless = yield* PaperlessClient;
 	const accepted = yield* Option.match(Option.fromNullishOr(item.ollamaReq), {
 		onNone: () => Effect.succeed(true),
 		onSome: (req) => ollama.assess(req).pipe(Effect.orElseSucceed(() => true)),
 	});
 	if (!accepted) return { saved: 0 as const, messageUid: undefined as MessageUid | undefined };
-	yield* fs.writeFile(item.path, item.data).pipe(mapFsError(item.path, "writeFile"));
+	const labelTags = emailLabelsToTagNames(item.labels);
+	const tags = [toTagName("email"), toTagName(item.emailSlug), ...labelTags];
+	yield* paperless.uploadDocument(item.data, item.filename, tags);
 	return { saved: 1 as const, messageUid: item.messageUid };
 });
 
@@ -109,11 +116,11 @@ export const saveEligibleAttachments = Effect.fn("saveEligibleAttachments")(func
 	return { saved, labeledUids } satisfies PageResult;
 });
 
-/** Process single raw attachment: check eligibility, build Ollama req, resolve path. Exported for testing. */
+/** Process single raw attachment: check eligibility, build Ollama req, build filename. Exported for testing. */
 export const processRawAttachment = Effect.fn("processRawAttachment")(function* (
-	raw: RawAttachment,
+	raw: RawImapAttachment,
 	i: number,
-	emailSubdir: string,
+	emailSlug: string,
 ) {
 	if (!raw) return null;
 	const config = yield* EmailConfig;
@@ -143,13 +150,14 @@ export const processRawAttachment = Effect.fn("processRawAttachment")(function* 
 						config.ollamaTextModel,
 					),
 				);
-				const fullBase = attachmentBaseFilename(raw.filename, raw.contentType, i);
-				const outPath = yield* resolveOutputPath(emailSubdir, fullBase);
+				const filename = attachmentBaseFilename(raw.filename, raw.contentType, i);
 				return {
-					path: outPath,
+					filename,
 					data,
 					ollamaReq,
 					messageUid: raw.messageUid,
+					emailSlug,
+					labels: raw.labels,
 				} satisfies AttachmentToSave;
 			}),
 	});
@@ -157,11 +165,11 @@ export const processRawAttachment = Effect.fn("processRawAttachment")(function* 
 
 /** Collect eligible attachments from raw; filter nulls. */
 export const collectEligibleAttachments = Effect.fn("collectEligibleAttachments")(function* (
-	rawAttachments: readonly RawAttachment[],
-	emailSubdir: string,
+	rawAttachments: readonly RawImapAttachment[],
+	emailSlug: string,
 ) {
 	const results = yield* Effect.forEach(rawAttachments, (raw, i) =>
-		processRawAttachment(raw, i, emailSubdir),
+		processRawAttachment(raw, i, emailSlug),
 	);
 	return Arr.filter(results, (r): r is AttachmentToSave => r !== null);
 });

@@ -62,7 +62,6 @@ import {
 import {
 	type AccountEmail,
 	AccountEmailSchema,
-	type ConsumeSubdir,
 	createUserRegistry,
 	type EmailLabel,
 	EmailLabelSchema,
@@ -110,7 +109,7 @@ describe("core", () => {
 				custom: undefined,
 				ct: "application/pdf",
 				ft: undefined,
-				expected: "signal_abc.pdf",
+				expected: "unnamed_signal_attachment_abc.pdf",
 			},
 			{ id: "x", custom: "my-file", ct: "image/png", ft: undefined, expected: "my-file.png" },
 			{ id: "x", custom: "doc", ct: undefined, ft: { ext: "pdf" }, expected: "doc.pdf" },
@@ -465,7 +464,12 @@ describe("core", () => {
 				expected: "invoice.pdf",
 			},
 			{ filename: "data", contentType: "text/csv", fallback: 0, expected: "data.csv" },
-			{ filename: undefined, contentType: "image/png", fallback: 3, expected: "attachment_3.png" },
+			{
+				filename: undefined,
+				contentType: "image/png",
+				fallback: 3,
+				expected: "unnamed_email_attachment_3.png",
+			},
 			{ filename: "doc", contentType: undefined, fallback: 1, expected: "doc" },
 			{ filename: "x.pdf", contentType: "image/jpeg", fallback: 0, expected: "x.jpg" },
 		])("attachmentBaseFilename($filename, $contentType, $fallback) -> $expected", ({
@@ -644,9 +648,7 @@ describe("core", () => {
 				{
 					slug: "user1" as UserSlug,
 					signalNumber: "+15550000001" as SignalNumber,
-					consumeSubdir: "user1" as ConsumeSubdir,
 					displayName: "User 1",
-					tagName: "User 1",
 				},
 			]);
 			expect(Result.isSuccess(authorizeSource(reg, "+15550000001" as SignalNumber))).toBe(true);
