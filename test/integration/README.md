@@ -25,6 +25,18 @@ GMAIL_TEST_EMAIL=your@gmail.com GMAIL_APP_PASSWORD=xxxx bun run test:integration
 
 Requires a Gmail account with 2FA enabled and an [app password](https://support.google.com/accounts/answer/185833). Skips when credentials are not set.
 
+## Optional: Live Paperless API Test
+
+Runs the PaperlessClient against real paperless-ngx in Docker via Testcontainers. Tests upload, tag resolution (fetch/create), and error handling (invalid token).
+
+Requires Docker. Skips when `PAPERLESS_API_INTEGRATION_TEST` is not set.
+
+```bash
+PAPERLESS_API_INTEGRATION_TEST=1 bun run test:integration
+```
+
+Uses `deploy/compose/docker-compose.full-stack.yml`; starts only `broker`, `db`, `gotenberg`, `tika`, `webserver`. First run may take ~2–3 min (image pulls).
+
 ## Optional: Keyring Availability Test
 
 Verifies that @napi-rs/keyring (system keychain) can be imported and performs a round-trip: `setPassword` → `getPassword` → `deletePassword`. Skips when `KEYRING_TEST` is not set (like the Gmail test). When set, runs the test; fails if keyring is unavailable (e.g. headless Linux, CI without keychain).
