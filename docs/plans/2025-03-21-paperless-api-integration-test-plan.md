@@ -22,7 +22,7 @@
 Add `testcontainers` to devDependencies:
 
 ```json
-"testcontainers": "^11.0.0"
+"testcontainers": "^11.13.0"
 ```
 
 ### Step 2: Install
@@ -310,13 +310,9 @@ Runs the PaperlessClient against real paperless-ngx in Docker via Testcontainers
 
 Requires Docker. Skips when `PAPERLESS_API_INTEGRATION_TEST` is not set.
 
-```bash
-PAPERLESS_API_INTEGRATION_TEST=1 bun run test:integration
-```
-```
+    PAPERLESS_API_INTEGRATION_TEST=1 bun run test:integration
 
 Uses `deploy/compose/docker-compose.full-stack.yml`; starts only `broker`, `db`, `gotenberg`, `tika`, `webserver`. First run may take ~2–3 min (image pulls).
-
 ```
 
 ### Step 2: Commit
