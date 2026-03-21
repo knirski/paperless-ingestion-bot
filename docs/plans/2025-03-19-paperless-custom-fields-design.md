@@ -306,6 +306,7 @@ Config JSON: `custom_fields` is optional. When absent, custom fields are disable
 
 - **Unit:** `buildCustomFieldValues` with various contexts (empty, partial, full). Test Option A (omit empty).
 - **Integration:** Mock POST → poll → PATCH flow; verify custom field values passed correctly. No real Paperless instance.
+- **Real-API (when available):** When the [paperless-api integration test](2025-03-21-paperless-api-integration-test-design.md) infrastructure exists (`PAPERLESS_API_INTEGRATION_TEST=1`), add real-API tests for the custom-field flow (POST → poll → PATCH), asserting values via `GET /api/documents/{id}/`.
 
 ### 12. PII and logging
 
