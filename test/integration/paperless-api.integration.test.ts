@@ -30,6 +30,7 @@ const COMPOSE_FILE = "docker-compose.full-stack.yml";
 const COMPOSE_ENV = pathJoin(COMPOSE_DIR, "docker-compose.env");
 const COMPOSE_TEST_ENV = pathJoin(COMPOSE_DIR, "docker-compose.test.env");
 const SERVICES = ["broker", "db", "gotenberg", "tika", "webserver"] as const;
+// Docker Compose v2 names first replica <service>-1 (see node.testcontainers.org/features/compose)
 const CONTAINER_WEBSERVER = "webserver-1";
 
 async function bootstrapToken(baseUrl: string): Promise<string> {
@@ -92,7 +93,7 @@ describe.skipIf(!runPaperlessApiLiveTest)("paperless-api live", () => {
 				toTagName("signal-test"),
 				toTagName("live-integration"),
 			]);
-		}).pipe(Effect.provide(layer));
+		}).pipe(Effect.provide(layer), Effect.asVoid);
 
 		await Effect.runPromise(program as Effect.Effect<void, DomainError>);
 
@@ -116,7 +117,7 @@ describe.skipIf(!runPaperlessApiLiveTest)("paperless-api live", () => {
 		const program = Effect.gen(function* () {
 			const paperless = yield* PaperlessClient;
 			yield* paperless.uploadDocument(pdfBytes, "tag-test.pdf", [toTagName(uniqueTag)]);
-		}).pipe(Effect.provide(layer));
+		}).pipe(Effect.provide(layer), Effect.asVoid);
 
 		await Effect.runPromise(program as Effect.Effect<void, DomainError>);
 
@@ -139,16 +140,37 @@ describe.skipIf(!runPaperlessApiLiveTest)("paperless-api live", () => {
 		const program = Effect.gen(function* () {
 			const paperless = yield* PaperlessClient;
 			yield* paperless.uploadDocument(new Uint8Array([1, 2, 3]), "bad.pdf", [toTagName("test")]);
-		}).pipe(Effect.provide(layer));
+		}).pipe(Effect.provide(layer), Effect.asVoid);
 
 		const exit = await Effect.runPromise(
 			Effect.exit(program) as Effect.Effect<Exit.Exit<void, DomainError>>,
 		);
 		expect(Exit.isFailure(exit)).toBe(true);
-		const errOpt = Exit.findErrorOption(exit);
-		expect(Option.isSome(errOpt)).toBe(true);
-		const err = Option.getOrThrow(errOpt);
+		const err = Option.getOrUndefined(Exit.findErrorOption(exit));
+		expect(err).toBeDefined();
+		if (err !== undefined) {
+			expect(err).toBeInstanceOf(PaperlessApiError);
+			expect((err as PaperlessApiError).status).toBe(401);
+		}
+	}, 10_000);
+
+	it("handles unreachable URL", async () => {
+		const layer = Layer.mergeAll(
+			TestBaseLayer,
+			Http.FetchHttpClient.layer,
+			PaperlessClient.live("http://127.0.0.1:9", "any-token"),
+		);
+		const program = Effect.gen(function* () {
+			const paperless = yield* PaperlessClient;
+			yield* paperless.uploadDocument(new Uint8Array([1]), "x.pdf", [toTagName("test")]);
+		}).pipe(Effect.provide(layer), Effect.asVoid);
+
+		const exit = await Effect.runPromise(
+			Effect.exit(program) as Effect.Effect<Exit.Exit<void, DomainError>>,
+		);
+		expect(Exit.isFailure(exit)).toBe(true);
+		const err = Option.getOrUndefined(Exit.findErrorOption(exit));
+		expect(err).toBeDefined();
 		expect(err).toBeInstanceOf(PaperlessApiError);
-		expect((err as PaperlessApiError).status).toBe(401);
 	}, 10_000);
 });

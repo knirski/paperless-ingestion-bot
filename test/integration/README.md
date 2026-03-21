@@ -27,7 +27,7 @@ Requires a Gmail account with 2FA enabled and an [app password](https://support.
 
 ## Optional: Live Paperless API Test
 
-Runs the PaperlessClient against real paperless-ngx in Docker via Testcontainers. Tests upload, tag resolution (fetch/create), and error handling (invalid token).
+Runs the PaperlessClient against real paperless-ngx in Docker via Testcontainers. Tests upload, tag resolution (fetch/create), and error handling (invalid token, unreachable URL).
 
 Requires Docker. Skips when `PAPERLESS_API_INTEGRATION_TEST` is not set.
 
@@ -36,6 +36,8 @@ PAPERLESS_API_INTEGRATION_TEST=1 bun run test:integration
 ```
 
 Uses `deploy/compose/docker-compose.full-stack.yml`; starts only `broker`, `db`, `gotenberg`, `tika`, `webserver`. First run may take ~2–3 min (image pulls).
+
+**Credential setup:** If `deploy/compose/docker-compose.env` does not exist, the test copies `docker-compose.test.env` to it. If you already have `docker-compose.env`, it must use the same admin credentials as `docker-compose.test.env` (`admin` / `test-admin-password`), or remove it so the test can copy the test env.
 
 ## Optional: Keyring Availability Test
 
