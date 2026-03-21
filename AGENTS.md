@@ -185,7 +185,7 @@ Credentials and config paths are sensitive; do not log or expose them.
 
 ## Planning
 
-- [docs/EFFECT_UNSTABLE_PLAN.md](docs/EFFECT_UNSTABLE_PLAN.md) — Effect unstable adoption (observability, AI, persistence, process).
+- [docs/plans/EFFECT_UNSTABLE_PLAN.md](docs/plans/EFFECT_UNSTABLE_PLAN.md) — Effect unstable adoption (observability, AI, persistence, process).
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Entry points, main flows, Gmail vs Generic IMAP (ADT + Match.exhaustive), error model.
 - [docs/adr/](docs/adr/) — Architecture Decision Records. See ADR workflow below. [ADR 0006](docs/adr/0006-bun-migration.md): Bun as sole package manager.
 

@@ -2,7 +2,7 @@
 # Single compose for document ingestion from Signal into Paperless.
 #
 # Prerequisites:
-# - Copy docker-compose.env.example to docker-compose.env and set PAPERLESS_SECRET_KEY
+# - Copy .env.example to .env and set PAPERLESS_SECRET_KEY
 # - Create config.json and users.json (see README)
 #
 # Setup:
@@ -56,8 +56,10 @@ services:
       - ./export:/usr/src/paperless/export
       # consume: Paperless-ngx can have a consume dir (scanners, manual drops); unrelated to this project
       # - consume:/usr/src/paperless/consume
-    env_file: docker-compose.env
     environment:
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
+      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER:-admin}
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD}
       PAPERLESS_REDIS: redis://broker:6379
       PAPERLESS_DBHOST: db
       PAPERLESS_DBENGINE: postgresql
@@ -87,7 +89,6 @@ services:
     volumes:
       - ./config.json:/etc/paperless-ingestion-bot/config.json:ro
       - ./users.json:/var/lib/paperless-ingestion-bot/users.json:ro
-    env_file: docker-compose.env
     environment:
       PAPERLESS_INGESTION_PAPERLESS_URL: http://webserver:8000
       PAPERLESS_INGESTION_PAPERLESS_TOKEN: ${PAPERLESS_INGESTION_PAPERLESS_TOKEN:-}

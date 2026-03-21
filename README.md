@@ -149,6 +149,7 @@ JSON config (often Nix-generated via `builtins.toJSON`). Standalone: no parent-r
 
 - `paperless_url`: Paperless-ngx base URL (e.g. `http://127.0.0.1:8000`)
 - `paperless_token`: Paperless API token (Settings → Users → Create token)
+- **Paperless API version contract:** The bot targets a specific Paperless-ngx REST API version via the `Accept: application/json; version=N` header. See `PAPERLESS_NGX_ACCEPT_VERSION` in `src/live/paperless-client.ts`. Your paperless-ngx `ALLOWED_VERSIONS` (Settings → General) must include this version.
 - `signal_api_url`: signal-cli-rest-api base URL (e.g. `http://127.0.0.1:8080`)
 - Config path: `--config` or `PAPERLESS_INGESTION_CONFIG` (default: `/etc/paperless-ingestion-bot/config.json`).
 - Users path: `--users` or `PAPERLESS_INGESTION_USERS_PATH` (default: `/var/lib/paperless-ingestion-bot/users.json`). Create manually, don't commit.
@@ -232,6 +233,7 @@ We target **Bun 1.3+** and Effect v4 beta. This is a deliberate choice for moder
 - [SECURITY.md](SECURITY.md): Vulnerability reporting
 - [SUPPORT.md](SUPPORT.md): Getting help
 - [test/integration/README.md](test/integration/README.md): Integration test guide
+- [docs/plans/COMPLETED_SUMMARY.md](docs/plans/COMPLETED_SUMMARY.md): Summary of completed plans and designs
 - [docs/adr/](docs/adr/): Architecture Decision Records
 
 **CII Best Practices:** See [docs/CII.md](docs/CII.md) for progress. Complete the [self-assessment](https://www.bestpractices.dev/en/projects/new?project_url=https%3A%2F%2Fgithub.com%2Fknirski%2Fpaperless-ingestion-bot) to earn the badge.

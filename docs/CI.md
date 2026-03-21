@@ -25,6 +25,7 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | [ci-workflows.yml](../.github/workflows/ci-workflows.yml) | push, pull_request → main | `paths: '.github/**'` | check (minimal) |
 | [ci-docs.yml](../.github/workflows/ci-docs.yml) | push, pull_request → main | `paths: '**/*.md'` | check (pass-through) |
 | [ci-nix.yml](../.github/workflows/ci-nix.yml) | push, pull_request → main | `paths: **/*.nix, package*.json, bun.lock, flake.lock` | nix |
+| [ci-paperless-api-integration.yml](../.github/workflows/ci-paperless-api-integration.yml) | push, pull_request → main | `paths: paperless-client, paperless*, deploy/compose, package*.json, bun.lock` | paperless-api-integration |
 | [ci-release-please.yml](../.github/workflows/ci-release-please.yml) | pull_request → main | `paths: .release-please-manifest.json` | check |
 | [codeql.yml](../.github/workflows/codeql.yml) | push, pull_request → main | `paths-ignore: **/*.md, docs/**` | analyze |
 | [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through, distinct name) |
@@ -64,6 +65,8 @@ Signatures are recorded in the [Rekor transparency log](https://search.sigstore.
 **ci-docs.yml** is complementary: runs when only `*.md` files change. Reports a passing `check` job so branch protection allows merge. See [troubleshooting required status checks](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks).
 
 **ci-nix.yml** runs only when Nix or dependency files change. Runs Nix build and auto-updates `bun.nix` for same-repo PRs and main. Uses the same GitHub App as auto-pr for the push so CI triggers on the new commit (GITHUB_TOKEN pushes do not trigger workflows). When ci-nix pushes a bun.nix update, it also triggers the check workflow via `workflow_dispatch` so the required status is reported on the new commit.
+
+**ci-paperless-api-integration.yml** runs only when Paperless-related paths change (paperless-client, tests, compose, deps). Executes the live Paperless API integration test via Testcontainers. Skips on doc-only or unrelated code changes.
 
 **codeql.yml** runs when non-docs code changes. Uses security-extended queries. Skips for docs-only (paths-ignore).
 

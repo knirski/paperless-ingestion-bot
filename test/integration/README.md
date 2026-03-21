@@ -11,7 +11,7 @@ The test:
 1. Connects to Gmail via IMAP using your credentials
 2. Runs the full pipeline: search, fetch, eligibility (Ollama mocked to always accept), path resolution
 3. Mocks `writeFile`, `makeDirectory`, and `markProcessed`; logs each with `confidence: "high"` and a reason
-4. Asserts the pipeline completes and returns `saved` (the count of messages that would have been saved)
+4. Asserts the pipeline completes and returns `saved` (the count of messages that would be saved)
 
 **What it proves:** Gmail IMAP connection, X-GM-RAW search, fetch, eligibility flow, and path resolution work end-to-end with real Gmail. A passing run with logged mocks gives high confidence that production writes would succeed.
 
@@ -25,19 +25,17 @@ GMAIL_TEST_EMAIL=your@gmail.com GMAIL_APP_PASSWORD=xxxx bun run test:integration
 
 Requires a Gmail account with 2FA enabled and an [app password](https://support.google.com/accounts/answer/185833). Skips when credentials are not set.
 
-## Optional: Live Paperless API Test
+## Optional: Paperless API Integration Test
 
-Runs the PaperlessClient against real paperless-ngx in Docker via Testcontainers. Tests upload, tag resolution (fetch/create), and error handling (invalid token, unreachable URL).
+Runs real paperless-ngx in Docker via Testcontainers. Uses `beforeAll`/`afterAll` for compose lifecycle so tests can be split into multiple `it()` blocks. Skips when `PAPERLESS_API_INTEGRATION_TEST` is not set.
 
-Requires Docker. Skips when `PAPERLESS_API_INTEGRATION_TEST` is not set.
+**API version:** Same contract as production — see [Config](../../README.md#config) (Paperless API version contract) and `PAPERLESS_NGX_ACCEPT_VERSION` in `src/live/paperless-client.ts`.
 
 ```bash
 PAPERLESS_API_INTEGRATION_TEST=1 bun run test:integration
 ```
 
-Uses `deploy/compose/docker-compose.full-stack.yml`; starts only `broker`, `db`, `gotenberg`, `tika`, `webserver`. First run may take ~2–3 min (image pulls).
-
-**Credential setup:** If `deploy/compose/docker-compose.env` does not exist, the test copies `docker-compose.test.env` to it. If you already have `docker-compose.env`, it must use the same admin credentials as `docker-compose.test.env` (`admin` / `test-admin-password`), or remove it so the test can copy the test env.
+Requires Docker. See [deploy/compose/README.md](../../deploy/compose/README.md) for Testcontainers setup. Compose starts in `beforeAll`, tears down in `afterAll`. API verification uses `HttpClient` + `filterStatusOk` + `schemaBodyJson(Schema)` for type-safe decoding.
 
 ## Optional: Keyring Availability Test
 
@@ -55,6 +53,7 @@ Requires a system keychain (libsecret/Secret Service, e.g. gnome-keyring, kwalle
 - **Effect.runPromise** at the boundary; no `@effect/vitest` (incompatible with Effect v4).
 - **Fixtures**: `integrationTest` provides `tmpDir` and `emailAccountsPath`; `buildTestLayer` composes layers per test.
 - **Optional live tests** (keyring, Gmail): For availability probes at load time, use `Effect.gen` + `Layer.build` + `Effect.exit`; run with `Effect.runPromise(Effect.scoped(...))`. Test the service layer (e.g. `CredentialsStore.live`), not the underlying library.
+- **Paperless API integration** (Testcontainers): Use `beforeAll`/`afterAll` for compose lifecycle so multiple `it()` blocks share the same env. API verification via `HttpClient` + `schemaBodyJson(Schema)`.
 
 ## Fixtures
 

@@ -16,7 +16,7 @@ Chosen option: **B**, because the API gives synchronous delivery, immediate vali
 
 ### Consequences
 
-* Good: Synchronous flow; immediate validation (auth, reachability); tags set directly (source, user, Gmail labels); no shared volume; enables custom fields (see [Paperless Custom Fields Design](../plans/2025-03-19-paperless-custom-fields-design.md))
+* Good: Synchronous flow; immediate validation (auth, reachability); tags set directly (source, user, Gmail labels); no shared volume; enables custom fields (see [Paperless Custom Fields Design](../plans/2026-03-19-paperless-custom-fields-design.md))
 * Good: Clear ownership—we control the upload process; future option for own queue with DLQ
 * Bad: Requires `paperless_url` and `paperless_token`; no consume dir fallback for scanners (they can keep a separate consume volume if needed)
 * Bad: Network dependency—bot needs reachability to Paperless; mitigated by `retryTransient` and `--skip-reachability-check` for flexible startup order
@@ -35,4 +35,4 @@ Chosen option: **B**, because the API gives synchronous delivery, immediate vali
 ### Related
 
 * [Paperless API Upload Design](../design/paperless-api-upload.md) — Implementation design (interface, pipelines, migration script)
-* [Paperless Custom Fields Design](../plans/2025-03-19-paperless-custom-fields-design.md) — Proposal for sender, subject, date in custom fields (not implemented)
+* [Paperless Custom Fields Design](../plans/2026-03-19-paperless-custom-fields-design.md) — Proposal for sender, subject, date in custom fields (not implemented)

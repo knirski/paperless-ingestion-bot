@@ -80,7 +80,7 @@ flowchart LR
 
 **Dependency direction:** `core` and `domain` have no dependencies on `shell`, `interfaces`, or `live`. `shell` depends on `core`, `domain`, `interfaces`, and `live`.
 
-**Effect unstable:** CLI uses `effect/unstable/cli`; HTTP server uses `effect/unstable/http`. See [EFFECT_UNSTABLE_PLAN.md](EFFECT_UNSTABLE_PLAN.md) for adoption roadmap.
+**Effect unstable:** CLI uses `effect/unstable/cli`; HTTP server uses `effect/unstable/http`. See [EFFECT_UNSTABLE_PLAN.md](plans/EFFECT_UNSTABLE_PLAN.md) for adoption roadmap.
 
 ## Where to Put X
 
@@ -112,6 +112,8 @@ JSON config. Schema-based validation in [`src/shell/config.ts`](../src/shell/con
 **Paths:** config.json → `--config` or `PAPERLESS_INGESTION_CONFIG`; users.json → `--users` or `PAPERLESS_INGESTION_USERS_PATH`; email-accounts.json → `--email-accounts` or `PAPERLESS_INGESTION_EMAIL_ACCOUNTS_PATH`. Loaded via [`runtime.ts`](../src/shell/runtime.ts) (`loadAllAccounts`, `saveAllAccounts`).
 
 **Upload:** Documents are uploaded to Paperless via REST API (`POST /api/documents/post_document/`). Tags: Signal `[signal-{slug}, "signal"]`; Email `["email", emailSlug]`.
+
+**Paperless API version contract:** All Paperless requests send `Accept: application/json; version=N` (see `PAPERLESS_NGX_ACCEPT_VERSION` in `paperless-client.ts`). This is the integration contract with paperless-ngx; the version must be in paperless-ngx `ALLOWED_VERSIONS`. Bumping the constant requires compatibility verification.
 
 ## Configuration vs user-generated data
 
@@ -153,7 +155,7 @@ Domain errors use `Schema.TaggedErrorClass` in [`domain/errors.ts`](../src/domai
 
 Tests swap live layers for mocks. Integration tests call pipelines directly with mock layers; no real IMAP, Ollama, or Signal API. See [test/integration/README.md](../test/integration/README.md) for fixtures, `buildTestLayer`, and how to add tests.
 
-**Related:** [AGENTS.md](../AGENTS.md) for AI agent instructions; [EFFECT_UNSTABLE_PLAN.md](EFFECT_UNSTABLE_PLAN.md) for Effect unstable adoption; [CI.md](CI.md) for workflow structure.
+**Related:** [AGENTS.md](../AGENTS.md) for AI agent instructions; [EFFECT_UNSTABLE_PLAN.md](plans/EFFECT_UNSTABLE_PLAN.md) for Effect unstable adoption; [CI.md](CI.md) for workflow structure.
 
 ## Project Structure
 

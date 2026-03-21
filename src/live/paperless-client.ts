@@ -10,7 +10,8 @@ import type { TagId, TagName } from "../domain/paperless-types.js";
 import { redactedForLog, redactUrl, unknownToMessage } from "../domain/utils.js";
 import type { PaperlessClientService } from "../interfaces/paperless-client.js";
 
-const PAPERLESS_API_VERSION = "10";
+/** Paperless-ngx API version for Accept header. Must match ALLOWED_VERSIONS in paperless-ngx settings. */
+export const PAPERLESS_NGX_ACCEPT_VERSION = "9";
 
 export class PaperlessClient extends ServiceMap.Service<PaperlessClient, PaperlessClientService>()(
 	"paperless-ingestion-bot/live/paperless-client",
@@ -33,7 +34,7 @@ function createPaperlessClient(
 
 	const headers = {
 		Authorization: `Token ${token}`,
-		Accept: `application/json; version=${PAPERLESS_API_VERSION}`,
+		Accept: `application/json; version=${PAPERLESS_NGX_ACCEPT_VERSION}`,
 	};
 
 	const toPaperlessError = (url: string, e: unknown) =>
@@ -133,7 +134,7 @@ function createPaperlessClient(
 				const req = HttpClientRequest.post(postDocumentUrl, {
 					headers: {
 						Authorization: `Token ${token}`,
-						Accept: `application/json; version=${PAPERLESS_API_VERSION}`,
+						Accept: `application/json; version=${PAPERLESS_NGX_ACCEPT_VERSION}`,
 					},
 					body: HttpBody.formData(formData),
 				});

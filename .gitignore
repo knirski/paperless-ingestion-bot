@@ -2,9 +2,11 @@ node_modules/
 package-lock.json
 dist/
 *.log
+# dotenv: ignore all except templates (see github/gitignore Node.gitignore)
 .env
 .env.*
-docker-compose.env
+!.env.example
+!.env.integration-tests
 .DS_Store
 coverage/
 test-report.junit.xml

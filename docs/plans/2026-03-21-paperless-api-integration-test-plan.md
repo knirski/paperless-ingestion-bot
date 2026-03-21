@@ -8,7 +8,7 @@
 
 **Tech Stack:** testcontainers (Node.js), Bun test, Effect v4, Paperless-ngx REST API.
 
-**Design reference:** [docs/plans/2025-03-21-paperless-api-integration-test-design.md](2025-03-21-paperless-api-integration-test-design.md)
+**Design reference:** [docs/plans/2026-03-21-paperless-api-integration-test-design.md](2026-03-21-paperless-api-integration-test-design.md)
 
 ---
 
@@ -401,7 +401,7 @@ git commit -m "fix: resolve lint/type issues in paperless-api live test"
 
 ## Execution Handoff
 
-Plan saved to `docs/plans/2025-03-21-paperless-api-integration-test-plan.md`.
+Plan saved to `docs/plans/2026-03-21-paperless-api-integration-test-plan.md`.
 
 **Execution options:**
 
