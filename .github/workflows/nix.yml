@@ -50,7 +50,7 @@ jobs:
           fetch-depth: 1
 
       - name: Install Nix
-        uses: cachix/install-nix-action@6004951b182f8860210c8d6f0d808ec5b1a33d28 # v25
+        uses: cachix/install-nix-action@1ca7d21a94afc7c957383a2d217460d980de4934 # v31.10.1
         with:
           extra_nix_config: "experimental-features = nix-command flakes auto-allocate-uids"
 
@@ -127,7 +127,7 @@ jobs:
           fetch-depth: 1
 
       - name: Install Nix
-        uses: cachix/install-nix-action@6004951b182f8860210c8d6f0d808ec5b1a33d28 # v25
+        uses: cachix/install-nix-action@1ca7d21a94afc7c957383a2d217460d980de4934 # v31.10.1
         with:
           extra_nix_config: "experimental-features = nix-command flakes auto-allocate-uids"
 
