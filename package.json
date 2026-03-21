@@ -66,6 +66,7 @@
 		"knip": "^5.86.0",
 		"lefthook": "^2.1.4",
 		"lint-staged": "^16.3.2",
+		"testcontainers": "^11.13.0",
 		"typescript": "^5.7.0"
 	},
 	"lint-staged": {
