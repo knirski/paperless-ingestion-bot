@@ -56,7 +56,7 @@ jobs:
           PAPERLESS_API_INTEGRATION_TEST: "1"
 
       - name: Markdown lint
-        uses: rvben/rumdl@8eeed34c6f8f3bacc43f59a6a34f3c15dd594b20 # v0.1.54
+        uses: rvben/rumdl@b52183a24937296947580d86711ecde803ba6e83 # v0.1.57
 
       - name: Spell check
         uses: crate-ci/typos@631208b7aac2daa8b707f55e7331f9112b0e062d # v1.44.0
