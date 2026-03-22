@@ -4,7 +4,7 @@
  */
 
 import { Effect, Layer, Ref, ServiceMap } from "effect";
-import { HttpBody, HttpClient, HttpClientRequest } from "effect/unstable/http";
+import { HttpBody, HttpClient, HttpClientError, HttpClientRequest } from "effect/unstable/http";
 import { formatErrorForStructuredLog, PaperlessApiError } from "../domain/errors.js";
 import type { TagId, TagName } from "../domain/paperless-types.js";
 import { redactedForLog, redactUrl, unknownToMessage } from "../domain/utils.js";
@@ -37,12 +37,14 @@ function createPaperlessClient(
 		Accept: `application/json; version=${PAPERLESS_NGX_ACCEPT_VERSION}`,
 	};
 
-	const toPaperlessError = (url: string, e: unknown) =>
-		new PaperlessApiError({
-			status: 0,
+	const toPaperlessError = (url: string, e: unknown) => {
+		const status = HttpClientError.isHttpClientError(e) && e.response ? e.response.status : 0;
+		return new PaperlessApiError({
+			status,
 			url: redactedForLog(url, redactUrl),
 			message: unknownToMessage(e),
 		});
+	};
 
 	/** Resolve a single tag name to ID. GET by name; if not found, POST to create. Uses cache. */
 	const resolveOneTag = Effect.fn("paperless-client.resolveOneTag")(function* (
