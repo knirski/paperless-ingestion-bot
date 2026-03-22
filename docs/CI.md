@@ -21,11 +21,10 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | Workflow | Trigger | Path filter | Jobs |
 |----------|---------|-------------|------|
 | [auto-pr.yml](../.github/workflows/auto-pr.yml) | push → `ai/**` | — | generate, create (PR from conventional commits) |
-| [ci.yml](../.github/workflows/ci.yml) | push, pull_request → main | `paths-ignore: '**/*.md', '.github/**'` | check, dependency-review |
+| [ci.yml](../.github/workflows/ci.yml) | push, pull_request → main | `paths-ignore: '**/*.md', '.github/**'` | check, dependency-review, paperless-api-integration |
 | [ci-workflows.yml](../.github/workflows/ci-workflows.yml) | push, pull_request → main | `paths: '.github/**'` | check (minimal) |
 | [ci-docs.yml](../.github/workflows/ci-docs.yml) | push, pull_request → main | `paths: '**/*.md'` | check (pass-through) |
 | [ci-nix.yml](../.github/workflows/ci-nix.yml) | push, pull_request → main | `paths: **/*.nix, package*.json, bun.lock, flake.lock` | nix |
-| [ci-paperless-api-integration.yml](../.github/workflows/ci-paperless-api-integration.yml) | push, pull_request → main | `paths: paperless-client, paperless*, deploy/compose, package*.json, bun.lock` | paperless-api-integration |
 | [ci-release-please.yml](../.github/workflows/ci-release-please.yml) | pull_request → main | `paths: .release-please-manifest.json` | check |
 | [codeql.yml](../.github/workflows/codeql.yml) | push, pull_request → main | `paths-ignore: **/*.md, docs/**` | analyze |
 | [codeql-docs.yml](../.github/workflows/codeql-docs.yml) | pull_request → main | `paths: **/*.md, docs/**` | analyze (pass-through, distinct name) |
@@ -56,7 +55,7 @@ cosign verify "ghcr.io/knirski/paperless-ingestion-bot@${IMAGE_DIGEST}"
 
 Signatures are recorded in the [Rekor transparency log](https://search.sigstore.dev/).
 
-**ci.yml** runs when any non-.md, non-.github file changes. Skips when only docs or only .github changes.
+**ci.yml** runs when any non-.md, non-.github file changes. Skips when only docs or only .github changes. Includes the paperless-api live integration test (Testcontainers) on every run.
 
 **ci-workflows.yml** runs when only `.github/**` changes. Minimal check: actionlint on workflows. Reports `check / check` for branch protection.
 
@@ -65,8 +64,6 @@ Signatures are recorded in the [Rekor transparency log](https://search.sigstore.
 **ci-docs.yml** is complementary: runs when only `*.md` files change. Reports a passing `check` job so branch protection allows merge. See [troubleshooting required status checks](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks).
 
 **ci-nix.yml** runs only when Nix or dependency files change. Runs Nix build and auto-updates `bun.nix` for same-repo PRs and main. Uses the same GitHub App as auto-pr for the push so CI triggers on the new commit (GITHUB_TOKEN pushes do not trigger workflows). When ci-nix pushes a bun.nix update, it also triggers the check workflow via `workflow_dispatch` so the required status is reported on the new commit.
-
-**ci-paperless-api-integration.yml** runs only when Paperless-related paths change (paperless-client, tests, compose, deps). Executes the live Paperless API integration test via Testcontainers. Skips on doc-only or unrelated code changes.
 
 **codeql.yml** runs when non-docs code changes. Uses security-extended queries. Skips for docs-only (paths-ignore).
 

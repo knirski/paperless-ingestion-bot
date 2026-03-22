@@ -360,7 +360,7 @@ Push to a branch and confirm CI runs (or use `bun run check:ci` / `act` if avail
 ### Step 3: Commit
 
 ```bash
-git add .github/workflows/ci.yml  # or ci-paperless-api-integration.yml
+git add .github/workflows/ci.yml
 git commit -m "ci: add paperless-api live integration test job"
 ```
 
