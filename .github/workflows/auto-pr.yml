@@ -21,7 +21,7 @@ concurrency:
 jobs:
   generate:
     if: github.event.repository.fork != true && github.ref_name != github.event.repository.default_branch
-    uses: knirski/auto-pr/.github/workflows/auto-pr-generate-reusable.yml@ac7350ac8c7b2fc604773049a9c3927587b209a8
+    uses: knirski/auto-pr/.github/workflows/auto-pr-generate-reusable.yml@28f9b0c664094b17c1c60837adb9e18cef1478ad
     with:
       auto_pr_how_to_test: "1. Run `bun run check`\n2. "
 
