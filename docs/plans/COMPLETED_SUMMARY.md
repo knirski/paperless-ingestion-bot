@@ -30,10 +30,11 @@ Plans and designs that have been fully implemented. For active or proposed work,
 **Summary:** Live integration test for `PaperlessClient` using real paperless-ngx in Docker via Testcontainers. Opt-in via `PAPERLESS_API_INTEGRATION_TEST=1`; excluded from `bun run check` when unset.
 
 **Deliverables:**
-- `test/integration/paperless-api.integration.test.ts` — happy path (upload, tag resolution), edge cases (invalid token 401, unreachable URL)
+- `test/integration/paperless-api.live.integration.test.ts` — happy path (upload, tag resolution), edge cases (invalid token 401, unreachable URL)
+- `test/integration/paperless-api-helpers.ts` — shared API helpers (`apiGet`, `apiGetDocuments`, `apiPostToken`, `pollUntilDocumentWithTag`, `pollUntilDocumentWithFilename`, `findDocByFilename`), `page_size` for pagination
 - Reuses `deploy/compose/docker-compose.full-stack.yml`; starts `broker`, `db`, `gotenberg`, `tika`, `webserver`
 - Bootstrap token via `POST /api/token/`; verification via `GET /api/documents/`, `GET /api/tags/` with `HttpClient` + `schemaBodyJson(Schema)`
-- `.github/workflows/ci-paperless-api-integration.yml` — CI job with `PAPERLESS_API_INTEGRATION_TEST=1`
+- `ci.yml` paperless-api-integration job — Live Paperless API integration test with `PAPERLESS_API_INTEGRATION_TEST=1`
 - `deploy/compose/.env.integration-tests` — test credentials for ephemeral containers
 
 ---
@@ -44,6 +45,7 @@ Plans and designs that have been fully implemented. For active or proposed work,
 |------|--------|----------|
 | Paperless Custom Fields | Proposal — not implemented | [2026-03-19-paperless-custom-fields-design.md](2026-03-19-paperless-custom-fields-design.md) |
 | Effect Unstable adoption | In progress (partial: RateLimiter done) | [EFFECT_UNSTABLE_PLAN.md](EFFECT_UNSTABLE_PLAN.md) |
+| IMAP Shared Temp Directory | Proposal — not implemented | [2026-03-22-imap-shared-temp-dir-design.md](2026-03-22-imap-shared-temp-dir-design.md) |
 
 ---
 

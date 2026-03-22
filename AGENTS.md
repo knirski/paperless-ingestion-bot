@@ -54,7 +54,8 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 | `bun run check:just-links` | Links only: lychee. Quick link verification. |
 | `bun run check:docs`       | Docs only: rumdl, typos. Quick docs verification. |
 | `bun test`                 | Unit tests with coverage                                                                                                           |
-| `bun run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
+| `bun run test:integration` | Integration tests (mock-based pipelines). See [test/integration/README.md](test/integration/README.md). |
+| `bun run test:integration:live` | Live tests (Paperless, Gmail, keyring; require env; skip when unset). |
 | `bun run lint`             | Lint (Biome)                                                                                                                       |
 | `bun run lint:fix`         | Lint and fix                                                                                                                       |
 | `bun run typecheck`        | TypeScript check                                                                                                                   |
