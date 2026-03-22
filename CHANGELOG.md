@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2](https://github.com/knirski/paperless-ingestion-bot/compare/v0.2.1...v0.2.2) (2026-03-22)
+
+
+### Features
+
+* paperless API upload instead of consume directory ([#148](https://github.com/knirski/paperless-ingestion-bot/issues/148)) ([66f07ea](https://github.com/knirski/paperless-ingestion-bot/commit/66f07eae934b9a3c7814bb9f2cb7512b4a2935e4))
+* **test:** add Paperless API live integration tests with shared helpers ([#159](https://github.com/knirski/paperless-ingestion-bot/issues/159)) ([c7f64f3](https://github.com/knirski/paperless-ingestion-bot/commit/c7f64f3495725f284d8678cf6f9e1fdda045e82f))
+
 ## [Unreleased]
 
 
