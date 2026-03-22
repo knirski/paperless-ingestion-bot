@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Layer, Logger, Path } from "effect";
+import { Effect, type Exit, FileSystem, Layer, Logger, Path } from "effect";
 import { PlatformServicesLayer } from "../src/shell/layers.js";
 
 export const SilentLoggerLayer = Logger.layer([]);
@@ -106,6 +106,11 @@ export async function readTestFile(path: string, encoding?: "utf-8"): Promise<st
 export function runWithLayer<R>(layer: Layer.Layer<R>) {
 	return <E, A>(effect: Effect.Effect<A, E, R>): Promise<A> =>
 		Effect.runPromise(effect.pipe(Effect.provide(layer)));
+}
+
+/** Run effect with Effect.exit for failure assertions. */
+export function runWithExit<A, E>(program: Effect.Effect<A, E>): Promise<Exit.Exit<A, E>> {
+	return Effect.runPromise(Effect.exit(program));
 }
 
 export { emailConfigTest, signalConfigTest } from "./fixtures/config.js";
