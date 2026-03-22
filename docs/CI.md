@@ -21,7 +21,7 @@ This repo uses GitHub Actions with built-in path filters. No third-party path-fi
 | Workflow | Trigger | Path filter | Jobs |
 |----------|---------|-------------|------|
 | [auto-pr.yml](../.github/workflows/auto-pr.yml) | push → `ai/**` | — | generate, create (PR from conventional commits) |
-| [ci.yml](../.github/workflows/ci.yml) | push, pull_request → main | `paths-ignore: '**/*.md', '.github/**'` | check, dependency-review, paperless-api-integration |
+| [ci.yml](../.github/workflows/ci.yml) | push, pull_request → main | `paths-ignore: '**/*.md', '.github/**'` | check, dependency-review |
 | [ci-workflows.yml](../.github/workflows/ci-workflows.yml) | push, pull_request → main | `paths: '.github/**'` | check (minimal) |
 | [ci-docs.yml](../.github/workflows/ci-docs.yml) | push, pull_request → main | `paths: '**/*.md'` | check (pass-through) |
 | [ci-nix.yml](../.github/workflows/ci-nix.yml) | push, pull_request → main | `paths: **/*.nix, package*.json, bun.lock, flake.lock` | nix |
@@ -55,7 +55,7 @@ cosign verify "ghcr.io/knirski/paperless-ingestion-bot@${IMAGE_DIGEST}"
 
 Signatures are recorded in the [Rekor transparency log](https://search.sigstore.dev/).
 
-**ci.yml** runs when any non-.md, non-.github file changes. Skips when only docs or only .github changes. Includes the paperless-api live integration test (Testcontainers) on every run.
+**ci.yml** runs when any non-.md, non-.github file changes. Skips when only docs or only .github changes. The check job includes unit tests, mock-based integration tests, and the Paperless API live integration test (Testcontainers).
 
 **ci-workflows.yml** runs when only `.github/**` changes. Minimal check: actionlint on workflows. Reports `check / check` for branch protection.
 

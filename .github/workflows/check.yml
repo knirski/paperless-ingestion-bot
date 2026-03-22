@@ -1,4 +1,4 @@
-# Reusable workflow: run full check (test, lint, typecheck, rumdl, typos, actionlint, shellcheck, lychee, SBOM, Codecov).
+# Reusable workflow: run full check (test, lint, typecheck, rumdl, typos, actionlint, shellcheck, lychee, SBOM, Codecov, Paperless API integration test).
 # Called by ci.yml (runs when non-.md files change).
 # No Nix — uses GitHub Actions for rumdl/typos/lychee/actionlint/shellcheck.
 
@@ -13,7 +13,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -41,6 +41,19 @@ jobs:
 
       - name: Check code (test, lint, typecheck)
         run: bun run check:code
+
+      - name: Pull Paperless stack images
+        run: |
+          docker pull docker.io/library/redis:8 &
+          docker pull docker.io/library/postgres:18 &
+          docker pull docker.io/gotenberg/gotenberg:8.27 &
+          docker pull docker.io/apache/tika:latest &
+          docker pull ghcr.io/paperless-ngx/paperless-ngx:latest &
+          wait
+      - name: Paperless API integration test
+        run: bun test test/integration/paperless-api.live.integration.test.ts
+        env:
+          PAPERLESS_API_INTEGRATION_TEST: "1"
 
       - name: Markdown lint
         uses: rvben/rumdl@8eeed34c6f8f3bacc43f59a6a34f3c15dd594b20 # v0.1.54
