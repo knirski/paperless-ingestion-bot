@@ -27,7 +27,7 @@ jobs:
 
   create:
     needs: generate
-    uses: knirski/auto-pr/.github/workflows/auto-pr-create-reusable.yml@ac7350ac8c7b2fc604773049a9c3927587b209a8
+    uses: knirski/auto-pr/.github/workflows/auto-pr-create-reusable.yml@28f9b0c664094b17c1c60837adb9e18cef1478ad
     with:
       auto_pr_pkg: ${{ needs.generate.outputs.auto_pr_pkg }}
     secrets: inherit
