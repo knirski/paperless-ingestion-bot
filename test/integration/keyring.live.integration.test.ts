@@ -5,7 +5,7 @@
  * round-trip: setPassword → getPassword → deletePassword.
  *
  * Run with:
- *   KEYRING_TEST=1 bun run test:integration
+ *   KEYRING_TEST=1 bun run test:integration:live
  *
  * Skips when KEYRING_TEST is not set (like Gmail test). When set, runs the test;
  * fails if keyring is unavailable (e.g. headless Linux, CI without keychain).

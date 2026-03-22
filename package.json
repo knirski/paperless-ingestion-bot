@@ -29,6 +29,7 @@
 		"test": "bun test --coverage",
 		"test:unit": "bun test",
 		"test:integration": "bun test test/integration",
+		"test:integration:live": "bun test test/integration/*.live.integration.test.ts",
 		"test:watch": "bun test --watch",
 		"check": "bash scripts/check-nix-hash.sh && bun run check:nix && bun run check:code && bun run check:docs && bun run lint:workflows && bun run lint:scripts",
 		"check:ci": "bash scripts/run-check-ci.sh",

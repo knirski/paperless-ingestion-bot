@@ -20,5 +20,5 @@
 		"isolatedModules": true
 	},
 	"include": ["src/**/*.ts", "test/**/*.ts", "scripts/**/*.ts"],
-	"exclude": ["node_modules", "test/integration/gmail-live.test.ts"]
+	"exclude": ["node_modules"]
 }
