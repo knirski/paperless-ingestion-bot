@@ -1,6 +1,6 @@
 # Paperless API Upload Design
 
-**Date:** 2025-03-19  
+**Date:** 2026-03-19  
 **Status:** Approved (user chose API path over consume directory)  
 **Implementation:** Done.
 
@@ -22,7 +22,7 @@ Replace consume-directory writes with Paperless REST API uploads. Documents are 
 - **Live** (`src/live/paperless-client.ts`): HTTP POST to `{baseUrl}/api/documents/post_document/` with multipart form
 - **Tag resolution**: `GET /api/tags/?name__iexact=TagName` per tag; if empty, create via `POST /api/tags/`. In-memory cache (`Ref<Map<TagName, TagId>>`) shared across uploads to avoid repeated API calls. Branded types: `TagName` (normalized string), `TagId` (number from API).
 - **Auth**: `Authorization: Token {token}` header
-- **API version**: `Accept: application/json; version=10` for stability
+- **API version contract**: All requests send `Accept: application/json; version=N`. The version is fixed in `PAPERLESS_NGX_ACCEPT_VERSION` (`src/live/paperless-client.ts`). This is the integration contract with paperless-ngx: the version must be in paperless-ngx `ALLOWED_VERSIONS` (Settings → General). Bumping requires compatibility verification.
 
 ### Config Changes
 
@@ -84,4 +84,4 @@ Email:  IMAP → fetch attachments (with labels) → uploadDocument(data, filena
 ## Related
 
 - [ADR 0007: Paperless API upload instead of consume directory](../adr/0007-paperless-api-upload.md) — Decision record.
-- [Paperless Custom Fields Design](../plans/2025-03-19-paperless-custom-fields-design.md) — Proposal for storing sender, subject, date, etc. in Paperless custom fields (not implemented).
+- [Paperless Custom Fields Design](../plans/2026-03-19-paperless-custom-fields-design.md) — Proposal for storing sender, subject, date, etc. in Paperless custom fields (not implemented).

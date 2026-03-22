@@ -54,7 +54,8 @@ Docs give the “what” and “how”; real-world usage shows trade-offs and co
 | `bun run check:just-links` | Links only: lychee. Quick link verification. |
 | `bun run check:docs`       | Docs only: rumdl, typos. Quick docs verification. |
 | `bun test`                 | Unit tests with coverage                                                                                                           |
-| `bun run test:integration` | Integration tests (mocks; optional live Gmail requires credentials). See [test/integration/README.md](test/integration/README.md). |
+| `bun run test:integration` | Integration tests (mock-based pipelines). See [test/integration/README.md](test/integration/README.md). |
+| `bun run test:integration:live` | Live tests (Paperless, Gmail, keyring; require env; skip when unset). |
 | `bun run lint`             | Lint (Biome)                                                                                                                       |
 | `bun run lint:fix`         | Lint and fix                                                                                                                       |
 | `bun run typecheck`        | TypeScript check                                                                                                                   |
@@ -185,7 +186,7 @@ Credentials and config paths are sensitive; do not log or expose them.
 
 ## Planning
 
-- [docs/EFFECT_UNSTABLE_PLAN.md](docs/EFFECT_UNSTABLE_PLAN.md) — Effect unstable adoption (observability, AI, persistence, process).
+- [docs/plans/EFFECT_UNSTABLE_PLAN.md](docs/plans/EFFECT_UNSTABLE_PLAN.md) — Effect unstable adoption (observability, AI, persistence, process).
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Entry points, main flows, Gmail vs Generic IMAP (ADT + Match.exhaustive), error model.
 - [docs/adr/](docs/adr/) — Architecture Decision Records. See ADR workflow below. [ADR 0006](docs/adr/0006-bun-migration.md): Bun as sole package manager.
 

@@ -2,6 +2,8 @@
 
 Two options: **minimal** (Signal + ingestion bot only) or **full-stack** (Paperless-ngx + Signal + ingestion bot + Ollama).
 
+**Paperless API version:** Same contract as production — see main [README Config](../../README.md#config) (Paperless API version contract).
+
 ## Minimal: Signal + ingestion bot
 
 Use `docker-compose.yml` when you already have Paperless-ngx elsewhere. The bot uploads documents via Paperless REST API. **Required:** Set `paperless_url` and `paperless_token` in `config.json`, or use env vars `PAPERLESS_INGESTION_PAPERLESS_URL` and `PAPERLESS_INGESTION_PAPERLESS_TOKEN` (e.g. in a `.env` file).
@@ -20,13 +22,13 @@ Use `docker-compose.full-stack.yml` for a complete setup in one compose:
 1. **Create Paperless env**
 
    ```bash
-   cp docker-compose.env.example docker-compose.env
-   # Edit docker-compose.env:
+   cp .env.example .env
+   # Edit .env:
    # - PAPERLESS_SECRET_KEY (long random string)
    # - PAPERLESS_INGESTION_PAPERLESS_TOKEN (see below)
    ```
 
-   **Obtain API token** (no UI required):
+   Compose loads `.env` for variable substitution. **Obtain API token** (no UI required):
 
    - **Option A — via API** (after Paperless is running, e.g. after step 3):
 
@@ -35,7 +37,7 @@ Use `docker-compose.full-stack.yml` for a complete setup in one compose:
        http://localhost:8000/api/token/
      ```
 
-     Add the returned token to `docker-compose.env` as `PAPERLESS_INGESTION_PAPERLESS_TOKEN`, then `docker compose -f docker-compose.full-stack.yml up -d` to apply.
+     Add the returned token to `.env` as `PAPERLESS_INGESTION_PAPERLESS_TOKEN`, then `docker compose -f docker-compose.full-stack.yml up -d` to apply.
 
    - **Option B — via management command** (inside container, after step 3):
 
@@ -50,7 +52,7 @@ Use `docker-compose.full-stack.yml` for a complete setup in one compose:
 
    ```bash
    cp ../../config.example.json config.json
-   # Edit config.json: paperless_url, paperless_token (or use env overrides from docker-compose.env)
+   # Edit config.json: paperless_url, paperless_token (or use env overrides from .env)
    ```
 
    Create `users.json` with your Signal users (see main [README](../../README.md#config) Config section).

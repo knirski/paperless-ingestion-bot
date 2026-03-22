@@ -4,13 +4,14 @@
  */
 
 import { Effect, Layer, Ref, ServiceMap } from "effect";
-import { HttpBody, HttpClient, HttpClientRequest } from "effect/unstable/http";
+import { HttpBody, HttpClient, HttpClientError, HttpClientRequest } from "effect/unstable/http";
 import { formatErrorForStructuredLog, PaperlessApiError } from "../domain/errors.js";
 import type { TagId, TagName } from "../domain/paperless-types.js";
 import { redactedForLog, redactUrl, unknownToMessage } from "../domain/utils.js";
 import type { PaperlessClientService } from "../interfaces/paperless-client.js";
 
-const PAPERLESS_API_VERSION = "10";
+/** Paperless-ngx API version for Accept header. Must match ALLOWED_VERSIONS in paperless-ngx settings. */
+export const PAPERLESS_NGX_ACCEPT_VERSION = "9";
 
 export class PaperlessClient extends ServiceMap.Service<PaperlessClient, PaperlessClientService>()(
 	"paperless-ingestion-bot/live/paperless-client",
@@ -33,15 +34,17 @@ function createPaperlessClient(
 
 	const headers = {
 		Authorization: `Token ${token}`,
-		Accept: `application/json; version=${PAPERLESS_API_VERSION}`,
+		Accept: `application/json; version=${PAPERLESS_NGX_ACCEPT_VERSION}`,
 	};
 
-	const toPaperlessError = (url: string, e: unknown) =>
-		new PaperlessApiError({
-			status: 0,
+	const toPaperlessError = (url: string, e: unknown) => {
+		const status = HttpClientError.isHttpClientError(e) && e.response ? e.response.status : 0;
+		return new PaperlessApiError({
+			status,
 			url: redactedForLog(url, redactUrl),
 			message: unknownToMessage(e),
 		});
+	};
 
 	/** Resolve a single tag name to ID. GET by name; if not found, POST to create. Uses cache. */
 	const resolveOneTag = Effect.fn("paperless-client.resolveOneTag")(function* (
@@ -133,7 +136,7 @@ function createPaperlessClient(
 				const req = HttpClientRequest.post(postDocumentUrl, {
 					headers: {
 						Authorization: `Token ${token}`,
-						Accept: `application/json; version=${PAPERLESS_API_VERSION}`,
+						Accept: `application/json; version=${PAPERLESS_NGX_ACCEPT_VERSION}`,
 					},
 					body: HttpBody.formData(formData),
 				});

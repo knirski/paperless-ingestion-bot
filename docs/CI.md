@@ -55,7 +55,7 @@ cosign verify "ghcr.io/knirski/paperless-ingestion-bot@${IMAGE_DIGEST}"
 
 Signatures are recorded in the [Rekor transparency log](https://search.sigstore.dev/).
 
-**ci.yml** runs when any non-.md, non-.github file changes. Skips when only docs or only .github changes.
+**ci.yml** runs when any non-.md, non-.github file changes. Skips when only docs or only .github changes. The check job includes unit tests, mock-based integration tests, and the Paperless API live integration test (Testcontainers).
 
 **ci-workflows.yml** runs when only `.github/**` changes. Minimal check: actionlint on workflows. Reports `check / check` for branch protection.
 

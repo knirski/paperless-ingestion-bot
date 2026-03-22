@@ -5,7 +5,7 @@
  * Logs each mocked write with a confidence level that it would succeed.
  *
  * Run with:
- *   GMAIL_TEST_EMAIL=your@gmail.com GMAIL_APP_PASSWORD=xxxx bun run test:integration
+ *   GMAIL_TEST_EMAIL=your@gmail.com GMAIL_APP_PASSWORD=xxxx bun run test:integration:live
  *
  * Requires a Gmail account with an app password (2FA must be enabled).
  */
@@ -13,6 +13,7 @@
 import { describe, expect, it } from "bun:test";
 import { Effect, FileSystem, Layer } from "effect";
 import * as Http from "effect/unstable/http";
+import type { EmailLabel } from "../../src/domain/types.js";
 import type { EmailSession } from "../../src/interfaces/email-client.js";
 import { EmailClient, EmailClientLive } from "../../src/live/imap-email-client.js";
 import { OllamaClient } from "../../src/live/ollama-client.js";
@@ -49,7 +50,7 @@ const ReadOnlyFileSystemLayer = Layer.effect(
 				writeFile: (
 					path: string,
 					data: Uint8Array,
-					_options?: { readonly flag?: string; readonly mode?: number },
+					_options?: Parameters<typeof fs.writeFile>[2],
 				) =>
 					Effect.log({
 						event: "gmail_live_mock",
@@ -59,10 +60,7 @@ const ReadOnlyFileSystemLayer = Layer.effect(
 						confidence: MOCK_CONFIDENCE,
 						reason: MOCK_REASON,
 					}).pipe(Effect.asVoid),
-				makeDirectory: (
-					path: string,
-					_options?: { readonly recursive?: boolean; readonly mode?: number },
-				) =>
+				makeDirectory: (path: string, _options?: Parameters<typeof fs.makeDirectory>[1]) =>
 					Effect.log({
 						event: "gmail_live_mock",
 						op: "makeDirectory",
@@ -115,9 +113,7 @@ const alwaysAcceptOllamaLayer = Layer.succeed(OllamaClient)(
 );
 
 describe.skipIf(!hasGmailCreds)("gmail live", () => {
-	it("runs full pipeline with mocked writes, logs confidence", {
-		timeout: 30_000,
-	}, async () => {
+	it("runs full pipeline with mocked writes, logs confidence", async () => {
 		const email = process.env.GMAIL_TEST_EMAIL;
 		const appPassword = process.env.GMAIL_APP_PASSWORD;
 		if (!email || !appPassword) throw new Error("GMAIL_TEST_EMAIL and GMAIL_APP_PASSWORD required");
@@ -143,7 +139,7 @@ describe.skipIf(!hasGmailCreds)("gmail live", () => {
 			Http.FetchHttpClient.layer,
 			emailConfigTest({
 				emailAccountsPath: accountsPath,
-				markProcessedLabel: "paperless",
+				markProcessedLabel: "paperless" as EmailLabel,
 			}),
 			credentialsStoreTest({ [email]: appPassword }),
 			ReadOnlyFileSystemLayer,
@@ -160,5 +156,5 @@ describe.skipIf(!hasGmailCreds)("gmail live", () => {
 		expect(result.saved).toBeGreaterThanOrEqual(0);
 
 		await tmp.remove();
-	});
+	}, 30_000);
 });

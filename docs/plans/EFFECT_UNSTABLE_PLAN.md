@@ -113,7 +113,7 @@ Plan for integrating `effect/unstable/*` modules into paperless-ingestion-bot. O
 
 ### 2.3 Optional: Tool / Tokenizer
 
-- **Tool/Toolkit:** Only if we add LLM tool-calling (e.g. “search accounts”, “check eligibility rules”). Low priority.
+- **Tool/Toolkit:** Only if we add LLM tool-calling (e.g. "search accounts", "check eligibility rules"). Low priority.
 - **Tokenizer:** Useful if prompts grow and we need truncation. Add when prompt length becomes an issue.
 
 ---
@@ -169,7 +169,7 @@ Plan for integrating `effect/unstable/*` modules into paperless-ingestion-bot. O
 
 ### 3.3 RateLimiter
 
-**Adopted.** Used for Signal webhook (120/min, token-bucket) and credential failure notifications (1 per 24h per email). See [ADR 0003](adr/0003-rate-limiting.md). For multi-instance deployments, `layerStoreRedis` is available.
+**Adopted.** Used for Signal webhook (120/min, token-bucket) and credential failure notifications (1 per 24h per email). See [ADR 0003](../adr/0003-rate-limiting.md). For multi-instance deployments, `layerStoreRedis` is available.
 
 **Implementation:**
 
