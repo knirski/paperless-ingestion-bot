@@ -50,7 +50,7 @@
 		"pack:dry": "bun run build && bun pm pack --dry-run"
 	},
 	"dependencies": {
-		"@effect/platform-bun": "4.0.0-beta.35",
+		"@effect/platform-bun": "4.0.0-beta.42",
 		"@napi-rs/keyring": "1.2.0",
 		"effect": "4.0.0-beta.35",
 		"file-type": "^21.3.1",
