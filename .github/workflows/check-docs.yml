@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Markdown lint
-        uses: rvben/rumdl@8eeed34c6f8f3bacc43f59a6a34f3c15dd594b20 # v0.1.54
+        uses: rvben/rumdl@bca528dda610d93073d1d94659c034c6b1146e39 # v0.1.74
 
       - name: Check links
         continue-on-error: true
@@ -30,4 +30,4 @@ jobs:
           args: --timeout 90 --max-retries 20 --retry-wait-time 5 --no-progress --accept 200,429 .
 
       - name: Spell check
-        uses: crate-ci/typos@631208b7aac2daa8b707f55e7331f9112b0e062d # v1.44.0
+        uses: crate-ci/typos@cf5f1c29a8ac336af8568821ec41919923b05a83 # v1.45.1

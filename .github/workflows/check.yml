@@ -31,7 +31,7 @@ jobs:
         run: bun x @cyclonedx/cdxgen -o sbom.json -t node
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sbom
           path: sbom.json
@@ -56,10 +56,10 @@ jobs:
           PAPERLESS_API_INTEGRATION_TEST: "1"
 
       - name: Markdown lint
-        uses: rvben/rumdl@8eeed34c6f8f3bacc43f59a6a34f3c15dd594b20 # v0.1.54
+        uses: rvben/rumdl@bca528dda610d93073d1d94659c034c6b1146e39 # v0.1.74
 
       - name: Spell check
-        uses: crate-ci/typos@631208b7aac2daa8b707f55e7331f9112b0e062d # v1.44.0
+        uses: crate-ci/typos@cf5f1c29a8ac336af8568821ec41919923b05a83 # v1.45.1
 
       - name: Lint workflows
         uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2
